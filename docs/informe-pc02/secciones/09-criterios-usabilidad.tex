@@ -1,0 +1,220 @@
+\section{Criterios concretos de usabilidad}
+\label{sec:usabilidad}
+
+Esta sección consolida los criterios de usabilidad que orientarán el
+diseño y la evaluación del simulador. La consolidación se hace en tres
+capas complementarias: (i) los cinco atributos clásicos de
+\textit{usability} de Nielsen (aprendizaje, eficiencia, memorabilidad,
+manejo de errores, satisfacción), reformulados para el dominio de la
+entrevista por voz; (ii) un subconjunto de las heurísticas de Nielsen
+de evaluación heurística (HE), aplicadas a las pantallas de la sala
+virtual y el plan de mejora; y (iii) un conjunto de \textbf{indicadores
+verificables} (umbrales numéricos o conformidades normativas) que se
+medirán durante el desarrollo y las pruebas con usuarios. Cada
+indicador se enlaza con un requerimiento de la sección
+\ref{sec:requerimientos} para asegurar trazabilidad.
+
+\subsection{Atributos de usabilidad y traducción al dominio}
+
+\begin{itemize}
+  \item \textbf{Aprendizaje (\textit{learnability}).} Un usuario nuevo
+        debe poder iniciar su primera sesión completa en menos de dos
+        minutos desde el alta, sin recurrir al tutorial guiado. La
+        metáfora del \textit{dojo} y la línea de tiempo circular se
+        eligen explícitamente para acelerar la formación del modelo
+        mental. Indicador: \rnf{10} \textit{(time-to-first-session)}.
+
+  \item \textbf{Eficiencia (\textit{efficiency}).} Tras tres sesiones
+        exitosas, el usuario debe poder iniciar una nueva entrevista en
+        no más de dos clics o un comando de voz, gracias a las
+        plantillas por industria persistidas en su perfil. Las acciones
+        durante la sesión están disponibles tanto por puntero como por
+        comando de voz reservado, lo que reduce la fricción al gesto
+        físico. Indicador: \rf{06}, \rf{19}.
+
+  \item \textbf{Memorabilidad (\textit{memorability}).} La disposición
+        espacial del avatar y el aura es invariante entre los modos
+        individual, peer mock y panel; lo único que cambia es la
+        información presentada. Los \textit{badges} y rangos por
+        competencia refuerzan el aprendizaje longitudinal. Indicador:
+        \rf{13}, satisfacción reportada en pruebas con usuarios.
+
+  \item \textbf{Manejo de errores (\textit{error handling}).} La
+        interfaz debe prevenir errores costosos antes de cometerlos
+        (confirmación explícita antes de publicar al \textit{feed},
+        botón ``rehacer última respuesta''), recuperarlos sin pérdida
+        de progreso (cola de reintentos ante caídas del LLM,
+        reconexión TURN ante caída de WebRTC) y comunicarlos en
+        lenguaje natural por voz del entrevistador, no como diálogos
+        modales técnicos. Indicador: \rnf{04}, \rnf{14}.
+
+  \item \textbf{Satisfacción.} La experiencia debe celebrar el proceso
+        formativo y no únicamente el resultado, evitando los
+        \textit{dark patterns} de comparación absoluta. La gamificación
+        prioriza mejora relativa del usuario respecto a su línea base,
+        no \textit{rankings} de pares ($\rf{14}$). La transparencia
+        sobre el funcionamiento del análisis automático y sus
+        eventuales sesgos ($\rnf{14}$) sostiene la confianza
+        longitudinal en la herramienta.
+\end{itemize}
+
+\subsection{Heurísticas de Nielsen aplicadas al simulador}
+
+Se aplican las diez heurísticas de Nielsen como rejilla de evaluación
+durante la revisión interna del prototipo y como criterios formales
+para la auditoría heurística externa antes de la primera prueba con
+usuarios. La tabla \ref{tab:heuristicas} indica, para cada heurística,
+cómo se materializa en el simulador y en qué pantalla se verifica.
+
+\begin{table}[ht]
+\centering
+\renewcommand{\arraystretch}{1.25}
+\footnotesize
+\begin{tabularx}{\linewidth}{@{}p{4.5cm} Y l@{}}
+\toprule
+\textbf{Heurística} & \textbf{Materialización en el simulador} &
+\textbf{Pantalla / RF} \\
+\midrule
+H1. Visibilidad del estado del sistema &
+El aura procedural y la línea de tiempo circular comunican el estado
+de la sesión y del análisis sin abrir paneles separados. &
+Sala virtual / \rf{05} \\
+\addlinespace
+H2. Correspondencia entre sistema y mundo real &
+Lenguaje neutral propio del proceso de selección laboral; metáfora
+del \textit{dojo} familiar para el usuario. &
+Sala virtual, plan de mejora \\
+\addlinespace
+H3. Control y libertad del usuario &
+Comandos ``pausa'', ``repetir'', ``terminar'' siempre disponibles;
+botón ``rehacer última respuesta'' antes del cierre. &
+Sala virtual / \rf{06} \\
+\addlinespace
+H4. Consistencia y estándares &
+Misma disposición espacial en los modos individual, peer y panel;
+componentes de aura y \textit{tooltip} reutilizables. &
+Toda la aplicación \\
+\addlinespace
+H5. Prevención de errores &
+Confirmación explícita antes de publicar grabaciones al \textit{feed};
+\textit{onboarding} de permisos antes de la primera sesión. &
+Privacidad, comunidad / \rf{21} \\
+\addlinespace
+H6. Reconocer mejor que recordar &
+\textit{Tooltips} contextuales sobre cada icono del aura con criterio
+y nivel de confianza; sugerencias del asistente lateral basadas en
+historial. &
+Sala virtual, asistente / \rf{15}, \rf{16} \\
+\addlinespace
+H7. Flexibilidad y eficiencia &
+Atajos de voz y de teclado declarados en cada control; plantillas
+por industria; navegación 100\,\% por teclado para todo flujo. &
+Configuración / \rf{19} \\
+\addlinespace
+H8. Diseño estético y minimalista &
+La sala virtual oculta cualquier información no esencial durante la
+sesión; las métricas viven en el aura, no en \textit{dashboards}. &
+Sala virtual / \rf{05} \\
+\addlinespace
+H9. Recuperación de errores en lenguaje claro &
+Mensajes del entrevistador en español neutro, sin códigos técnicos;
+explicación verbal de caídas de red o del LLM. &
+Sala virtual / \rnf{14} \\
+\addlinespace
+H10. Ayuda y documentación &
+Tour guiado al primer ingreso, asistente lateral por demanda,
+ayuda inferida por inactividad o reintentos repetidos. &
+Toda la aplicación / \rf{15}, \rf{16} \\
+\bottomrule
+\end{tabularx}
+\caption{Aplicación de las diez heurísticas de Nielsen al simulador.}
+\label{tab:heuristicas}
+\end{table}
+
+\subsection{Indicadores verificables}
+
+Los criterios anteriores se traducen en indicadores con umbrales o
+conformidades concretas, evaluables durante el desarrollo (mediante
+prueba automatizada o telemetría) y durante las pruebas con usuarios
+(mediante observación cronometrada y cuestionarios SUS). La tabla
+\ref{tab:indicadores} resume el conjunto.
+
+\begin{table}[ht]
+\centering
+\renewcommand{\arraystretch}{1.25}
+\footnotesize
+\begin{tabularx}{\linewidth}{@{}p{3.6cm} Y p{3.0cm} p{2.4cm}@{}}
+\toprule
+\textbf{Indicador} & \textbf{Definición operativa} &
+\textbf{Umbral / objetivo} & \textbf{Trazabilidad} \\
+\midrule
+Tiempo a primera sesión & Tiempo entre alta del usuario y final de su
+primera entrevista. & $\le 2$ minutos & \rnf{10} \\
+\addlinespace
+Latencia del aura & Retardo extremo a extremo entre evento percibido y
+actualización visual del aura. & $\le 500$\,ms (p95) & \rnf{01},
+\rf{05} \\
+\addlinespace
+Latencia de respuesta del LLM & Retardo entre fin de turno del
+candidato y comienzo de la voz del entrevistador. & $\le 2$\,s (p95)
+& \rnf{02}, \rf{02} \\
+\addlinespace
+Latencia de subtítulos & Retardo de aparición del subtítulo respecto
+al fonema de inicio de la pregunta del LLM. & $\le 300$\,ms (p95) &
+\rf{18} \\
+\addlinespace
+Tasa de finalización de tarea & Porcentaje de usuarios que completan
+una entrevista de extremo a extremo sin asistencia humana. &
+$\ge 90\%$ tras 30\,s de inducción & Pruebas moderadas \\
+\addlinespace
+Tasa de error en STT &
+Word Error Rate sobre transcripciones del candidato en español neutro.
+& $\le 12\%$ (referencial) & \rf{03} \\
+\addlinespace
+Conformidad WCAG 2.2 AA &
+Auditoría \texttt{axe-core} en CI sin violaciones \textit{serious} ni
+\textit{critical}. & 0 violaciones & \rnf{08} \\
+\addlinespace
+Puntaje Lighthouse &
+Categoría \textit{Accessibility} ejecutada en CI sobre las cinco rutas
+críticas. & $\ge 95$ & \rnf{08} \\
+\addlinespace
+Conformidad de teclado &
+Cobertura E2E \textit{keyboard-only} de los flujos de usuario. &
+$100\%$ de flujos críticos & \rf{19}, \rnf{08} \\
+\addlinespace
+SUS (System Usability Scale) &
+Cuestionario aplicado a una muestra de candidatos primarios al cierre
+de la prueba con usuarios. & $\ge 75$ & Prueba final con
+usuarios \\
+\addlinespace
+Costo de IA por sesión &
+Costo medio en USD por sesión completa de 30 minutos. &
+$\le \$0{,}20$ & \rnf{13} \\
+\bottomrule
+\end{tabularx}
+\caption{Indicadores verificables de usabilidad y conformidad,
+con umbrales operativos y trazabilidad a requerimientos.}
+\label{tab:indicadores}
+\end{table}
+
+\subsection{Estrategia de evaluación}
+
+La verificación de los indicadores anteriores se distribuye en cuatro
+hitos a lo largo del ciclo de desarrollo: (i) revisión heurística
+interna por dos miembros del equipo siguiendo la rejilla de la tabla
+\ref{tab:heuristicas} antes de la primera prueba con usuarios,
+(ii) ejecución continua de \texttt{axe-core} y \textit{Lighthouse} en
+\textit{integración continua} sobre cada \textit{pull request} para
+los indicadores de accesibilidad y rendimiento, (iii) pruebas
+moderadas con un usuario representante por perfil primario
+(\sk{1}--\sk{7}) sobre una entrevista completa, registrando los
+indicadores conductuales (tasa de finalización, tiempo a primera
+sesión) y aplicando el cuestionario SUS al cierre, y
+(iv) auditoría externa de accesibilidad previa a la entrega final, con
+informe firmado de conformidad WCAG 2.2 nivel AA.
+
+Los criterios anteriores no son una capa decorativa: cada uno se
+declara como entrada al \textit{backlog} de pruebas automatizadas o al
+plan de pruebas con usuarios, de modo que un fallo medible en
+cualquiera de ellos bloquea la aceptación del módulo correspondiente.
