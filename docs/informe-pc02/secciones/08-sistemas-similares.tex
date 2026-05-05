@@ -4,60 +4,83 @@
 Antes de fijar el alcance del proyecto se relevaron las herramientas
 disponibles en el mercado que abordan, total o parcialmente, el problema
 de la preparación para entrevistas laborales. El relevamiento se centró
-en cinco productos representativos del estado del arte, seleccionados
-por cobertura de prensa y tracción reportada en el último año, y
-distribuidos entre las dos categorías observables: simuladores
-asistidos por IA (Interview Warmup, Big Interview, Yoodli, Final Round
-AI) y plataformas de práctica entre pares (Pramp). Se descartaron del
-relevamiento las plataformas de evaluación corporativa
+en cinco productos representativos del estado del arte (consultados en
+mayo de 2026), seleccionados por cobertura de prensa y tracción
+reportada en el último año, y distribuidos entre las dos categorías
+observables: simuladores asistidos por IA (Interview Warmup, Big
+Interview, Yoodli, Final Round AI) y plataformas de práctica entre
+pares con grading automático (Exponent Practice, antes Pramp). Se
+descartaron del relevamiento las plataformas de evaluación corporativa
 (p.\,ej.\ HireVue) por estar orientadas a reclutadores y no al
 candidato.
 
 \subsection{Productos relevados}
 
 \paragraph{Interview Warmup (Google).} Producto gratuito orientado a
-candidatos de ingreso a empresas tecnológicas. Presenta preguntas en
-texto y permite respuesta hablada por el navegador. Genera una
+candidatos de ingreso a empresas tecnológicas. Presentaba preguntas en
+texto y permitía respuesta hablada por el navegador, con una
 visualización de patrones lingüísticos (palabras frecuentes,
 referencias profesionales, muletillas) sobre la transcripción. No
-analiza video ni emite un puntaje cuantitativo y no contempla
+analizaba video ni emitía un puntaje cuantitativo y no contemplaba
 adaptación dinámica de la dificultad ni interacción con otros usuarios.
+Es relevante señalar que Google decidió \textbf{archivar} la
+herramienta como parte de una reorganización de su programa
+educativo; varias universidades que la recomendaban (UPenn, Lafayette
+College, Pepperdine, entre otras) han migrado a alternativas como
+InterviewGuru. Se mantiene en el relevamiento como referencia
+histórica del enfoque \textit{text-to-speech} con análisis ligero.
 
 \paragraph{Big Interview.} Suite comercial con planes individuales e
-institucionales. Combina contenidos formativos extensos (videos, guías,
-plantillas STAR) con un módulo de práctica donde el usuario se graba a
-sí mismo respondiendo preguntas y recibe un panel posterior con
-métricas básicas (\textit{eye contact}, \textit{filler words}, ritmo).
-La retroalimentación se entrega como \textit{dashboard} lateral
-clásico y no en tiempo real durante la entrevista. La adaptación al
-candidato es limitada y depende de la curaduría manual de bancos de
-preguntas por industria.
+institucionales. Su módulo \textit{VideoAI} entrega
+\textit{feedback} instantáneo sobre dieciséis dimensiones, entre las
+que figuran ritmo, palabras de relleno, contacto visual,
+\textit{vocabulary}, claridad del contenido, alineación con el rol,
+nivel de confianza, y observaciones técnicas como volumen e
+iluminación. La calibración previa de \textit{eye-tracking} fue
+removida en versiones recientes. La salida final se entrega como
+\textit{Action Plan} personalizado con pasos accionables. La
+adaptación dinámica al candidato sigue siendo limitada y depende de
+la curaduría manual de bancos de preguntas por industria.
 
-\paragraph{Yoodli.} Aplicación enfocada en la fluidez del discurso
-hablado más que en el contenido técnico de la entrevista. Soporta
-sesiones grabadas y modo en vivo durante reuniones de
-videoconferencia, con métricas prosódicas (palabras por minuto, pausas,
-muletillas, riqueza léxica) entregadas al cierre. Su análisis no
-verbal se limita a la voz y no incorpora análisis postural ni de
-contacto visual; tampoco habilita sesiones colaborativas entre pares.
+\paragraph{Yoodli.} Aplicación originalmente enfocada en la fluidez
+del discurso hablado que en 2026 incorporó análisis de
+\textit{eye contact} y lenguaje corporal cuando el usuario activa la
+\textit{webcam}, así como un \textbf{modo panel multi-persona} para
+practicar contra varios entrevistadores simultáneos. Soporta sesiones
+grabadas y modo en vivo durante reuniones de videoconferencia, con
+métricas prosódicas (palabras por minuto, pausas, muletillas, riqueza
+léxica) y \textit{nudges} en tiempo real durante la sesión. No
+habilita sesiones colaborativas entre pares ni adaptación de
+dificultad por modelo de habilidad por competencia, y su análisis de
+lenguaje corporal se limita a confianza visual sin métricas
+estructuradas de postura ni gestualidad.
 
-\paragraph{Final Round AI.} Producto reciente posicionado como
+\paragraph{Final Round AI.} Producto posicionado como
 \textit{interview copilot}: durante una entrevista real con un
 reclutador humano, sugiere al candidato respuestas o estructuras
-argumentales en una ventana lateral. El modo \textit{mock} es
-secundario y replica el patrón pregunta-respuesta con feedback
-posterior. El énfasis del producto está en la asistencia en vivo y no
-en el entrenamiento longitudinal con plan de mejora; el componente
-ético del uso del \textit{copilot} en entrevistas reales está aún en
-discusión pública.
+argumentales en una ventana lateral. La compañía promueve
+explícitamente un \textit{stealth mode} no detectable por el
+entrevistador, lo que ha abierto un debate público sobre los límites
+éticos del uso de asistentes de IA en procesos de selección reales.
+El modo \textit{mock} es secundario y replica el patrón
+pregunta-respuesta con \textit{feedback} posterior; el énfasis del
+producto está en la asistencia en vivo y no en el entrenamiento
+longitudinal con plan de mejora.
 
-\paragraph{Pramp.} Plataforma colaborativa donde dos candidatos se
-emparejan por compatibilidad de rol y se entrevistan mutuamente, sin
-intervención de IA. Cada participante alterna roles candidato y
-entrevistador, y se evalúan con una rúbrica predefinida. Su valor
-reside en la práctica humana realista, pero la calidad del feedback
-queda íntegramente en manos del par y carece de métricas objetivas
-multimodales.
+\paragraph{Exponent Practice (antes Pramp).} La plataforma fundacional
+de práctica entre pares (Pramp) fue absorbida por Exponent en 2026 y
+relanzada como Exponent Practice. La mecánica central se conserva: dos
+candidatos se emparejan por compatibilidad de rol mediante un
+\textit{matching} por antecedentes, disponibilidad y áreas de
+práctica, se entrevistan mutuamente en sesiones de 30--40 minutos
+sobre videollamada propia con editor de código compartido, y alternan
+roles candidato y entrevistador. La novedad relevante es la
+incorporación de \textbf{calificación automática por IA} para
+entrevistas de comportamiento, \textit{product management}, diseño de
+sistemas y \textit{data science}: el sistema genera un \textit{transcript}
+y aplica una rúbrica con puntaje por atributo y recomendación de
+mejora. La práctica permanece gratuita, con créditos limitados y plan
+ilimitado dentro de la suscripción de Exponent.
 
 \subsection{Comparación funcional}
 
@@ -65,7 +88,8 @@ La tabla \ref{tab:similares} resume el cruce de capacidades observadas
 con los ejes que estructuran este proyecto: análisis multimodal,
 \textit{feedback} en tiempo real, adaptación al candidato, modalidad
 colaborativa entre pares, gamificación y atención explícita a la
-accesibilidad.
+accesibilidad. Las celdas reflejan el estado verificado de cada
+producto en mayo de 2026.
 
 \begin{table}[ht]
 \centering
@@ -81,11 +105,11 @@ accesibilidad.
 \textbf{Práctica entre pares} &
 \textbf{WCAG AA} \\
 \midrule
-Interview Warmup & Limitado (texto) & No & No & Limitada & No & Parcial \\
-Big Interview    & Sí (post)        & Sí (post) & No & Limitada & No & Parcial \\
-Yoodli           & Sí (vivo+post)   & No & Parcial & No & No & Parcial \\
-Final Round AI   & Sí (vivo)        & No & Sí (sugerencias) & Limitada & No & No documentado \\
-Pramp            & No               & No (peer humano) & N/A & N/A & Sí (núcleo) & No documentado \\
+Interview Warmup     & Limitado (texto) & No  & No        & No & No  & Parcial \\
+Big Interview        & Sí              & Sí (16 ejes) & Sí & Limitada & No & Parcial \\
+Yoodli               & Sí (vivo+post)  & Sí (limitado) & Sí (\textit{nudges}) & No & No & Parcial \\
+Final Round AI       & Sí (vivo)       & No & Sí (sugerencias)  & No & No & No documentado \\
+Exponent (Pramp)     & Sí (post AI)    & No (peer humano) & N/A & N/A & Sí (núcleo) & No documentado \\
 \midrule
 \textbf{Este proyecto} &
 \textbf{Sí (vivo)} &
@@ -103,36 +127,56 @@ La fila final corresponde al simulador propuesto.}
 
 \subsection{Posicionamiento y diferenciación}
 
-El relevamiento permite ubicar el proyecto en una intersección poco
-cubierta del espacio de soluciones existentes. La oferta actual se
-distribuye en tres polos: (i) simuladores con \textit{feedback}
-posterior y análisis incompleto del lenguaje no verbal (Big Interview,
-Yoodli), (ii) asistentes en vivo orientados a entrevistas reales con
-componente ético cuestionado (Final Round AI), y (iii) plataformas de
-práctica entre pares sin métricas objetivas (Pramp). Ninguna de las
-herramientas relevadas combina simultáneamente: análisis multimodal
-sincrónico de voz y video con cómputo en cliente, retroalimentación
-visual integrada al avatar (no como \textit{dashboard} lateral),
-adaptación de dificultad por modelo de habilidad por competencia,
-modalidad colaborativa entre pares con observador instrumentado, y
-conformidad explícita con WCAG 2.2 nivel AA con rutas alternativas
-para usuarios con discapacidad.
+El relevamiento muestra que el espacio de soluciones evolucionó
+notablemente en el último año: el análisis multimodal en tiempo real
+dejó de ser exclusivo de productos premium y aparece ya en Big
+Interview y Yoodli, y la práctica entre pares incorporó capa de IA en
+Exponent Practice. Sin embargo, ninguna herramienta combina
+simultáneamente los siguientes cinco rasgos, que constituyen el núcleo
+diferenciador del presente proyecto.
 
-La propuesta del presente proyecto se diferencia en cuatro ejes
-verificables. Primero, el \textit{aura luminosa procedural} alrededor
-del entrevistador-avatar reemplaza al panel de métricas tradicional y
-materializa la metáfora del \textit{dojo}, sosteniendo la inmersión
-durante la sesión (cubre \rf{05} y \rf{15}). Segundo, la totalidad del
-análisis de video ocurre en el navegador mediante MediaPipe, sin envío
-de imagen cruda a servicios externos, lo que mejora simultáneamente la
-privacidad y el costo operativo (\rnf{05}). Tercero, la sesión
-\textit{peer mock} sobre WebRTC habilita observación instrumentada
-con métricas cruzadas y comentarios anclados a \textit{timestamps},
-una capacidad ausente en Pramp y en los productos asistidos por IA
-relevados (\rf{10}--\rf{12}). Cuarto, la accesibilidad se trata como
-requerimiento de primer nivel y no como adición tardía: todos los
-canales del aura tienen sustituto auditivo o textual y la operación
-total del simulador es posible con teclado, conmutadores o voz
+Primero, el \textit{aura luminosa procedural} alrededor del avatar
+reemplaza el patrón dominante de \textit{dashboard} lateral o reporte
+post-sesión, y materializa la metáfora del \textit{dojo} para sostener
+la inmersión durante la entrevista. Ningún competidor relevado
+abandona el paradigma de panel/reporte; todos los productos asistidos
+por IA muestran las métricas como tarjetas, gráficos o
+\textit{Action Plans} separados del contenido conversacional (cubre
+\rf{05} y \rf{15}).
+
+Segundo, el análisis de video del candidato se ejecuta en su totalidad
+en el navegador mediante \textit{MediaPipe}, sin envío de imagen
+cruda a servicios externos. Big Interview y Yoodli no documentan esta
+restricción de privacidad y procesan el video del lado servidor; el
+diseño \textit{client-side} mejora simultáneamente la privacidad del
+usuario, el cumplimiento de la Ley N${}^\circ$ 29733 (Perú) y el costo
+operativo del proyecto (\rnf{05}).
+
+Tercero, el modelo de habilidad por competencia con \textbf{calibración
+adaptativa por IRT} ajusta la dificultad de la pregunta siguiente en
+función de la calidad de la respuesta previa, y converge sobre el
+nivel real del candidato tras tres sesiones. Ninguno de los cinco
+productos relevados expone una adaptación dinámica de este tipo:
+Big Interview e Interview Warmup operan sobre bancos curados,
+Yoodli y Final Round AI no adaptan la dificultad, y Exponent
+Practice depende del nivel del par humano emparejado (\rf{09}).
+
+Cuarto, la sesión \textit{peer mock} sobre WebRTC se complementa con
+un \textbf{panel del observador instrumentado}: el peer entrevistador
+ve el aura del candidato en vivo, ancla comentarios en
+\textit{timestamps} específicos y completa una rúbrica estructurada al
+cierre. Exponent Practice ofrece \textit{transcripts} y rúbricas
+post-sesión calculadas por IA, pero el peer humano no dispone de
+métricas multimodales del candidato durante la entrevista. Esta
+combinación de práctica humana y análisis multimodal es ausente del
+estado del arte relevado (\rf{10}--\rf{12}).
+
+Quinto, la accesibilidad se trata como requerimiento de primer nivel y
+no como adición tardía: todos los canales del aura tienen sustituto
+auditivo o textual y la operación total del simulador es posible con
+teclado, conmutadores o voz, conforme a WCAG 2.2 nivel AA. Ninguno de
+los productos relevados documenta conformidad explícita con WCAG; la
+oferta actual asume usuarios sin discapacidad sensorial ni motora
 (\rf{17}--\rf{20} y \rnf{08}).
 
 Este posicionamiento orienta también el alcance del MVP: el equipo
@@ -140,4 +184,7 @@ prioriza completar las capacidades diferenciadoras antes de replicar
 funciones ya bien resueltas por la competencia (p.\,ej.\ catálogos
 extensos de preguntas curados manualmente, formación en redacción de
 \textit{currícula}, integración con plataformas de empleabilidad
-externas), las cuales quedan documentadas como extensiones futuras.
+externas, modo \textit{copilot} en entrevistas reales), las cuales
+quedan documentadas como extensiones futuras o, en el caso del
+\textit{copilot} en entrevistas reales, descartadas explícitamente por
+restricciones éticas asumidas como criterio de diseño del proyecto.
