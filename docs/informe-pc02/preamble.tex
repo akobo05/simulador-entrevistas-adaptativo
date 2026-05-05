@@ -1,0 +1,104 @@
+% ============================================================
+%  Preámbulo común --- Tarea LEC06 CC451
+% ============================================================
+
+% --- Idioma y codificación ---
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[spanish,es-tabla]{babel}
+\usepackage{lmodern}
+\usepackage{microtype}
+
+% --- Geometría ---
+\usepackage[a4paper,margin=2.4cm]{geometry}
+\usepackage{setspace}
+\onehalfspacing
+
+% --- Tipografía y enlaces ---
+\usepackage{xcolor}
+\definecolor{azulUNI}{RGB}{0,51,102}
+\definecolor{grisCajas}{RGB}{240,240,240}
+\definecolor{grisBorde}{RGB}{200,200,200}
+
+\usepackage[colorlinks=true,
+            linkcolor=azulUNI,
+            citecolor=azulUNI,
+            urlcolor=azulUNI]{hyperref}
+
+% --- Tablas y listas ---
+\usepackage{booktabs}
+\usepackage{tabularx}
+\usepackage{longtable}
+\usepackage{array}
+\usepackage{multirow}
+\usepackage{enumitem}
+\setlist{nosep,leftmargin=1.4em}
+
+% --- Encabezados de sección ---
+\usepackage{titlesec}
+\titleformat{\section}
+  {\color{azulUNI}\Large\bfseries}{\thesection}{0.6em}{}
+\titleformat{\subsection}
+  {\color{azulUNI}\large\bfseries}{\thesubsection}{0.5em}{}
+\titleformat{\subsubsection}
+  {\bfseries}{\thesubsubsection}{0.4em}{}
+
+% --- Cabecera y pie ---
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small CC451 --- IHC --- LEC06}
+\fancyhead[R]{\small UNI \quad 2026-I}
+\fancyfoot[C]{\thepage}
+\renewcommand{\headrulewidth}{0.3pt}
+
+% --- Cajas de aviso y código ---
+\usepackage{tcolorbox}
+\tcbuselibrary{breakable,skins}
+
+\newtcolorbox{cajaPrompt}[1][]{%
+  enhanced,
+  colback=grisCajas,
+  colframe=azulUNI,
+  boxrule=0.5pt,
+  arc=2pt,
+  fonttitle=\bfseries\color{white},
+  coltitle=white,
+  attach boxed title to top left={xshift=4mm,yshift=-2mm},
+  boxed title style={colback=azulUNI,sharp corners},
+  breakable,
+  before skip=10pt, after skip=10pt,
+  #1
+}
+
+\newtcolorbox{cajaCriterio}[1][]{%
+  enhanced,
+  colback=white,
+  colframe=grisBorde,
+  boxrule=0.4pt,
+  arc=1pt,
+  breakable,
+  before skip=6pt, after skip=10pt,
+  #1
+}
+
+% --- Listings (para mostrar prompts en monoespaciado si conviene) ---
+\usepackage{listings}
+\lstset{
+  basicstyle=\ttfamily\footnotesize,
+  breaklines=true,
+  breakatwhitespace=true,
+  frame=single,
+  rulecolor=\color{grisBorde},
+  backgroundcolor=\color{grisCajas},
+  columns=fullflexible,
+}
+
+% --- Comandos cortos ---
+\newcommand{\rf}[1]{\textbf{RF-#1}}
+\newcommand{\rnf}[1]{\textbf{RNF-#1}}
+\newcommand{\cu}[1]{\textbf{CU-#1}}
+\newcommand{\sk}[1]{\textbf{S#1}}
+
+% Tabularx column type (J = justified)
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}

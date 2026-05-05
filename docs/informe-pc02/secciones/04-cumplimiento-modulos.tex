@@ -1,0 +1,207 @@
+\section{Cumplimiento de los módulos UX/UI exigidos}
+\label{sec:modulos}
+
+El enunciado exige los \textbf{cuatro} módulos obligatorios y \textbf{tres
+de los cuatro} módulos opcionales. Esta sección integra la respuesta del
+proveedor Claude (prompt 04), seleccionada por su mayor precisión
+mecanística (mapeo concreto de variables del aura, descripción del
+\textit{pipeline} de roles del LLM, justificación estructurada del
+módulo descartado) y por su trazabilidad explícita con el backlog de
+RF/RNF de la sección~\ref{sec:requerimientos}.
+
+\subsection{Módulos obligatorios}
+
+\subsubsection{1. Interfaz gráfica no convencional}
+El simulador implementa una sala virtual tridimensional renderizada con
+WebGL/Three.js, en la que el entrevistador es un avatar estilizado
+rodeado por un \textbf{aura luminosa procedural} que actúa como canal de
+feedback continuo. El aura mapea las métricas multimodales a parámetros
+visuales independientes:
+
+\begin{itemize}
+  \item \textbf{Color}: codifica la valencia global del desempeño
+        (ámbar a verde).
+  \item \textbf{Intensidad}: codifica el nivel de fluidez verbal.
+  \item \textbf{Ritmo de pulsación}: codifica la cadencia detectada.
+  \item \textbf{Asimetría espacial}: codifica el equilibrio entre canal
+        verbal y no verbal.
+\end{itemize}
+
+\noindent La interacción ocurre dentro del entorno tridimensional sin
+ventanas modales sobreimpuestas, lo que constituye una desviación del
+paradigma de formulario web convencional. La visualización mantiene
+$\ge 30$\,fps en hardware de referencia y degrada a una representación
+bidimensional simplificada cuando se detecta GPU insuficiente.
+\textbf{Cubre} \rf{05}, \rf{15}, \rnf{03}.
+
+\subsubsection{2. Interfaz de voz}
+Canal de voz bidireccional cuasi-real:
+
+\begin{itemize}
+  \item Las respuestas del entrevistador LLM se sintetizan mediante TTS
+        (modelo de Gemini con voz seleccionable).
+  \item Las intervenciones del candidato se transcriben mediante STT
+        continuo con detección de fin de habla y segmentación por
+        turnos.
+  \item Sobre la transcripción y la señal acústica se calculan
+        \textbf{en cliente} las métricas prosódicas que alimentan el
+        aura (fluidez, ritmo, pausas, tono, densidad de muletillas).
+  \item Una \textbf{capa de comandos de voz} permite controlar la
+        sesión mediante intenciones reservadas (``pausar'',
+        ``repetir pregunta'', ``siguiente'', ``terminar entrevista'')
+        procesadas por un reconocedor de gramática restringida
+        independiente del canal sustantivo.
+\end{itemize}
+
+\noindent La latencia mediana de TTS y de aparición de subtítulos se
+mantiene por debajo del umbral fijado por \rnf{01}--\rnf{02}.
+\textbf{Cubre} \rf{02}, \rf{06}, \rf{17}--\rf{19}, \rnf{01}--\rnf{02}.
+
+\subsubsection{3. Integración con uno o varios LLM}
+El sistema integra \textbf{tres roles diferenciados} sobre la API de
+Gemini, cada uno con su propio prompt sistémico, contexto y memoria
+acotada:
+
+\begin{itemize}
+  \item \textbf{Entrevistador}: genera preguntas adaptadas a industria,
+        rol y nivel del candidato; reformula en función del historial
+        conversacional de la sesión.
+  \item \textbf{Coach}: opera en modo asincrónico al cierre de la
+        sesión; consume la transcripción anonimizada y las métricas
+        agregadas para producir un plan de mejora estructurado por
+        competencias.
+  \item \textbf{Moderador}: actúa exclusivamente en sesiones de peer
+        mock; observa la transcripción cruzada de ambos pares y emite
+        intervenciones breves cuando detecta desviaciones del
+        protocolo o silencios prolongados.
+\end{itemize}
+
+\noindent Ningún rol recibe el video crudo del candidato: recibe
+únicamente los descriptores numéricos derivados del \textit{pipeline}
+de MediaPipe en cliente. \textbf{Cubre} \rf{02}, \rf{07}, \rf{16},
+\rnf{05}, \rnf{14}.
+
+\subsubsection{4. Ayuda contextual para el usuario}
+Cuatro capas observables:
+
+\begin{enumerate}
+  \item \textbf{Tour guiado} al primer ingreso, navegable con teclado,
+        que destaca cada zona funcional de la sala virtual.
+  \item \textbf{Etiquetas emergentes} (\textit{tooltips}) accesibles
+        por foco y por puntero sobre todos los controles, con
+        descripción breve y atajo de teclado asociado.
+  \item \textbf{Asistente coach-on-demand}, invocable mediante el
+        comando ``ayuda'' o tecla dedicada, que responde dudas sobre
+        el funcionamiento del simulador (no sobre el contenido
+        evaluativo de la entrevista) consultando una base documental
+        indexada.
+  \item \textbf{Inferencia de necesidad de ayuda} por inactividad o
+        errores repetidos: si el usuario permanece sin acción durante
+        un umbral configurable o reintenta el mismo comando con falla,
+        el sistema sugiere la sección de ayuda relevante.
+\end{enumerate}
+
+\noindent \textbf{Cubre} \rf{15}--\rf{16}.
+
+\subsection{Módulos opcionales seleccionados (3 de 4)}
+
+\subsubsection{Personalización continua}
+\begin{itemize}
+  \item Historial conversacional persistente, consultable como línea
+        de tiempo de sesiones con métricas, transcripción y reporte
+        (\rf{08}).
+  \item Plan adaptativo recalculado al cierre de cada sesión: el
+        módulo \textit{Coach} prioriza las competencias con menor
+        desempeño en las últimas $N$ sesiones y selecciona los
+        siguientes ejercicios en función de esa priorización (\rf{07}).
+  \item Perfil de industria y rol declarado por el usuario y refinado
+        a partir del CV cargado y de las respuestas previas; condiciona
+        el banco de preguntas y el vocabulario técnico esperado por el
+        entrevistador (\rf{01}).
+  \item \textbf{Calibración progresiva del nivel} mediante un modelo
+        de estimación de habilidad por competencia (similar a IRT) que
+        sube o baja la dificultad de la siguiente pregunta según la
+        calidad de la respuesta previa, con nivel inicial fijado por
+        una sesión diagnóstica (\rf{09}).
+  \item Persistencia de preferencias de interfaz, accesibilidad y
+        configuración del aura entre sesiones y dispositivos, con
+        sincronización por cuenta autenticada (\rnf{04}).
+\end{itemize}
+
+\subsubsection{Interactividad con otros usuarios}
+\begin{itemize}
+  \item Peer mock vía WebRTC con señalización por servidor propio y
+        media P2P entre pares; sala con dos roles activos
+        (candidato y observador) y un moderador LLM compartido
+        (\rf{10}).
+  \item Panel del observador con métricas multimodales del candidato
+        en vivo (con consentimiento explícito previo del candidato
+        registrado en sesión) y formulario estructurado para emitir
+        feedback por competencia (\rf{11}).
+  \item Comentarios anclados al \textit{timestamp} de la grabación
+        local de la sesión, navegables por marcador y editables por el
+        observador hasta el cierre (\rf{11}).
+  \item Intercambio de roles mediante un único control que invierte
+        candidato y observador y reinicia el contador de la nueva
+        entrevista, preservando el historial de la sesión anterior
+        como adjunto consultable (\rf{12}).
+  \item \textbf{Modo panel} con hasta tres observadores simultáneos
+        sobre un único candidato, con feedback agregado al cierre y
+        resolución de conflictos por promedio ponderado por
+        antigüedad del observador.
+  \item \textbf{Feedback cruzado asincrónico}: solicitar revisión de
+        una entrevista grabada por un par seleccionado del directorio,
+        con plazo configurable y notificación al solicitante cuando el
+        feedback queda disponible.
+\end{itemize}
+
+\subsubsection{Gamificación}
+\begin{itemize}
+  \item Rangos por competencia (comunicación verbal, lenguaje
+        corporal, contenido técnico, manejo del estrés) calculados
+        como agregaciones móviles sobre las últimas $N$ sesiones, con
+        umbrales fijos y observables en el perfil (\rf{13}).
+  \item \textit{Badges} otorgados por logros verificables y
+        deterministas (p.\,ej. completar diez sesiones consecutivas,
+        alcanzar puntaje umbral en una competencia, completar un peer
+        mock como observador), con criterios documentados y reversibles
+        ante anulación de la sesión correspondiente (\rf{13}).
+  \item Ligas temáticas agrupadas por industria y rol, con
+        clasificación semanal basada en \emph{mejora relativa} del
+        usuario respecto a su propia línea base, no en comparación
+        absoluta entre usuarios, para evitar penalizar a principiantes
+        (\rf{14}).
+  \item Retos grupales con objetivo común (acumulación colectiva de
+        horas de práctica o de peer mocks completados en un periodo) y
+        progreso visible para todos los miembros del grupo.
+\end{itemize}
+
+\subsection{Módulo opcional descartado: interfaces hápticas}
+
+Se descarta la inclusión de interfaces hápticas en el alcance del MVP
+por cuatro razones convergentes:
+
+\begin{enumerate}
+  \item \textbf{Dominio}: la entrevista laboral simulada no requiere
+        intercambio táctil; la totalidad del valor evaluativo y
+        formativo se transmite por canales auditivo, visual y textual,
+        y no existe evidencia documentada de mejora de desempeño por
+        háptica en este dominio.
+  \item \textbf{Hardware}: la única superficie háptica realmente
+        accesible en el contexto de uso esperado es la vibración del
+        móvil, un canal de muy baja resolución expresiva que además no
+        está disponible en escritorio (entorno principal del simulador).
+  \item \textbf{Inmersión}: una vibración durante la entrevista
+        interrumpiría la simulación de un contexto formal y se
+        percibiría como notificación intrusiva en lugar de información
+        integrada, contradiciendo la metáfora del dojo.
+  \item \textbf{Recursos}: el equipo prefiere profundizar los tres
+        módulos opcionales seleccionados, donde existen requerimientos
+        automatizables y verificables, antes que dispersar esfuerzo en
+        una capa háptica cuya verificación automática sería difícil.
+\end{enumerate}
+
+\noindent La decisión queda sujeta a revisión en una fase posterior si
+se incorpora un caso de uso específico (por ejemplo, alertas hápticas
+para usuarios con discapacidad auditiva durante peer mock) que
+justifique el costo de implementación.

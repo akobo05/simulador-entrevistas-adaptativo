@@ -1,0 +1,70 @@
+\section{Tema y objetivo del proyecto}
+\label{sec:tema}
+
+\subsection{Título}
+\textbf{Simulador de Entrevistas Laborales Adaptativo}: un reclutador basado en
+LLM que adapta sus preguntas a la industria y nivel del candidato, analizando
+en tiempo real la voz (fluidez, muletillas, pausas, tono) y el lenguaje
+corporal por webcam (contacto visual, postura, gestualidad), y que habilita
+\textit{mock interviews} colaborativas entre estudiantes con roles
+intercambiables.
+
+\subsection{Objetivo principal}
+Diseñar y construir una aplicación web/PWA que permita a estudiantes y
+recién egresados practicar entrevistas laborales en cualquier momento,
+recibiendo retroalimentación objetiva, instantánea y multimodal sobre su
+desempeño verbal y no verbal, así como un plan de mejora personalizado y la
+opción de validación entre pares.
+
+\subsection{Objetivos específicos}
+\begin{enumerate}
+  \item Implementar un agente entrevistador conversacional por voz capaz de
+        adaptar dinámicamente la dificultad y el dominio (industria, rol,
+        nivel) según el perfil del candidato.
+  \item Calcular y mostrar en tiempo real métricas de comunicación verbal
+        (palabras-muletilla por minuto, ritmo, claridad) y no verbal
+        (contacto visual, postura, gestualidad) sin enviar video crudo a
+        servicios externos.
+  \item Generar un plan de mejora individualizado tras cada sesión, basado
+        en debilidades recurrentes detectadas a lo largo del historial
+        longitudinal del usuario.
+  \item Habilitar sesiones \textit{peer-to-peer} entre estudiantes mediante
+        WebRTC, con panel de observador, comentarios anclados a
+        \textit{timestamps} e intercambio de roles.
+  \item Aplicar elementos de gamificación (rangos por competencia, ligas
+        temáticas, \textit{badges}) que sostengan la motivación intrínseca
+        sin recurrir a \textit{dark patterns}.
+  \item Garantizar accesibilidad WCAG 2.2 nivel AA y rutas alternativas para
+        usuarios con discapacidad visual, auditiva, motora o cognitiva.
+\end{enumerate}
+
+\subsection{Problema real que resuelve}
+Los estudiantes y recién egresados enfrentan dos barreras al prepararse para
+entrevistas técnicas:
+
+\begin{itemize}
+  \item \textbf{Falta de retroalimentación objetiva}: amigos y familiares no
+        pueden evaluar lenguaje corporal y fluidez de manera consistente, y
+        el sesgo afectivo distorsiona su juicio.
+  \item \textbf{Costo y escasez de coaches profesionales}: el coaching uno
+        a uno es caro, requiere agenda y suele ser inaccesible para
+        estudiantes universitarios.
+\end{itemize}
+
+\noindent Una herramienta multimodal con IA permite practicar
+$24\times 7$, sin exposición inicial a juicio humano, y luego con
+validación opcional entre pares.
+
+\subsection{Diferenciación frente a propuestas similares}
+A diferencia de aplicaciones para entrenamiento de habilidades sociales
+orientadas al bienestar emocional, esta propuesta:
+
+\begin{itemize}
+  \item Se enfoca en empleabilidad técnica (entrevistas reales de trabajo).
+  \item Usa análisis audiovisual multimodal en tiempo real (voz $+$ video),
+        no solo diálogo textual.
+  \item Incorpora una dimensión comunitaria y competitiva (peer mock,
+        ligas, \textit{ranking}).
+  \item Su métrica objetivo es desempeño profesional, no reducción de
+        síntomas clínicos.
+\end{itemize}

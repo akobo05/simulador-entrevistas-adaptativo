@@ -1,0 +1,263 @@
+\section{Usuarios con discapacidad y funcionalidad asociada}
+\label{sec:discapacidad}
+
+Los \textit{stakeholders} \sk{4}--\sk{7} forman parte del usuario nuclear
+del simulador. La estrategia es ofrecer \textbf{equivalencia funcional}:
+toda capacidad del candidato general (\sk{1}) debe estar disponible para
+ellos por una ruta accesible. Se trabaja sobre WCAG 2.2 nivel AA, con
+verificación automática en CI mediante \texttt{axe-core} y
+\texttt{Lighthouse}, y validación manual con representantes de cada
+perfil. Esta sección integra la respuesta del proveedor Claude
+(prompt 02), seleccionada por su rigor en la cita de criterios WCAG
+concretos y por proponer métricas sustitutas que evitan penalizar
+injustamente al usuario.
+
+\subsection{Discapacidad visual (\sk{4})}
+
+\subsubsection*{A. Necesidades específicas}
+\begin{itemize}
+  \item Acceso completo al contenido textual y gráfico de la sala
+        virtual mediante lector de pantalla (NVDA, JAWS, VoiceOver),
+        incluyendo el estado del aura del entrevistador y los
+        indicadores de progreso de la sesión.
+  \item Sustitución del canal visual del aura por un canal sonoro o
+        textual equivalente, ya que los degradados luminosos son
+        inaccesibles para usuarios ciegos y de bajo contraste
+        discriminable para usuarios con baja visión.
+  \item Control de tipografía, contraste y zoom del cliente sin que se
+        rompan los flujos de entrevista, conservando la persistencia
+        de configuración entre sesiones.
+  \item Eliminación de la métrica de contacto visual del cómputo del
+        puntaje global, sustituida por una métrica de orientación
+        auditiva equivalente.
+  \item Información clara y anticipada sobre el uso de la cámara:
+        posibilidad de mantenerla apagada sin perder funcionalidades
+        evaluables.
+\end{itemize}
+
+\subsubsection*{B. Funcionalidades verificables}
+\begin{enumerate}
+  \item Operación al 100\,\% por teclado en todos los flujos
+        (login, configuración, entrevista, revisión de feedback, peer
+        mock), conforme al criterio WCAG 2.2 2.1.1 \textit{Keyboard};
+        verificable mediante recorrido E2E con Playwright sin uso de
+        puntero.
+  \item Todo elemento interactivo expone nombre, rol y estado
+        accesibles vía ARIA, conforme al criterio WCAG 2.2 4.1.2
+        \textit{Name, Role, Value}; verificable con \texttt{axe-core}
+        en CI con cero violaciones de severidad
+        \textit{serious}/\textit{critical}.
+  \item El aura luminosa se traduce en un canal sonoro paralelo
+        (\textit{earcons} no verbales con mapeo frecuencia-fluidez y
+        panorámica-ritmo) que se activa con un \textit{toggle}
+        persistido en el perfil; verificable con E2E que valida la
+        emisión del \textit{earcon} ante eventos sintéticos.
+  \item La métrica de contacto visual se reemplaza automáticamente por
+        \emph{orientación de voz hacia el micrófono} cuando el usuario
+        declara discapacidad visual o desactiva la cámara; verificable
+        por telemetría del cambio de métrica activa y por test
+        unitario del módulo de \textit{scoring}.
+  \item El cliente cumple WCAG 2.2 1.4.3 \textit{Contrast (Minimum)}
+        con ratio mínimo de 4.5:1 en texto y 3:1 en componentes, y
+        WCAG 2.2 1.4.4 \textit{Resize Text} permitiendo zoom hasta
+        200\,\% sin pérdida de contenido ni funcionalidad; verificable
+        con Lighthouse Accessibility (puntaje mínimo 95) y pruebas
+        visuales con zoom forzado.
+  \item El feedback final se entrega también como reporte estructurado
+        en HTML semántico y descargable en texto plano, navegable por
+        encabezados y regiones; verificable con \texttt{axe-core} sobre
+        el reporte y con E2E que confirma jerarquía h1--h2--h3 sin
+        saltos.
+\end{enumerate}
+
+\subsection{Discapacidad auditiva (\sk{5})}
+
+\subsubsection*{A. Necesidades específicas}
+\begin{itemize}
+  \item Equivalente textual en tiempo real para toda emisión de voz del
+        entrevistador LLM, con latencia compatible con la cadencia
+        conversacional de una entrevista.
+  \item Posibilidad de responder en lengua de señas o por escrito sin
+        que se degrade el análisis de competencias comunicativas.
+  \item Sustitución de las métricas dependientes de prosodia (tono,
+        pausas, muletillas) por métricas observables en el canal
+        alternativo elegido por el usuario.
+  \item Indicadores visuales redundantes para cualquier alerta o
+        evento que en el flujo estándar se señaliza por audio.
+  \item Compatibilidad con auriculares con bobina inductiva (T-coil) y
+        control independiente del volumen del entrevistador respecto al
+        volumen de notificaciones.
+\end{itemize}
+
+\subsubsection*{B. Funcionalidades verificables}
+\begin{enumerate}
+  \item Subtítulos sincronizados de las preguntas del entrevistador
+        mediante TTS con \textit{captions} WebVTT, latencia mediana
+        $\le 500\,\mathrm{ms}$ \texttt{(referencial)}, conforme a
+        WCAG 2.2 1.2.4 \textit{Captions (Live)}; verificable por
+        telemetría de latencia y E2E que valida la presencia y
+        sincronía de pistas WebVTT.
+  \item Modo \emph{respuesta escrita}: el turno se cierra mediante
+        envío de texto en lugar de detección de fin de habla;
+        verificable con E2E que completa una entrevista íntegra en
+        este modo y telemetría que registra el modo activo por sesión.
+  \item Cuando se selecciona discapacidad auditiva o el modo escrito,
+        las métricas de fluidez verbal y muletillas se sustituyen por
+        \emph{coherencia y densidad léxica} sobre la transcripción del
+        usuario; verificable con test unitario del módulo de
+        \textit{scoring}.
+  \item Todos los eventos de audio (turno asignado, alerta de tiempo,
+        cambio de fase, desconexión en peer mock) tienen contraparte
+        visual persistente de al menos $3\,\mathrm{s}$
+        \texttt{(referencial)}, conforme a WCAG 2.2 1.4.13
+        \textit{Content on Hover or Focus}; verificable con E2E que
+        dispara eventos sintéticos y valida la aparición en el DOM.
+  \item El componente de subtítulos cumple WCAG 2.2 1.4.12
+        \textit{Text Spacing} y permite ajuste de tamaño, color de
+        fondo y opacidad sin recargar la sesión; verificable con
+        \texttt{axe-core} y E2E de persistencia entre sesiones.
+  \item La sala de peer mock incluye un canal de chat textual paralelo
+        al canal de voz, con historial accesible durante toda la
+        sesión; verificable con E2E multiusuario que confirma entrega
+        bidireccional en menos de $1\,\mathrm{s}$ \texttt{(referencial)}.
+\end{enumerate}
+
+\subsection{Discapacidad motora (\sk{6})}
+
+\subsubsection*{A. Necesidades específicas}
+\begin{itemize}
+  \item Operación del simulador sin requerir gestos finos de mouse,
+        soportando teclado, conmutadores (\textit{switch access}) y
+        comandos de voz.
+  \item Tolerancia a tiempos de respuesta variables: ningún flujo
+        crítico debe expirar por inactividad sin posibilidad de
+        extensión.
+  \item Eliminación o sustitución de las métricas de postura y
+        gesticulación, que penalizarían a usuarios con movilidad
+        reducida del tronco, brazos o cabeza.
+  \item Encuadre flexible de la cámara: aceptación de planos no
+        convencionales (lateral, sentado en silla de ruedas, decúbito)
+        sin que la detección considere la imagen como inválida.
+  \item Áreas de activación amplias y sin requerimiento de pulsaciones
+        simultáneas o sostenidas.
+\end{itemize}
+
+\subsubsection*{B. Funcionalidades verificables}
+\begin{enumerate}
+  \item Toda acción ejecutable mediante un único punto de entrada
+        (teclado, \textit{switch} o voz) sin combinaciones simultáneas
+        obligatorias, conforme a WCAG 2.2 2.1.4
+        \textit{Character Key Shortcuts} y 2.5.7
+        \textit{Dragging Movements}; verificable con E2E
+        \textit{keyboard-only} y otro \textit{voice-only}.
+  \item Todos los objetivos táctiles tienen tamaño mínimo de
+        $24\times 24$\,px CSS, conforme al criterio WCAG 2.2 2.5.8
+        \textit{Target Size (Minimum)}; verificable con auditoría
+        automatizada que mide el \textit{bounding box} de todos los
+        elementos interactivos.
+  \item Los temporizadores de respuesta del entrevistador son
+        configurables (sin límite, estándar, $\times 2$, $\times 3$) y
+        notifican antes de expirar con opción de prórroga, conforme a
+        WCAG 2.2 2.2.1 \textit{Timing Adjustable}; verificable con E2E
+        y telemetría del temporizador efectivo por sesión.
+  \item Cuando el usuario declara discapacidad motora, las métricas de
+        postura y gesticulación se reemplazan por
+        \emph{estabilidad del encuadre facial} (presencia y centrado
+        relativo del rostro) sin penalizar inclinaciones, asimetrías
+        ni ausencia de movimiento corporal; verificable con test
+        unitario del \textit{pipeline} MediaPipe y regresión sobre
+        \textit{datasets} sintéticos de planos no convencionales.
+  \item Capa de comandos de voz para todos los controles
+        (\textit{``siguiente pregunta''}, \textit{``pausar''},
+        \textit{``repetir''}), independiente del canal de respuesta
+        sustantiva, conforme a WCAG 2.2 2.5.4 \textit{Motion
+        Actuation}; verificable con E2E que dispara los comandos por
+        API sintética y valida los efectos en el DOM.
+  \item El sistema permite recalibrar el encuadre de la cámara
+        declarando explícitamente la posición del usuario (de frente,
+        lateral, sentado bajo, recostado) sin que la detección marque
+        la imagen como no válida; verificable con test de integración
+        que inyecta \textit{frames} de cada posición.
+\end{enumerate}
+
+\subsection{Discapacidad cognitiva y neurodivergencia (\sk{7})}
+
+\subsubsection*{A. Necesidades específicas}
+\begin{itemize}
+  \item Reducción configurable de estímulos visuales y sonoros: el
+        aura, las animaciones de fondo y los efectos de transición
+        pueden saturar a usuarios con TEA o TDAH.
+  \item Lenguaje claro en preguntas y feedback, con posibilidad de
+        reformular en versión simplificada sin alterar el contenido
+        evaluativo.
+  \item Soporte tipográfico para usuarios con dislexia (fuentes
+        específicas, espaciado aumentado, alineación a la izquierda
+        sin justificado).
+  \item Previsibilidad y control sobre la duración y estructura de la
+        sesión, evitando cambios de fase sin aviso.
+  \item Posibilidad de pausar la sesión sin penalización ni pérdida de
+        progreso, en respuesta a sobrecarga sensorial o de atención.
+\end{itemize}
+
+\subsubsection*{B. Funcionalidades verificables}
+\begin{enumerate}
+  \item Modo de \emph{estimulación reducida} que desactiva el aura, las
+        animaciones de fondo, los \textit{earcons} no esenciales y las
+        transiciones, dejando únicamente indicadores estáticos de
+        estado; verificable con E2E que confirma la ausencia de
+        animaciones CSS activas (\texttt{prefers-reduced-motion}
+        honrado), conforme a WCAG 2.2 2.3.3 \textit{Animation from
+        Interactions}, y con auditoría Lighthouse.
+  \item El usuario puede limitar el aura a un máximo de dos métricas
+        de su elección entre las disponibles; verificable con E2E que
+        selecciona la configuración y valida que el componente del
+        aura solo renderiza los canales seleccionados.
+  \item Todas las preguntas del entrevistador disponen de una versión
+        en lenguaje claro (oraciones cortas, voz activa, una idea por
+        oración) accesible mediante un control persistente; verificable
+        con test unitario sobre el módulo de generación y métrica de
+        legibilidad automatizada (índice INFLESZ o similar) con puntaje
+        mínimo \texttt{(referencial)}.
+  \item Control de tipografía con opciones validadas para dislexia
+        (fuente con \textit{tracking} aumentado y espaciado interlínea
+        $\ge 1.5$), conforme a WCAG 2.2 1.4.12 \textit{Text Spacing};
+        verificable con E2E que aplica la configuración y valida
+        \texttt{line-height}, \texttt{letter-spacing} y
+        \texttt{word-spacing} en el DOM.
+  \item Pausa y reanudación en cualquier punto sin pérdida del estado
+        conversacional ni penalización en el puntaje, con estado
+        conservado por al menos $24\,\mathrm{h}$ \texttt{(referencial)},
+        conforme a WCAG 2.2 2.2.1 \textit{Timing Adjustable} y 2.2.6
+        \textit{Timeouts}; verificable con E2E que pausa, cierra el
+        navegador, reabre y valida la continuidad del contexto.
+  \item Antes de iniciar cada fase, el simulador anuncia su duración
+        estimada, su estructura y los criterios que se evaluarán, en
+        formato textual persistente, conforme a la práctica de
+        previsibilidad asociada a WCAG 2.2 3.2.5 \textit{Change on
+        Request}; verificable con E2E que confirma la presencia del
+        bloque de anuncio en cada transición de fase.
+\end{enumerate}
+
+\subsection{Verificación}
+
+La validación combina cuatro herramientas y cuatro hitos por perfil:
+
+\paragraph{Herramientas} \texttt{axe-core} integrado en CI con umbral
+cero para violaciones \textit{serious} y \textit{critical};
+\texttt{Lighthouse} con puntaje Accessibility mínimo de 95;
+\texttt{Playwright} para E2E que cubren los flujos
+\textit{keyboard-only}, modo escrito, comandos de voz y configuración
+de tipografía; panel de telemetría propio que registra modo activo,
+métricas sustitutas, latencia de subtítulos y temporizadores efectivos.
+
+\paragraph{Hitos}
+\begin{enumerate}
+  \item Revisión heurística experta antes de la primera prueba con
+        usuarios.
+  \item Prueba moderada con un usuario representativo por perfil
+        (\sk{4}--\sk{7}) sobre una entrevista completa.
+  \item Peer mock con al menos un par mixto que incluya un usuario
+        del perfil correspondiente.
+  \item Auditoría final externa con conformidad WCAG 2.2 nivel AA
+        documentada en informe firmado, previa a la entrega.
+\end{enumerate}

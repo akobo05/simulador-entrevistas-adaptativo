@@ -1,0 +1,270 @@
+\section{Entrevistas con representantes de usuarios finales}
+\label{sec:entrevistas}
+
+La nota final del enunciado establece textualmente:
+\textit{``Se espera que en la definición formal de su proyecto (PC02)
+se tomen en cuenta estos y otros resultados, incluyendo resultado de
+entrevistas con representantes de sus usuarios finales''}.
+
+Esta sección presenta la \textbf{guía operativa} elaborada por el
+equipo a partir del prompt 06 (Gemini, versionado en
+\texttt{prompts/respuestas/gemini\_06\_entrevistas.md}) y deja
+explícitas las acciones que el equipo ejecutará para completar el
+trabajo con datos reales.
+
+\begin{cajaPrompt}[title={Estado actual --- pendiente de ejecución de campo}]
+La guía operativa (perfiles, criterios de selección, bloques de
+preguntas, métricas a registrar y plantilla de consentimiento) está
+lista. Falta el trabajo de campo: contactar entrevistados, ejecutar
+las sesiones, transcribir y consolidar hallazgos. La consolidación
+final se incorporará en este mismo archivo en una iteración posterior
+del informe.
+\end{cajaPrompt}
+
+\subsection{Perfil 1 --- Estudiante de últimos ciclos (\sk{1})}
+
+\paragraph{Objetivo} Identificar puntos de dolor en la transición
+académica-laboral y validar la aceptación de una interfaz de
+entrenamiento basada en IA.
+
+\paragraph{Criterios de selección}
+\begin{itemize}
+  \item Estudiante matriculado en 8\textsuperscript{vo},
+        9\textsuperscript{no} o 10\textsuperscript{mo} ciclo de una
+        carrera de ingeniería.
+  \item Sin experiencia previa en prácticas preprofesionales o con
+        máximo una experiencia técnica.
+  \item Búsqueda activa de empleo declarada para los próximos 6 meses.
+  \item Usuario recurrente de herramientas de videoconferencia
+        (Zoom, Meet, Teams).
+\end{itemize}
+
+\paragraph{Bloques de preguntas}
+\begin{itemize}
+  \item \textbf{Contexto y experiencia previa}:
+        \begin{itemize}
+          \item ¿Cómo ha sido su proceso de preparación para las
+                primeras postulaciones laborales?
+          \item ¿Qué aspectos de una entrevista presencial o virtual le
+                generan mayor incertidumbre?
+        \end{itemize}
+  \item \textbf{Expectativas frente a la IA}:
+        \begin{itemize}
+          \item ¿Qué valor esperaría obtener de un evaluador que no
+                es humano?
+          \item ¿Cómo reaccionaría si el nivel de dificultad de las
+                preguntas cambia según sus respuestas anteriores?
+        \end{itemize}
+  \item \textbf{Metáfora del dojo y el aura}:
+        \begin{itemize}
+          \item Al imaginar un entorno de ``entrenamiento constante''
+                tipo dojo, ¿qué elementos visuales consideraría
+                motivadores?
+          \item ¿De qué manera interpretaría un halo de luz que cambia
+                de color mientras usted habla?
+        \end{itemize}
+  \item \textbf{Privacidad y ética}:
+        \begin{itemize}
+          \item ¿Qué condiciones exigiría para permitir que un
+                algoritmo analice sus gestos faciales?
+          \item ¿Cómo preferiría que el sistema le informe sobre el
+                uso de sus datos tras finalizar la sesión?
+        \end{itemize}
+\end{itemize}
+
+\paragraph{Métricas a registrar}
+\begin{itemize}
+  \item Frecuencia de mención de términos relacionados con
+        ``ansiedad'' o ``nerviosismo''.
+  \item Tiempo de respuesta ante la propuesta del aura
+        (latencia en la reacción).
+  \item Recuento de adjetivos positivos/negativos asociados al
+        feedback automatizado.
+\end{itemize}
+
+\subsection{Perfil 2 --- Recién egresado (\sk{2})}
+
+\paragraph{Objetivo} Evaluar la utilidad de simulaciones de alta
+complejidad y la efectividad del plan de mejora personalizado para la
+inserción laboral real.
+
+\paragraph{Criterios de selección}
+\begin{itemize}
+  \item Egresado universitario con menos de 12 meses de haber culminado
+        estudios.
+  \item Postulante activo con al menos 3 entrevistas realizadas en el
+        último trimestre.
+  \item Acceso a equipo de cómputo propio con webcam y micrófono
+        funcional.
+\end{itemize}
+
+\paragraph{Bloques de preguntas}
+\begin{itemize}
+  \item Experiencia en procesos reales: motivos de rechazo frecuentes,
+        retroalimentación recibida.
+  \item Funcionalidad del plan de mejora: información indispensable,
+        uso cotidiano del plan.
+  \item Metáfora y gamificación: rangos/ligas, sala virtual.
+  \item Privacidad y datos: almacenamiento por la universidad,
+        confianza en análisis de lenguaje corporal por IA.
+\end{itemize}
+
+\paragraph{Métricas a registrar}
+\begin{itemize}
+  \item Sugerencias específicas para el plan de mejora.
+  \item Grado de interés en gamificación (escala 1--5 observada).
+  \item Palabras clave recurrentes (``empleabilidad'', ``competencia'').
+\end{itemize}
+
+\subsection{Perfil 3 --- Coach de carrera o reclutador (\sk{8}, \sk{9})}
+
+\paragraph{Objetivo} Contrastar las métricas automáticas del sistema
+con los estándares profesionales de evaluación de talento.
+
+\paragraph{Criterios de selección}
+\begin{itemize}
+  \item Profesional con más de 3 años de experiencia en reclutamiento
+        IT o coaching laboral.
+  \item Experiencia previa evaluando perfiles \textit{junior} o
+        practicantes de ingeniería.
+  \item Conocimiento básico de IA aplicada a RRHH.
+\end{itemize}
+
+\paragraph{Bloques de preguntas}
+\begin{itemize}
+  \item Criterios de evaluación: indicadores no verbales,
+        progresión de dificultad.
+  \item Validación de la herramienta: fiabilidad del análisis de
+        muletillas y ritmo, sesgos.
+  \item Interacción humano-IA: reacción ante respuestas incompletas,
+        valor del peer mock.
+  \item Privacidad institucional: garantías de seguridad, reportes
+        agregados.
+\end{itemize}
+
+\paragraph{Métricas a registrar}
+\begin{itemize}
+  \item Términos técnicos de reclutamiento omitidos por la propuesta.
+  \item Gestos de escepticismo o validación ante las métricas de
+        lenguaje corporal.
+  \item Tiempo dedicado a discutir la ética de la IA.
+\end{itemize}
+
+\subsection{Perfiles 4--7 --- Usuarios con discapacidad (\sk{4}--\sk{7})}
+
+\paragraph{Objetivo} Validar la accesibilidad de la interfaz multimodal
+y la eficacia de los canales alternativos de feedback.
+
+\paragraph{Criterios de selección}
+\begin{itemize}
+  \item \sk{4} (visual): usuario dependiente de lector de pantalla o
+        con baja visión severa.
+  \item \sk{5} (auditiva): usuario con pérdida auditiva que utilice
+        subtitulado o lengua de señas.
+  \item \sk{6} (motora): usuario con movilidad reducida en manos que
+        utilice software de asistencia.
+  \item \sk{7} (cognitiva/neurodivergente): usuario diagnosticado
+        dentro del espectro autista o con TDAH.
+\end{itemize}
+
+\paragraph{Bloques de preguntas (comunes y específicos)}
+\begin{itemize}
+  \item \textbf{Barreras de accesibilidad}: obstáculos en plataformas
+        de entrevista por video actuales; interacción típica con
+        asistentes de voz o comandos verbales.
+  \item \textbf{Interfaz no convencional} (específico \sk{4}/\sk{5}):
+        \begin{itemize}
+          \item (\sk{4}) ¿Cómo esperaría recibir la información del
+                aura si esta es puramente visual?
+          \item (\sk{5}) ¿Qué tan útil le resulta la descripción
+                textual del tono de voz del entrevistador?
+        \end{itemize}
+  \item \textbf{Carga cognitiva y ayuda} (específico \sk{6}/\sk{7}):
+        \begin{itemize}
+          \item (\sk{6}) ¿Qué dificultades prevé al interactuar con
+                una interfaz que requiere respuestas en tiempo real?
+          \item (\sk{7}) ¿De qué manera el avatar del entrevistador
+                podría reducir la ansiedad social en lugar de
+                aumentarla?
+        \end{itemize}
+  \item \textbf{Manejo de sensores}:
+        \begin{itemize}
+          \item ¿Qué inquietudes le genera que el sistema analice sus
+                patrones de movimiento o voz específicos?
+          \item ¿Cómo prefiere ser notificado si el sistema no logra
+                procesar correctamente su imagen o audio?
+        \end{itemize}
+\end{itemize}
+
+\paragraph{Métricas a registrar}
+\begin{itemize}
+  \item Identificación de fallos potenciales en el flujo de navegación
+        mediante voz o teclado.
+  \item Menciones explícitas al estándar WCAG o necesidades de
+        personalización.
+  \item Signos de fatiga cognitiva durante la descripción de
+        funcionalidades complejas.
+\end{itemize}
+
+\subsection{Plantilla de consentimiento informado}
+
+\begin{cajaCriterio}
+\textbf{Título del proyecto}: Simulador de Entrevistas Laborales
+Adaptativo (CC451 --- UNI). \\
+\textbf{Investigadores}: Davila Santos, Serrano Arostegui, Poma
+Navarro.
+
+\paragraph{Propósito} Se le solicita participar en una entrevista para
+recoger requisitos y percepciones sobre una plataforma de simulación
+de entrevistas con IA. La información ayudará a mejorar la
+accesibilidad y eficacia del sistema.
+
+\paragraph{Procedimiento} La sesión durará entre 45 y 60 minutos. Se
+registrará audio y se tomarán notas de la transcripción para análisis
+académico exclusivo del curso CC451.
+
+\paragraph{Confidencialidad} Sus datos personales serán anonimizados
+mediante códigos. Las grabaciones se eliminarán al finalizar el ciclo
+académico 2026-I. No se compartirá video crudo ni audio con entidades
+externas al equipo de desarrollo y la cátedra.
+
+\paragraph{Derechos} Su participación es voluntaria. Puede negarse a
+responder cualquier pregunta o retirarse del proceso en cualquier
+momento sin penalización alguna.
+
+\paragraph{Consentimiento}
+Yo, \rule{6cm}{0.4pt}, identificado con DNI/Código \rule{2.5cm}{0.4pt},
+declaro haber sido informado sobre los objetivos del estudio y acepto
+voluntariamente participar, autorizando la grabación de esta sesión
+únicamente para fines de transcripción y análisis académico. \\[0.5cm]
+Firma: \rule{5cm}{0.4pt} \quad Fecha: \rule{0.6cm}{0.4pt}/\rule{0.6cm}{0.4pt}/2026
+\end{cajaCriterio}
+
+\subsection{Plan de ejecución y consolidación}
+
+\paragraph{Acciones del equipo}
+\begin{enumerate}
+  \item Reclutar al menos un entrevistado por cada perfil
+        (\sk{1}, \sk{2}, \sk{8} o \sk{9}, y un representante por cada
+        \sk{4}--\sk{7}).
+  \item Realizar las entrevistas (45--60 min cada una) con
+        consentimiento informado firmado.
+  \item Transcribir las grabaciones y registrar hallazgos por
+        entrevista.
+  \item Consolidar patrones recurrentes, discrepancias y ajustes al
+        \textit{backlog} de RF/RNF o casos de uso, con su justificación
+        basada en los hallazgos.
+  \item Incorporar la consolidación en este mismo archivo en la
+        siguiente iteración del informe, con la siguiente estructura
+        por entrevista: perfil del entrevistado, fecha y duración,
+        modalidad, hallazgos clave por bloque temático, citas
+        literales relevantes (con consentimiento explícito) y cambios
+        al diseño del proyecto derivados, con referencia al RF/RNF o
+        caso de uso afectado.
+\end{enumerate}
+
+\paragraph{Trazabilidad entrevistas a requerimientos} Por cada
+hallazgo accionable se registrará: ID de la entrevista (E-NN),
+hallazgo en una oración, requerimiento o caso de uso impactado
+(\rf{N}, \rnf{N}, \cu{N}), tipo de impacto
+(confirma / agrega / modifica / descarta).

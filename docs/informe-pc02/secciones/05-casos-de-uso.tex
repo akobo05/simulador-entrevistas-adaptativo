@@ -1,0 +1,222 @@
+\section{Especificación detallada de casos de uso}
+\label{sec:casos}
+
+Cada caso de uso sigue el formato extendido de Cockburn (actor, objetivo,
+precondiciones, flujo principal, alternativos, postcondiciones) y se enlaza
+con los requerimientos que satisface. La cobertura completa se resume en
+la matriz de trazabilidad al final de la sección.
+
+\subsection{\cu{01}: Realizar entrevista individual}
+\begin{cajaCriterio}
+\textbf{Actor primario:} Candidato (\sk{1}, \sk{2}). \\
+\textbf{Actores secundarios:} LLM Entrevistador, LLM Coach. \\
+\textbf{Objetivo:} Practicar una entrevista de 30 min y obtener un
+resumen con plan de mejora. \\
+\textbf{Precondiciones:} Usuario autenticado; consentimiento de audio,
+video y métricas otorgado; navegador con permisos de cámara y micrófono. \\
+\textbf{Postcondiciones (éxito):} Sesión persistida; métricas calculadas;
+plan de mejora generado y mostrado al usuario.
+\end{cajaCriterio}
+
+\paragraph{Flujo principal}
+\begin{enumerate}
+  \item El candidato selecciona industria, rol y nivel objetivo.
+  \item El sistema valida los permisos del navegador y carga la sala
+        virtual.
+  \item El avatar entrevistador saluda por voz y formula la primera
+        pregunta.
+  \item El candidato responde por voz; MediaPipe deriva métricas en el
+        navegador y las envía al backend.
+  \item El aura luminosa actualiza los indicadores con latencia
+        $\le 500\,\mathrm{ms}$.
+  \item El entrevistador formula la siguiente pregunta adaptándose a la
+        respuesta previa. Se repite hasta completar la sesión o hasta
+        que el candidato diga ``terminar entrevista''.
+  \item El LLM Coach genera el resumen y plan de mejora; el sistema lo
+        muestra al candidato y lo persiste.
+\end{enumerate}
+
+\paragraph{Flujos alternativos}
+\begin{itemize}
+  \item \textbf{4a.} Si MediaPipe no detecta rostro durante $>10\,\mathrm{s}$,
+        el sistema pausa y pide reencuadre (sin penalizar postura).
+  \item \textbf{6a.} Si el candidato dice ``pausa'', el sistema detiene
+        captura y temporizador hasta el comando ``continuar''.
+  \item \textbf{6b.} Si el candidato dice ``repite la pregunta'', el
+        avatar la reformula sin contarlo como reintento.
+  \item \textbf{2a / 7a.} Si falla la API del LLM, el sistema cae en una
+        cola de reintentos y avisa al usuario sin perder la sesión.
+\end{itemize}
+
+\paragraph{Cubre} \rf{01}--\rf{07}, \rf{15}, \rnf{01}--\rnf{02},
+\rnf{05}, \rnf{14}.
+
+\subsection{\cu{02}: Configurar perfil y preferencias de accesibilidad}
+\begin{cajaCriterio}
+\textbf{Actor primario:} Cualquier usuario primario (\sk{1}--\sk{7}). \\
+\textbf{Objetivo:} Establecer industria preferida, idioma, paciencia del
+entrevistador, modo de baja estimulación, modo audio-first, contraste,
+tipografía, declaración de condiciones que reemplazan métricas. \\
+\textbf{Precondiciones:} Usuario autenticado.
+\end{cajaCriterio}
+
+\paragraph{Flujo principal}
+\begin{enumerate}
+  \item El usuario abre ``Mi perfil''.
+  \item Selecciona o ajusta cada preferencia; la UI muestra una vista
+        previa en vivo del impacto.
+  \item Guarda; las preferencias se aplican inmediatamente a sesiones
+        futuras y al asistente lateral.
+\end{enumerate}
+
+\paragraph{Cubre} \rf{17}--\rf{20}, \rnf{08}--\rnf{09}.
+
+\subsection{\cu{03}: Realizar mock interview entre pares (peer)}
+\begin{cajaCriterio}
+\textbf{Actores primarios:} Candidato (\sk{1}) y Peer Observador (\sk{3}). \\
+\textbf{Objetivo:} Practicar una entrevista con feedback humano sin
+salir de la aplicación. \\
+\textbf{Precondiciones:} Ambos usuarios autenticados; uno de ellos creó
+una sala con código compartible; ambos consintieron grabación.
+\end{cajaCriterio}
+
+\paragraph{Flujo principal}
+\begin{enumerate}
+  \item El candidato crea sala; el sistema emite un código.
+  \item El peer entra con el código; WebRTC establece la conexión.
+  \item El candidato responde a preguntas que pueden venir del LLM
+        entrevistador, del peer, o de ambos según el modo.
+  \item El peer ancla comentarios en la línea de tiempo durante o
+        después de cada respuesta.
+  \item Al terminar, los usuarios pueden intercambiar roles.
+  \item El sistema genera dos resúmenes (uno por rol) y los persiste.
+\end{enumerate}
+
+\paragraph{Flujos alternativos}
+\begin{itemize}
+  \item \textbf{2a.} Si la conexión WebRTC falla, el sistema reintenta
+        con servidor TURN; si persiste, ofrece modo asincrónico
+        (grabar y compartir).
+\end{itemize}
+
+\paragraph{Cubre} \rf{10}--\rf{12}, \rf{21}, \rnf{04}, \rnf{15}.
+
+\subsection{\cu{04}: Consultar historial y plan de mejora}
+\begin{cajaCriterio}
+\textbf{Actor primario:} Candidato (\sk{1}, \sk{2}). \\
+\textbf{Actor secundario:} Coach o mentor (\sk{9}) si el usuario lo
+autorizó. \\
+\textbf{Objetivo:} Revisar la evolución por competencia, las sesiones
+pasadas y el plan de mejora vigente.
+\end{cajaCriterio}
+
+\paragraph{Flujo principal}
+\begin{enumerate}
+  \item El usuario abre ``Mi progreso''.
+  \item Visualiza tendencias por competencia (gráfico) y \textit{badges}
+        obtenidos.
+  \item Selecciona una sesión específica para revisar la grabación,
+        las métricas y los comentarios.
+  \item Pide al asistente lateral que profundice en un punto del plan
+        (``dame ejemplos para reducir muletillas''); el LLM responde con
+        contexto del historial.
+\end{enumerate}
+
+\paragraph{Cubre} \rf{07}--\rf{09}, \rf{16}, \rnf{14}.
+
+\subsection{\cu{05}: Gestionar gamificación (rangos, badges, ligas)}
+\begin{cajaCriterio}
+\textbf{Actor primario:} Candidato (\sk{1}--\sk{3}). \\
+\textbf{Objetivo:} Inscribirse en una liga, ver ranking, recibir
+\textit{badges} al cumplir hitos.
+\end{cajaCriterio}
+
+\paragraph{Flujo principal}
+\begin{enumerate}
+  \item El usuario explora ligas activas filtrando por industria.
+  \item Se inscribe en la liga correspondiente.
+  \item Cada sesión válida actualiza su puntaje semanal.
+  \item Al cumplir el hito de un \textit{badge} (ej. 3 sesiones con
+        cero muletillas en 5 min), el sistema lo otorga y notifica.
+  \item Al cierre semanal, se publica el ranking y el usuario puede
+        ver su posición.
+\end{enumerate}
+
+\paragraph{Cubre} \rf{13}--\rf{14}, \rnf{04}.
+
+\subsection{\cu{06}: Gestionar consentimiento, datos y privacidad}
+\begin{cajaCriterio}
+\textbf{Actor primario:} Cualquier usuario primario (\sk{1}--\sk{7}). \\
+\textbf{Actor regulador:} Autoridad de protección de datos (\sk{16}). \\
+\textbf{Objetivo:} Otorgar/revocar consentimientos, eliminar grabaciones,
+exportar datos.
+\end{cajaCriterio}
+
+\paragraph{Flujo principal}
+\begin{enumerate}
+  \item En el primer ingreso, el sistema solicita consentimiento granular
+        (audio, video, transcripción, métricas, uso comunitario).
+  \item En cualquier momento, el usuario puede revocar un consentimiento
+        específico desde ``Mi privacidad''.
+  \item El usuario solicita borrado de una grabación; el sistema lo
+        ejecuta y emite confirmación.
+  \item El usuario solicita exportación de datos; el sistema genera un
+        archivo cifrado y le envía un enlace temporal.
+\end{enumerate}
+
+\paragraph{Cubre} \rf{21}--\rf{22}, \rnf{05}--\rnf{07}.
+
+\subsection{\cu{07}: Administrar la plataforma}
+\begin{cajaCriterio}
+\textbf{Actor primario:} Administrador del sistema (\sk{12}). \\
+\textbf{Objetivo:} Gestionar usuarios, contenido de industrias, ligas y
+moderación del feed comunitario.
+\end{cajaCriterio}
+
+\paragraph{Flujo principal}
+\begin{enumerate}
+  \item El administrador entra al \textit{backoffice}.
+  \item Crea, edita o desactiva ligas, industrias o usuarios.
+  \item Revisa el feed comunitario; modera o elimina contenido reportado.
+\end{enumerate}
+
+\paragraph{Cubre} \rf{23}.
+
+\subsection{\cu{08}: Generar reportes institucionales}
+\begin{cajaCriterio}
+\textbf{Actor primario:} Universidad / oficina de empleabilidad (\sk{10}). \\
+\textbf{Objetivo:} Obtener métricas agregadas anonimizadas para reportes
+de empleabilidad.
+\end{cajaCriterio}
+
+\paragraph{Flujo principal}
+\begin{enumerate}
+  \item Un usuario institucional autenticado accede al panel de reportes.
+  \item Filtra por industria, rango de fechas y rangos por competencia.
+  \item Descarga un reporte en CSV/PDF con datos agregados (nunca
+        identificables).
+\end{enumerate}
+
+\paragraph{Cubre} \rf{24}, \rnf{05}.
+
+\subsection{Matriz de trazabilidad caso de uso a requerimiento}
+
+\begin{longtable}{p{1.6cm} p{12cm}}
+\toprule
+\textbf{CU} & \textbf{Requerimientos cubiertos} \\
+\midrule
+\cu{01} & \rf{01}--\rf{07}, \rf{15}; \rnf{01}, \rnf{02}, \rnf{05}, \rnf{14} \\
+\cu{02} & \rf{17}--\rf{20}; \rnf{08}, \rnf{09} \\
+\cu{03} & \rf{10}--\rf{12}, \rf{21}; \rnf{04}, \rnf{15} \\
+\cu{04} & \rf{07}--\rf{09}, \rf{16}; \rnf{14} \\
+\cu{05} & \rf{13}--\rf{14}; \rnf{04} \\
+\cu{06} & \rf{21}--\rf{22}; \rnf{05}--\rnf{07} \\
+\cu{07} & \rf{23} \\
+\cu{08} & \rf{24}; \rnf{05} \\
+\bottomrule
+\end{longtable}
+
+\noindent Los RNF transversales \rnf{03}, \rnf{08}, \rnf{10}--\rnf{13} se
+verifican a nivel de toda la aplicación (rendimiento global, accesibilidad
+en todas las vistas, mantenibilidad, observabilidad y costo) y no se
+asignan a un caso de uso individual.

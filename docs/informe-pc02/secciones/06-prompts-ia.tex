@@ -1,0 +1,204 @@
+\section{Proveedores de IA generativa y prompts utilizados}
+\label{sec:prompts}
+
+La tarea LEC06 exige el uso de \textbf{al menos dos proveedores de IA
+generativa}, indicar los \textit{prompts} optimizados y justificar por
+qué los resultados elegidos son los mejores. El equipo empleó los dos
+siguientes, ambos en sus interfaces web:
+
+\begin{itemize}
+  \item \textbf{Google Gemini} (versión web, modelo Gemini 2.5).
+        Priorizado en tareas que requerían \emph{volumen y cobertura}:
+        listado amplio de \textit{stakeholders} y guía operativa de
+        entrevistas con representantes de usuarios.
+  \item \textbf{Anthropic Claude} (versión web, familia Claude 4.X).
+        Priorizado en tareas que requerían \emph{rigor estructural,
+        consistencia de formato y sensibilidad ética}: funcionalidad
+        para usuarios con discapacidad, cumplimiento de módulos UX/UI
+        y casos de uso en formato Cockburn extendido.
+\end{itemize}
+
+Las respuestas crudas se versionaron en
+\texttt{prompts/respuestas/} para auditoría: cada salida puede
+contrastarse contra el prompt que la originó y contra la versión
+integrada en el informe.
+
+\subsection{Estrategia general}
+
+Toda conversación con cada IA comenzó con un \textbf{contexto base}
+idéntico (\texttt{prompts/00\_contexto\_base.md}) que fija dominio,
+restricciones de estilo, idioma, lenguaje centrado en la persona y el
+principio de \emph{automatización obligatoria}: cualquier
+funcionalidad o requerimiento propuesto debe ser verificable por test,
+telemetría o validación de UI.
+
+Para cada uno de los puntos exigidos por la tarea se eligió el
+proveedor con mayor probabilidad de producir el mejor resultado, y los
+resultados se compilaron manualmente en este informe sin copiar
+respuestas de IA en bruto. Las divergencias entre la respuesta del
+proveedor y el contenido final del informe se documentan en cada
+subsección.
+
+\subsection{Prompt 1 --- Stakeholders (Gemini)}
+\paragraph{Archivos} prompt: \texttt{prompts/01\_stakeholders\_gemini.md};
+respuesta: \texttt{prompts/respuestas/gemini\_01\_stakeholders.md}.
+
+\paragraph{Por qué Gemini} Su tendencia a producir listas amplias y a
+incorporar actores institucionales y regulatorios sin que se le
+recuerde explícitamente facilita maximizar cobertura desde el primer
+borrador.
+
+\paragraph{Criterio de selección y resultado} La respuesta de Gemini
+cubrió los cuatro perfiles con discapacidad como \textit{stakeholders}
+primarios separados, identificó la Ley
+N\textsuperscript{\textordmasculine}~29733 como marco regulatorio peruano
+relevante, y nombró concretamente la Oficina de Empleabilidad UNI y
+los proveedores cloud (Render, Fly.io, Vercel). Estos descriptores
+específicos se integraron en la sección~\ref{sec:stakeholders}.
+
+\paragraph{Divergencia documentada} Gemini propuso 14
+\textit{stakeholders} y omitió cuatro roles que el equipo consideró
+relevantes: \textit{peer} entrevistador como rol activo, reclutador
+como consultor del proyecto, coach/mentor y administrador del sistema
+diferenciado del equipo de desarrollo. La sección 01 los agrega
+explícitamente y mantiene su numeración \sk{1}--\sk{17} como
+autoritativa, con tabla de equivalencia hacia la numeración de Gemini.
+
+\paragraph{Incidencia detectada} En la ejecución del 29-04-2026, la
+salida del prompt 02 fue idéntica a la del prompt 01 en la sesión web
+de Gemini (probable reutilización de contexto en la pestaña). El
+equipo decidió no reejecutar el prompt 01 y delegar el contenido
+sustantivo del punto 2 (funcionalidad para discapacidad) a Claude, que
+es donde realmente se requería el rigor de WCAG.
+
+\subsection{Prompt 2 --- Funcionalidad para discapacidad (Claude)}
+\paragraph{Archivos} prompt: \texttt{prompts/02\_discapacidad\_claude.md};
+respuesta: \texttt{prompts/respuestas/claude\_02\_discapacidad.md}.
+
+\paragraph{Por qué Claude} La sección requiere lenguaje centrado en la
+persona, citas correctas a WCAG 2.2 nivel AA y atención a casos donde
+una métrica multimodal puede penalizar injustamente al usuario.
+
+\paragraph{Criterio de selección y resultado} La respuesta de Claude
+cumplió los cuatro criterios definidos a priori: (i) propuso métricas
+sustitutas para cada caso de penalización injusta (postura
+$\to$ presencia, contacto visual $\to$ orientación de voz hacia el
+micrófono, fluidez verbal $\to$ coherencia y densidad léxica, postura
+$\to$ estabilidad del encuadre facial); (ii) citó criterios WCAG
+concretos por número (2.1.1, 1.4.3, 1.4.4, 1.2.4, 1.4.13, 1.4.12,
+2.5.8, 2.2.1, 2.1.4, 2.5.7, 2.5.4, 2.3.3, 3.2.5, 4.1.2); (iii) usó
+lenguaje centrado en la persona en todo el texto; (iv) cerró con un
+párrafo de verificación que enumera herramientas (\texttt{axe-core},
+Lighthouse, Playwright, panel de telemetría) y cuatro hitos por perfil.
+La respuesta se integró íntegramente en la sección~\ref{sec:discapacidad}
+con ajustes mínimos de formato LaTeX.
+
+\subsection{Prompt 3 --- Requerimientos funcionales y no funcionales}
+\paragraph{Estado} Pendiente de ejecutar formalmente con un proveedor.
+El equipo elaboró la sección~\ref{sec:requerimientos} a partir del
+\textit{backlog} consensuado en las reuniones de diseño, validado
+contra los \textit{stakeholders} de la sección~\ref{sec:stakeholders}
+y contra los módulos UX/UI de la sección~\ref{sec:modulos}. El prompt
+preparado para Gemini (\texttt{prompts/03\_requerimientos\_gemini.md})
+está listo para ejecución en una iteración posterior si el profesor
+lo requiere; los criterios de selección ya están definidos en el
+prompt.
+
+\subsection{Prompt 4 --- Cumplimiento de módulos UX/UI (Claude)}
+\paragraph{Archivos} prompt: \texttt{prompts/04\_modulos\_claude.md};
+respuesta: \texttt{prompts/respuestas/claude\_04\_modulos.md}.
+
+\paragraph{Por qué Claude} La sección requiere coherencia
+argumentativa entre lo que cada módulo es, cómo lo cumple el
+simulador y qué requerimientos satisface.
+
+\paragraph{Criterio de selección y resultado} Se seleccionó la
+respuesta de Claude por: (i) precisión mecanística en el mapeo del
+aura (color $=$ valencia, intensidad $=$ fluidez, ritmo de pulsación
+$=$ cadencia, asimetría espacial $=$ equilibrio verbal/no verbal);
+(ii) descripción del \textit{pipeline} de tres roles del LLM con
+contexto y memoria acotada propios; (iii) justificación de la
+exclusión de hápticas con cuatro argumentos diferenciados (dominio,
+hardware, inmersión, recursos), no agrupados en un único párrafo
+difuso; (iv) cuatro capas observables de ayuda contextual, no la
+clásica enumeración tooltip/asistente. Estos elementos se integraron
+en la sección~\ref{sec:modulos}.
+
+\paragraph{Divergencia documentada} Claude usó una numeración de
+RF/RNF distinta de la canónica del informe (RF-21..RF-60). Las
+referencias en la sección~\ref{sec:modulos} fueron remapeadas a la
+numeración \rf{01}--\rf{24} de la sección~\ref{sec:requerimientos}.
+
+\subsection{Prompt 5 --- Casos de uso (Claude)}
+\paragraph{Archivos} prompt: \texttt{prompts/05\_casos\_uso\_claude.md};
+respuesta: \texttt{prompts/respuestas/claude\_05\_casos\_uso.md}.
+
+\paragraph{Por qué Claude} Para ocho casos de uso largos, la
+consistencia entre todos importa más que la cobertura adicional.
+Claude respeta plantillas extensas sin fugarse del esquema y, cuando
+detecta que falta un RF, lo señala como nota separada al final en
+lugar de inventarlo en medio.
+
+\paragraph{Criterio de selección y resultado} Se seleccionó la
+respuesta de Claude porque: (i) produjo exactamente los ocho casos de
+uso pedidos con la numeración solicitada; (ii) cada CU incluyó al
+menos un flujo alternativo documentado; (iii) cerró con dos notas
+explícitas sobre cobertura: tres RNF transversales que no encajan en
+un CU específico (compatibilidad de navegador, cobertura de pruebas,
+consumo de memoria) y dos posibles RF faltantes (matchmaking previo a
+peer mock, persistencia de preferencias de accesibilidad entre
+dispositivos). Estas observaciones se incorporaron como notas finales
+en la sección~\ref{sec:casos}. El cuerpo de los CU del informe usa la
+numeración \rf{}/\rnf{} canónica.
+
+\paragraph{Divergencia documentada} Como en el prompt 4, la respuesta
+de Claude empleó una numeración propia de RF/RNF (RF-46, RF-60, etc.)
+que sugería un \textit{backlog} ampliado. El informe mantiene la
+numeración \rf{01}--\rf{24} de la sección~\ref{sec:requerimientos}
+como autoritativa; las observaciones de Claude sobre RF faltantes
+quedan como insumo para una iteración futura del \textit{backlog}.
+
+\subsection{Prompt 6 --- Guía de entrevistas con usuarios finales (Gemini)}
+\paragraph{Archivos} prompt:
+\texttt{prompts/06\_entrevistas\_gemini.md}; respuesta:
+\texttt{prompts/respuestas/gemini\_06\_entrevistas.md}.
+
+\paragraph{Por qué Gemini} La generación de preguntas variadas para
+siete perfiles distintos en una sola pasada se beneficia de la
+amplitud de Gemini.
+
+\paragraph{Criterio de selección y resultado} La respuesta cumplió los
+criterios: (i) preguntas abiertas en presente sin sesgar la respuesta;
+(ii) tiempo total acotado a 45--60 minutos; (iii) bloques específicos
+por perfil con discapacidad, no genéricos; (iv) plantilla de
+consentimiento informado lista para imprimir. Se integró
+íntegramente en la sección~\ref{sec:entrevistas} como guía operativa
+para que el equipo ejecute las entrevistas reales.
+
+\subsection{Resumen del flujo de trabajo}
+
+\begin{enumerate}
+  \item Pegar el contexto base en una conversación nueva en cada IA.
+  \item Esperar la confirmación ``Listo'' antes de enviar el prompt
+        específico.
+  \item Pegar el prompt del punto correspondiente.
+  \item Versionar la respuesta cruda en
+        \texttt{prompts/respuestas/<proveedor>\_<prompt>\_<topico>.md}.
+  \item Aplicar los criterios de selección descritos en cada
+        subsección al resultado.
+  \item Si el resultado falla algún criterio, repetir con prompt
+        ajustado y conservar las dos versiones.
+  \item Compilar manualmente los mejores fragmentos en este informe
+        LaTeX y documentar las divergencias.
+\end{enumerate}
+
+\subsection*{Apéndice A --- Restricciones del contexto base}
+\begin{enumerate}
+  \item Español neutro académico, sin emojis ni coloquialismos.
+  \item Listas exhaustivas y mutuamente excluyentes.
+  \item No inventar datos numéricos; marcar como
+        \texttt{(referencial)}.
+  \item Toda funcionalidad propuesta debe ser automatizable.
+  \item Lenguaje centrado en la persona y referencia a WCAG 2.2 AA.
+  \item Salida lista para pegar en LaTeX.
+\end{enumerate}

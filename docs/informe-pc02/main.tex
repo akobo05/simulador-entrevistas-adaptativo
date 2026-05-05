@@ -1,0 +1,52 @@
+\documentclass[11pt,a4paper]{article}
+
+\input{preamble}
+
+\title{%
+  \vspace{-1.5cm}
+  \large CC451 --- Interacción Humano Computadora \\[0.3cm]
+  \Large Tarea LEC06 --- Definición Formal del Proyecto \\[0.5cm]
+  \LARGE\bfseries Simulador de Entrevistas Laborales Adaptativo \\[0.3cm]
+  \large \textit{Reclutador LLM con análisis multimodal de voz y lenguaje corporal}
+}
+
+\author{%
+  Aaron Davila Santos \and
+  Max Serrano Arostegui \and
+  Walter Poma Navarro
+}
+
+\date{Universidad Nacional de Ingeniería \\
+      Profesor: Ciro Núñez Iturri \\
+      Ciclo 2026-I \quad --- \quad 29 de abril de 2026}
+
+\begin{document}
+
+\maketitle
+\thispagestyle{empty}
+
+\begin{abstract}
+\noindent Este documento constituye la definición formal (PC02) del proyecto del curso CC451.
+Se presentan: (i) el tema y objetivo principal, (ii) el listado completo de
+\textit{stakeholders} incluyendo usuarios con discapacidad, (iii) los requerimientos
+funcionales y no funcionales asociados a cada uno, (iv) el cumplimiento de los
+módulos UX/UI obligatorios y opcionales exigidos por el enunciado, y (v) las
+especificaciones detalladas de los casos de uso. La elaboración del documento
+utilizó dos proveedores de IA generativa (Google Gemini y Anthropic Claude,
+ambos en versión web) cuyos prompts optimizados y criterios de selección de
+resultados se reportan al final.
+\end{abstract}
+
+\tableofcontents
+\newpage
+
+\input{secciones/00-tema-objetivo}
+\input{secciones/01-stakeholders}
+\input{secciones/02-stakeholders-discapacidad}
+\input{secciones/03-requerimientos}
+\input{secciones/04-cumplimiento-modulos}
+\input{secciones/05-casos-de-uso}
+\input{secciones/06-prompts-ia}
+\input{secciones/07-entrevistas-usuarios}
+
+\end{document}

@@ -1,0 +1,180 @@
+\section{Stakeholders del proyecto}
+\label{sec:stakeholders}
+
+Esta sección consolida la lista de \textit{stakeholders} a partir del
+prompt 01 (Gemini), enriquecida por el equipo con actores que el modelo
+no incluyó (\textit{peer} entrevistador como rol activo,
+reclutador/coach como consultor, administrador del sistema como rol
+diferenciado del equipo de desarrollo, y comunidad académica de IHC).
+La numeración resultante \sk{1}--\sk{17} es la \textbf{autoritativa} en
+todo el documento y se referencia en las secciones de requerimientos
+(\ref{sec:requerimientos}) y casos de uso (\ref{sec:casos}).
+
+Clasificación: \textbf{P} = primario (interactúa directamente con la
+aplicación), \textbf{S} = secundario (interactúa de forma indirecta),
+\textbf{T} = terciario (afectado pero no interactúa).
+
+\subsection{Listado completo}
+
+\begin{longtable}{p{1.0cm} p{0.6cm} p{4.4cm} p{8.0cm}}
+\toprule
+\textbf{ID} & \textbf{Tipo} & \textbf{Stakeholder} & \textbf{Interés / rol respecto al sistema} \\
+\midrule
+\endhead
+
+\sk{1}  & P & Estudiante de ingeniería en búsqueda de prácticas
+preprofesionales (UNI) &
+Interactúa con el sistema para entrenar habilidades blandas y técnicas
+específicas del perfil de egreso. Su interés es obtener feedback
+accionable para reducir la ansiedad y mejorar su desempeño en procesos
+reales. \\
+\addlinespace
+
+\sk{2}  & P & Recién egresado en búsqueda de su primer empleo a tiempo
+completo &
+Utiliza la plataforma para simular entrevistas de mayor complejidad
+técnica y estratégica según el mercado laboral actual. Busca validar
+su capacidad de comunicación efectiva y el manejo de lenguaje corporal
+frente a un evaluador basado en IA. \\
+\addlinespace
+
+\sk{3}  & P & Usuario en rol de \textit{peer} entrevistador &
+El mismo estudiante (\sk{1} o \sk{2}) en rol invertido durante
+\textit{mock interviews} colaborativas: formula preguntas, ancla
+comentarios, califica. \\
+\addlinespace
+
+\sk{4}  & P & Usuario con discapacidad visual (baja visión o ceguera) &
+Accede a la interfaz mediante lectores de pantalla y comandos de voz,
+requiriendo cumplimiento de WCAG 2.2 nivel AA. Su interés es el
+entrenamiento de la voz y el ritmo sin barreras de accesibilidad
+visual. \\
+
+\sk{5}  & P & Usuario con discapacidad auditiva (hipoacusia o sordera) &
+Interactúa mediante subtitulado en tiempo real y señales visuales que
+compensan la retroalimentación sonora. Depende de una interfaz que
+traduzca el tono y ritmo del entrevistador en indicadores claros. \\
+
+\sk{6}  & P & Usuario con discapacidad motora (limitación funcional en
+extremidades superiores) &
+Utiliza la aplicación mediante tecnologías de asistencia como
+pulsadores o control por voz. Requiere que la interfaz no dependa de
+interacciones físicas complejas o tiempos de respuesta táctiles
+exigentes. \\
+
+\sk{7}  & P & Usuario con condición de neurodivergencia (TEA, TDAH,
+dislexia) &
+Emplea el simulador para practicar el contacto visual y la
+interpretación de señales sociales en un entorno controlado y
+predecible. Su interés principal es la reducción de la sobrecarga
+cognitiva mediante una interfaz clara y la repetición ilimitada de
+sesiones. \\
+\addlinespace
+
+\sk{8}  & S & Reclutador o profesional de RRHH (consultor del proyecto) &
+Aporta criterios reales de evaluación de entrevistas; revisa la
+calibración de las preguntas y rúbricas generadas por el LLM. \\
+\addlinespace
+
+\sk{9}  & S & Coach de carrera o mentor &
+Recomienda la herramienta, revisa el plan de mejora del candidato y
+puede dejar comentarios asincrónicos en sesiones grabadas. \\
+\addlinespace
+
+\sk{10} & S & Oficina de Empleabilidad de la Universidad Nacional de
+Ingeniería &
+Monitorea reportes agregados y anonimizados para identificar brechas
+de habilidades comunes en los estudiantes. Utiliza estos datos para
+ajustar talleres de inserción laboral y mejorar los indicadores de
+empleabilidad de la institución. \\
+\addlinespace
+
+\sk{11} & S & Equipo de desarrollo y mantenimiento del proyecto &
+Responsable de la implementación técnica, mantenimiento de los modelos
+de MediaPipe y la integración de las API multimodales. Asegura
+estabilidad operativa del backend y persistencia de los planes de
+mejora personalizados. \\
+\addlinespace
+
+\sk{12} & S & Administrador del sistema &
+Gestiona usuarios, ligas, contenido de industrias y moderación del
+\textit{feed} comunitario. Diferenciado del equipo de desarrollo
+(\sk{11}) por tener acceso a operaciones en producción y no a
+despliegues. \\
+\addlinespace
+
+\sk{13} & S & Docentes del curso CC451 (cátedra) &
+Supervisan el uso del sistema como herramienta pedagógica para
+evaluación de métricas de UX y accesibilidad. Validan que el proyecto
+cumpla con los objetivos académicos y técnicos planteados en el ciclo
+2026-I. \\
+\addlinespace
+
+\sk{14} & S & Administradores de infraestructura en la nube
+(Render, Fly.io, Vercel) &
+Proveen servicios de cómputo y red para el despliegue de la PWA y el
+backend. Su interés es el consumo eficiente de recursos y el
+cumplimiento de los acuerdos de nivel de servicio. \\
+\addlinespace
+
+\sk{15} & T & Empresas reclutadoras del sector tecnológico y de
+ingeniería &
+Beneficiarias indirectas: reciben candidatos mejor preparados. No
+interactúan directamente con el software, pero el resultado del
+entrenamiento impacta en la calidad de sus procesos de selección. \\
+\addlinespace
+
+\sk{16} & T & Autoridad Nacional de Protección de Datos Personales
+(Perú, ANPDP) &
+Vela por el cumplimiento de la Ley N\textsuperscript{\textordmasculine}~29733
+respecto al tratamiento de datos biométricos y grabaciones procesadas
+por el sistema. Su rol es regulatorio: asegurar que no se vulnere la
+privacidad de los estudiantes durante el análisis de voz y video. \\
+\addlinespace
+
+\sk{17} & T & Familiares y entorno cercano del candidato &
+Se ven influenciados por la mejora en las perspectivas económicas y el
+éxito profesional del usuario tras el uso del simulador. Representan
+el entorno de apoyo que se beneficia indirectamente de la inserción
+laboral efectiva del candidato. \\
+
+\bottomrule
+\end{longtable}
+
+\subsection{Mapa de prioridades}
+Para el alcance del MVP se priorizan los \textit{stakeholders}
+primarios (\sk{1}--\sk{7}), garantizando que las rutas de uso de los
+cuatro perfiles con discapacidad (\sk{4}--\sk{7}) sean equivalentes en
+funcionalidad a la del candidato general (\sk{1}). Los
+\textit{stakeholders} secundarios y terciarios influyen en
+requerimientos no funcionales (privacidad, mantenibilidad, costo de
+operación, cumplimiento normativo) y se atienden en la
+sección~\ref{sec:requerimientos}.
+
+\subsection{Equivalencia con la numeración propuesta por Gemini}
+La respuesta cruda del prompt 01 (versionada en
+\texttt{prompts/respuestas/gemini\_01\_stakeholders.md}) usa una
+numeración propia de 14 \textit{stakeholders}. La equivalencia con la
+numeración autoritativa del informe es:
+
+\begin{itemize}
+  \item Gemini-S1 $=$ \sk{1}; Gemini-S2 $=$ \sk{2}.
+  \item Gemini-S3, S4, S5, S6 $=$ \sk{4}, \sk{5}, \sk{6}, \sk{7}
+        (perfiles con discapacidad).
+  \item Gemini-S7 $=$ \sk{10} (Oficina de Empleabilidad UNI).
+  \item Gemini-S8 $=$ \sk{13} (Docentes del curso).
+  \item Gemini-S9 $=$ \sk{11} (equipo de desarrollo).
+  \item Gemini-S10 $=$ \sk{14} (infraestructura cloud).
+  \item Gemini-S11 $=$ \sk{15} (empresas reclutadoras).
+  \item Gemini-S12 $=$ \sk{16} (autoridad de protección de datos).
+  \item Gemini-S13 $=$ \textit{proveedor LLM externo}, no incluido como
+        \textit{stakeholder} en el informe; aparece como dependencia
+        técnica en arquitectura.
+  \item Gemini-S14 $=$ \sk{17} (familiares).
+\end{itemize}
+
+\noindent El equipo agregó cuatro \textit{stakeholders} no propuestos
+por Gemini: \sk{3} (peer entrevistador como rol activo), \sk{8}
+(reclutador/RRHH como consultor del proyecto), \sk{9} (coach/mentor
+con feedback asincrónico) y \sk{12} (administrador del sistema
+diferenciado del equipo de desarrollo).

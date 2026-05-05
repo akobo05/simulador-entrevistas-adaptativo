@@ -17,9 +17,15 @@ Reclutador basado en LLM que adapta sus preguntas a la industria y nivel del can
 | Max Serrano Arostegui | MS |
 | Walter Poma Navarro | WP |
 
+## Documentación
+
+- [`docs/propuesta/PropuestaProyecto.pdf`](docs/propuesta/PropuestaProyecto.pdf) — propuesta inicial del proyecto.
+- [`docs/informe-pc02/main.pdf`](docs/informe-pc02/main.pdf) — informe de avance PC02 (PDF compilado).
+- [`docs/informe-pc02/`](docs/informe-pc02/) — fuentes LaTeX del informe, prompts versionados y figuras.
+
 ## Estado
 
-Repositorio en fase inicial — el código fuente del MVP se incorporará en iteraciones posteriores.
+Fase de definición formal del proyecto (PC02). El código fuente del MVP se incorporará en iteraciones posteriores.
 
 ## Licencia
 

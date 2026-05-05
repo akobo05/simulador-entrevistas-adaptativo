@@ -1,0 +1,194 @@
+\section{Requerimientos funcionales y no funcionales}
+\label{sec:requerimientos}
+
+Cada requerimiento se identifica con \rf{n} (funcional) o \rnf{n} (no
+funcional), se asocia a uno o más \textit{stakeholders} y debe ser
+\textbf{automatizable} por la aplicación (verificable mediante prueba
+automática, métrica de telemetría o validación de la UI). La trazabilidad
+con casos de uso aparece en la sección \ref{sec:casos}.
+
+\subsection{Requerimientos funcionales}
+
+\begin{longtable}{p{1.4cm} p{8.0cm} p{2.0cm} p{2.6cm}}
+\toprule
+\textbf{ID} & \textbf{Descripción} & \textbf{Stakeholders} & \textbf{Verificación automática} \\
+\midrule
+\endhead
+
+\rf{01} & Iniciar una sesión de entrevista seleccionando industria, rol
+y nivel objetivo. & \sk{1}--\sk{7} & Test E2E de creación de sesión \\
+\addlinespace
+\rf{02} & Sostener un diálogo bidireccional por voz con un avatar
+entrevistador basado en LLM. & \sk{1}--\sk{3}, \sk{6} &
+Test de integración con mock del LLM \\
+\addlinespace
+\rf{03} & Capturar audio del candidato y derivar métricas de fluidez
+(palabras por minuto, palabras-muletilla, pausas, ratio
+silencio/habla). & \sk{1}--\sk{3} & Test unitario sobre clip
+sintético \\
+\addlinespace
+\rf{04} & Capturar video del candidato y derivar métricas de
+contacto visual, postura y gestualidad mediante MediaPipe en el
+navegador. & \sk{1}--\sk{3} & Test con grabación de prueba \\
+\addlinespace
+\rf{05} & Mostrar las métricas en tiempo real como ``aura luminosa''
+alrededor del avatar, con latencia $\le 500\,\mathrm{ms}$. &
+\sk{1}--\sk{3} & Test de rendimiento + visual regression \\
+\addlinespace
+\rf{06} & Ofrecer comandos de voz que reemplazan acciones de UI
+(``pausa'', ``repite la pregunta'', ``terminar entrevista''). &
+\sk{1}--\sk{6} & Test de NLU sobre frases de prueba \\
+\addlinespace
+\rf{07} & Generar al final de cada sesión un resumen y un plan de
+mejora priorizado, basado en las métricas de la sesión y el historial. &
+\sk{1}--\sk{2}, \sk{9} & Test de prompt $+$ snapshot del JSON
+generado \\
+\addlinespace
+\rf{08} & Mantener un historial longitudinal de sesiones por
+competencia, con tendencia visible. & \sk{1}--\sk{2} &
+Test de persistencia en BD \\
+\addlinespace
+\rf{09} & Calibrar el nivel del candidato (junior/mid/senior) tras 3
+sesiones, ajustando dificultad de futuras preguntas. & \sk{1}--\sk{2} &
+Test sobre dataset de sesiones simuladas \\
+\addlinespace
+\rf{10} & Permitir crear y unirse a una sesión \textit{peer} en vivo vía
+WebRTC, con un usuario en rol candidato y otro en rol observador. &
+\sk{1}, \sk{3} & Test E2E con dos navegadores headless \\
+\addlinespace
+\rf{11} & Permitir al observador anclar comentarios en \textit{timestamps}
+específicos de la grabación. & \sk{3}, \sk{9} & Test E2E del panel \\
+\addlinespace
+\rf{12} & Intercambiar roles candidato $\leftrightarrow$ observador en
+cualquier momento de la sesión \textit{peer}. & \sk{1}, \sk{3} &
+Test E2E \\
+\addlinespace
+\rf{13} & Asignar rangos por competencia (Aprendiz $\to$ Competente
+$\to$ Avanzado $\to$ Experto) y \textit{badges} basados en hitos
+medidos. & \sk{1}--\sk{3} & Test sobre reglas de promoción \\
+\addlinespace
+\rf{14} & Mantener ligas temáticas semanales por industria con
+\textit{ranking}. & \sk{1}--\sk{3} & Test del motor de ranking \\
+\addlinespace
+\rf{15} & Mostrar \textit{tooltips} contextuales sobre cada icono del
+aura explicando criterio y nivel de confianza. & \sk{1}--\sk{7} &
+Test E2E de hover/foco \\
+\addlinespace
+\rf{16} & Proveer un asistente lateral LLM ligero que responda dudas
+durante configuración y tras cada sesión. & \sk{1}--\sk{7} &
+Test del prompt del asistente \\
+\addlinespace
+\rf{17} & Ofrecer modo \textit{audio-first} con descripción auditiva
+del aura y resumen post-sesión por TTS. & \sk{4} & Test de TTS y de
+descripción de eventos \\
+\addlinespace
+\rf{18} & Generar subtítulos en vivo con retardo $\le 300\,\mathrm{ms}$
+y permitir entrada por texto en lugar de voz. & \sk{5} & Test de
+latencia de subtítulos \\
+\addlinespace
+\rf{19} & Permitir operación 100\,\% por teclado y comandos de voz
+para todas las acciones de UI. & \sk{6} & Test de cobertura
+keyboard-only \\
+\addlinespace
+\rf{20} & Activar modo de baja estimulación con paleta neutra, sin
+animaciones, aura simplificada y lenguaje claro. & \sk{7} &
+Test visual + revisión de prompt en modo claro \\
+\addlinespace
+\rf{21} & Solicitar consentimiento informado granular (audio, video,
+transcripción, métricas) antes de la primera sesión. & \sk{1}--\sk{7},
+\sk{16} & Test de flujo de onboarding \\
+\addlinespace
+\rf{22} & Permitir al usuario eliminar grabaciones y exportar sus datos
+(derecho ARCO). & \sk{1}--\sk{7}, \sk{16} & Test E2E de borrado y
+exportación \\
+\addlinespace
+\rf{23} & Panel de administración para gestión de usuarios,
+contenido de industrias y moderación del feed comunitario. &
+\sk{12} & Test E2E del backoffice \\
+\addlinespace
+\rf{24} & Reportes agregados anonimizados de uso para institución
+educativa. & \sk{10} & Test de agregación y anonimización \\
+
+\bottomrule
+\end{longtable}
+
+\subsection{Requerimientos no funcionales}
+
+\begin{longtable}{p{1.4cm} p{2.6cm} p{6.8cm} p{2.8cm}}
+\toprule
+\textbf{ID} & \textbf{Categoría} & \textbf{Descripción} & \textbf{Métrica / criterio} \\
+\midrule
+\endhead
+
+\rnf{01} & Rendimiento & Latencia extremo a extremo del aura de
+métricas. & $\le 500\,\mathrm{ms}$ p95 \\
+\addlinespace
+\rnf{02} & Rendimiento & Latencia de respuesta del LLM
+entrevistador. & $\le 2\,\mathrm{s}$ p95 \\
+\addlinespace
+\rnf{03} & Rendimiento & La aplicación debe ejecutarse fluidamente
+en una laptop estándar (8\,GB RAM, sin GPU) y en un móvil de gama
+media (4\,GB RAM). & 30\,FPS sostenidos en pestaña activa \\
+\addlinespace
+\rnf{04} & Disponibilidad & Disponibilidad del servicio. & $\geq$~99\,\%
+mensual fuera de mantenimiento \\
+\addlinespace
+\rnf{05} & Privacidad & No enviar video crudo a servicios externos;
+solo métricas derivadas localmente por MediaPipe. & Auditoría de
+tráfico saliente \\
+\addlinespace
+\rnf{06} & Privacidad & Cifrado en reposo de grabaciones y borrado
+automático a los 30 días salvo indicación del usuario. & Test de
+cron de retención \\
+\addlinespace
+\rnf{07} & Seguridad & Autenticación con OAuth/OIDC y \textit{tokens}
+con expiración. & Test de expiración \\
+\addlinespace
+\rnf{08} & Accesibilidad & Cumplir WCAG 2.2 nivel AA. &
+axe-core sin violaciones críticas; Lighthouse $\ge 95$ en
+accesibilidad \\
+\addlinespace
+\rnf{09} & Internacionalización & UI y prompts del LLM en español
+neutro; arquitectura preparada para añadir inglés. & Tests con
+\textit{locales} es-PE y en-US \\
+\addlinespace
+\rnf{10} & Usabilidad & Un usuario nuevo debe poder iniciar su primera
+sesión en $\le 2$ minutos desde el alta. & Test de usabilidad
+cronometrado \\
+\addlinespace
+\rnf{11} & Mantenibilidad & Cobertura de tests automatizados $\geq$~70\,\%
+en backend y $\geq$~60\,\% en frontend. & Reporte de cobertura en CI \\
+\addlinespace
+\rnf{12} & Observabilidad & Logs estructurados y trazas
+distribuidas con correlación por sesión. & Test de presencia de
+\texttt{traceId} \\
+\addlinespace
+\rnf{13} & Costo de operación & Costo medio de IA por sesión completa
+de 30 min $\le \$0.20$ USD. & Métrica de telemetría agregada \\
+\addlinespace
+\rnf{14} & Ética / IA & Mostrar nivel de confianza y advertencia de
+sesgo (acentos, estilos) en toda métrica derivada de modelos. &
+Test del componente \textit{tooltip} \\
+\addlinespace
+\rnf{15} & Compatibilidad & Funcionar en Chrome, Firefox y Safari
+versiones $-2$. & Tests E2E en matriz de navegadores \\
+
+\bottomrule
+\end{longtable}
+
+\subsection{Trazabilidad stakeholders a requerimientos}
+\begin{itemize}
+  \item \sk{1}--\sk{2} (candidato general y con experiencia):
+        \rf{01}--\rf{09}, \rf{13}--\rf{16}, \rf{21}--\rf{22}, todos los RNF.
+  \item \sk{3} (peer entrevistador): \rf{10}--\rf{12}, \rf{15}--\rf{16}.
+  \item \sk{4} (visual): \rf{15}, \rf{17}, \rf{21}--\rf{22}, \rnf{08}.
+  \item \sk{5} (auditiva): \rf{15}, \rf{18}, \rf{21}--\rf{22}, \rnf{08}.
+  \item \sk{6} (motora): \rf{06}, \rf{15}, \rf{19}, \rf{21}--\rf{22},
+        \rnf{08}.
+  \item \sk{7} (cognitiva/neurodivergente): \rf{15}, \rf{20},
+        \rf{21}--\rf{22}, \rnf{08}.
+  \item \sk{9} (coach): \rf{07}, \rf{11}.
+  \item \sk{10} (universidad): \rf{24}, \rnf{04}, \rnf{13}.
+  \item \sk{12} (administrador): \rf{23}.
+  \item \sk{16} (regulador): \rf{21}--\rf{22}, \rnf{05}--\rnf{07}.
+\end{itemize}
