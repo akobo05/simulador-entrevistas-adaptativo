@@ -1,0 +1,516 @@
+\section{Alternativas de diseño propuestas en el proceso}
+\label{sec:alternativas}
+
+Esta sección documenta las decisiones de diseño más relevantes tomadas
+durante la conceptualización del proyecto. Para cada una de las cinco
+dimensiones críticas se presentan las alternativas evaluadas, se
+comparan bajo los mismos criterios (usabilidad, costo de
+implementación, accesibilidad y riesgo técnico) y se justifica la
+opción seleccionada con trazabilidad explícita a los requerimientos
+de la sección~\ref{sec:requerimientos} y a los casos de uso de la
+sección~\ref{sec:casos}.
+
+\subsection{Dimensión 1: representación de las métricas durante la entrevista}
+
+El reto de diseño consistió en comunicar al candidato información
+continua sobre su desempeño (fluidez, contacto visual, postura) sin
+desviar su atención del diálogo con el entrevistador.
+
+\subsubsection*{Alternativa 1A — Paneles laterales numéricos}
+Disposición convencional con el video del candidato al centro y
+paneles laterales con barras y cifras (``contacto visual: 62\,\%'',
+``muletillas: 3/min''), análoga a la usada por Yoodli o Big Interview.
+
+\begin{table}[ht]
+\centering\footnotesize
+\renewcommand{\arraystretch}{1.2}
+\begin{tabularx}{\linewidth}{@{}p{3.6cm} Y@{}}
+\toprule
+\textbf{Criterio} & \textbf{Evaluación} \\
+\midrule
+Usabilidad & Diseño familiar y de bajo costo cognitivo inicial, pero
+divide la atención entre entrevistador y paneles, interrumpe el ritmo
+conversacional y puede aumentar la ansiedad por exposición continua a
+cifras. \\
+Costo de implementación & Bajo; patrón de UI estándar. \\
+Accesibilidad & Compatible con lectores de pantalla mediante etiquetas
+ARIA, pero la carga visual adicional perjudica al perfil con
+neurodivergencia (\sk{7}). \\
+Riesgo técnico & Muy bajo. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\noindent\textbf{Decisión:} descartada. No cumple el módulo de
+interfaz gráfica no convencional exigido por el enunciado y rompe la
+inmersión propia de una entrevista.
+
+\subsubsection*{Alternativa 1B — Indicadores radiales superpuestos}
+Círculos de progreso superpuestos al avatar que cambian de tamaño o
+color según las métricas. Punto intermedio entre paneles y aura.
+
+\begin{table}[ht]
+\centering\footnotesize
+\renewcommand{\arraystretch}{1.2}
+\begin{tabularx}{\linewidth}{@{}p{3.6cm} Y@{}}
+\toprule
+\textbf{Criterio} & \textbf{Evaluación} \\
+\midrule
+Usabilidad & Menos intrusivos que los paneles, pero requieren mirada
+directa para ser leídos; no se perciben de forma periférica. \\
+Costo de implementación & Medio; viable con SVG animado o
+transiciones CSS. \\
+Accesibilidad & Si la información se transmite únicamente por color,
+incumple WCAG 2.2 criterio 1.4.1, por lo que requiere un canal
+adicional. \\
+Riesgo técnico & Bajo. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\noindent\textbf{Decisión:} descartada. La lectura no es periférica y
+la dependencia exclusiva del color genera barreras de accesibilidad.
+
+\subsubsection*{Alternativa 1C — Aura luminosa procedural alrededor del avatar (elegida)}
+Halo visual generado con WebGL/Three.js que rodea al avatar y modula
+sus parámetros en función de las métricas: color (valencia global),
+intensidad (fluidez verbal), pulsación (cadencia) y asimetría
+espacial (equilibrio entre canal verbal y no verbal). Durante la
+entrevista no hay paneles ni números: la información reside en la
+periferia visual.
+
+\begin{table}[ht]
+\centering\footnotesize
+\renewcommand{\arraystretch}{1.2}
+\begin{tabularx}{\linewidth}{@{}p{3.6cm} Y@{}}
+\toprule
+\textbf{Criterio} & \textbf{Evaluación} \\
+\midrule
+Usabilidad & Permite mantener el contacto visual con el avatar y
+recibir simultáneamente información del desempeño. El tour inicial y
+los \textit{tooltips} contextuales (\rf{15}) cubren la curva de
+aprendizaje del significado de cada parámetro. \\
+Costo de implementación & Alto; requiere Three.js y \textit{shaders}
+GLSL. La degradación automática a una representación bidimensional
+simplificada cuando se detecta GPU insuficiente preserva el
+rendimiento (\rnf{03}). \\
+Accesibilidad & El canal visual del aura cuenta con un equivalente
+sonoro mediante \textit{earcons} (\rf{17}) para usuarios con
+discapacidad visual (\sk{4}); el aura nunca es el único canal. \\
+Riesgo técnico & Medio; mitigado mediante la ruta de degradación 2D y
+la verificación de la latencia del aura ($\le 500$\,ms p95,
+\rnf{01}). \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\noindent\textbf{Decisión:} \textbf{opción elegida}. Es la única
+alternativa que entrega \textit{feedback} continuo sin interrumpir el
+diálogo y la única que materializa el módulo de interfaz no
+convencional. Cubre \rf{05}, \rf{15}, \rnf{01}, \rnf{03}.
+
+\subsection{Dimensión 2: representación visual del entrevistador}
+
+Se evaluó qué forma debía adoptar el entrevistador en pantalla para
+ser percibido como interlocutor sin generar incomodidad.
+
+\subsubsection*{Alternativa 2A — Solo voz, sin figura visual}
+El entrevistador existe únicamente como canal de audio. En pantalla
+permanecen el aura, los controles de la sesión y la cámara del
+candidato.
+
+\begin{table}[ht]
+\centering\footnotesize
+\renewcommand{\arraystretch}{1.2}
+\begin{tabularx}{\linewidth}{@{}p{3.6cm} Y@{}}
+\toprule
+\textbf{Criterio} & \textbf{Evaluación} \\
+\midrule
+Usabilidad & La ausencia de un punto visual de referencia hace
+artificial el intercambio respecto a una entrevista presencial y
+debilita la metáfora del \textit{Warachikuy}. \\
+Costo de implementación & Muy bajo; no hay avatar que renderizar. \\
+Accesibilidad & Favorable para \sk{4}, pero perjudica a \sk{5} por la
+ausencia de señales visuales del cambio de turno. \\
+Riesgo técnico & Muy bajo. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\noindent\textbf{Decisión:} descartada como diseño principal. Se
+mantiene como modo de degradación cuando el hardware no soporta el
+renderizado 3D.
+
+\subsubsection*{Alternativa 2B — Avatar 2D estilo \textit{cartoon}}
+Ilustración animada bidimensional con sincronía básica de boca y
+ojos, similar a aplicaciones formativas masivas.
+
+\begin{table}[ht]
+\centering\footnotesize
+\renewcommand{\arraystretch}{1.2}
+\begin{tabularx}{\linewidth}{@{}p{3.6cm} Y@{}}
+\toprule
+\textbf{Criterio} & \textbf{Evaluación} \\
+\midrule
+Usabilidad & Formato familiar, pero el registro estilístico choca con
+la formalidad esperada de una entrevista laboral y proyecta una
+imagen poco profesional. \\
+Costo de implementación & Medio; viable con Lottie o Rive. \\
+Accesibilidad & Más liviano que el 3D y compatible con hardware
+básico sin necesidad de degradación. \\
+Riesgo técnico & Bajo. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\noindent\textbf{Decisión:} descartada. El registro estilístico no es
+coherente con la simulación de un proceso de selección real.
+
+\subsubsection*{Alternativa 2C — Avatar 3D estilizado, no hiperrealista (elegida)}
+Personaje 3D con geometría simplificada y estética no fotorrealista
+(\textit{cel-shading} o \textit{low-poly}) renderizado con Three.js.
+La estilización evita el \textit{uncanny valley} y al mismo tiempo
+preserva la presencia visual de un interlocutor; el aura procedural
+se integra como una extensión natural del avatar.
+
+\begin{table}[ht]
+\centering\footnotesize
+\renewcommand{\arraystretch}{1.2}
+\begin{tabularx}{\linewidth}{@{}p{3.6cm} Y@{}}
+\toprule
+\textbf{Criterio} & \textbf{Evaluación} \\
+\midrule
+Usabilidad & La abstracción visual es suficiente para que el usuario
+trate al avatar como un interlocutor sin la incomodidad asociada a
+representaciones casi-realistas. Encaja con la metáfora del
+\textit{Warachikuy} adoptada por el proyecto. \\
+Costo de implementación & Alto; mitigado mediante el uso de
+\textit{assets} libres (ReadyPlayerMe, Mixamo) y animaciones
+genéricas para el habla. \\
+Accesibilidad & Cuando el hardware no soporta el 3D, se activa
+automáticamente la versión 2D o solo-voz (\rnf{03}). \\
+Riesgo técnico & Medio; el principal foco es la sincronía
+voz-animación, simplificable a una animación genérica de turno. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\noindent\textbf{Decisión:} \textbf{opción elegida}. Es coherente con
+la metáfora del proyecto, permite una integración orgánica con el
+aura y dispone de una ruta de degradación controlada. Cubre \rf{05}
+y \rnf{03}.
+
+\subsection{Dimensión 3: tecnología de renderizado del aura}
+
+Una vez definido el aura como canal visual, se evaluó la tecnología
+adecuada para producirla, considerando equipos sin GPU dedicada.
+
+\subsubsection*{Alternativa 3A — Canvas 2D nativo del navegador}
+El aura se dibuja como formas bidimensionales (círculos, ondas)
+animadas sobre un \textit{canvas} plano superpuesto al avatar.
+
+\begin{table}[ht]
+\centering\footnotesize
+\renewcommand{\arraystretch}{1.2}
+\begin{tabularx}{\linewidth}{@{}p{3.6cm} Y@{}}
+\toprule
+\textbf{Criterio} & \textbf{Evaluación} \\
+\midrule
+Usabilidad & La planitud impide transmitir la noción de halo
+envolvente; la composición resulta en una capa adherida en lugar de
+una integración orgánica. \\
+Costo de implementación & Bajo; API estándar bien documentada. \\
+Riesgo técnico & Muy bajo, pero la discontinuidad visual entre el
+plano del aura y el entorno tridimensional del avatar deteriora la
+coherencia. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\noindent\textbf{Decisión:} descartada por incompatibilidad visual
+con el avatar 3D.
+
+\subsubsection*{Alternativa 3B — SVG animado con GSAP}
+El aura se compone de figuras vectoriales SVG cuyos atributos se
+animan mediante CSS o GSAP.
+
+\begin{table}[ht]
+\centering\footnotesize
+\renewcommand{\arraystretch}{1.2}
+\begin{tabularx}{\linewidth}{@{}p{3.6cm} Y@{}}
+\toprule
+\textbf{Criterio} & \textbf{Evaluación} \\
+\midrule
+Usabilidad & Los efectos son más expresivos que en Canvas 2D, pero
+persiste el problema de integración con el entorno 3D; resulta
+adecuado como modo de respaldo. \\
+Costo de implementación & Bajo-medio; GSAP cuenta con
+documentación y ejemplos abundantes. \\
+Riesgo técnico & Bajo; con muchos \textit{paths} SVG simultáneos se
+observan caídas de rendimiento. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\noindent\textbf{Decisión:} descartada como opción principal. Se
+adopta como \textit{fallback} 2D cuando se detecta ausencia de GPU,
+sustituyendo al aura WebGL en ese caso.
+
+\subsubsection*{Alternativa 3C — WebGL/Three.js con \textit{shaders} (elegida)}
+El aura se implementa como una esfera deformada en tiempo real
+mediante \textit{shaders} GLSL, integrada en la misma escena 3D del
+avatar. Los parámetros de deformación, color y ritmo se actualizan
+desde el bucle de métricas multimodales.
+
+\begin{table}[ht]
+\centering\footnotesize
+\renewcommand{\arraystretch}{1.2}
+\begin{tabularx}{\linewidth}{@{}p{3.6cm} Y@{}}
+\toprule
+\textbf{Criterio} & \textbf{Evaluación} \\
+\midrule
+Usabilidad & El aura queda integrada de forma orgánica al avatar; los
+cambios de color e intensidad se perciben naturalmente en la
+periferia visual. \\
+Costo de implementación & Alto; requiere conocimientos de GLSL y
+Three.js. Mitigado partiendo de \textit{shaders} de plasma de
+referencia disponibles en repositorios abiertos. \\
+Accesibilidad & El canal visual cuenta con un equivalente sonoro
+permanente para \sk{4} (\rf{17}). \\
+Riesgo técnico & Medio; cubierto por la degradación automática a la
+alternativa 3B cuando el hardware lo requiere. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\noindent\textbf{Decisión:} \textbf{opción elegida}. Es la única que
+produce un halo orgánico integrado al avatar 3D, con una ruta de
+degradación que controla el riesgo de hardware. Cubre \rf{05},
+\rnf{01} y \rnf{03}.
+
+\subsection{Dimensión 4: modalidad del \textit{peer mock}}
+
+Se evaluaron tres modalidades para el módulo de práctica entre pares,
+en función de su sincronía y de la riqueza de \textit{feedback}
+disponible para el observador.
+
+\subsubsection*{Alternativa 4A — Asincrónica con grabación y comentarios diferidos}
+El candidato graba la sesión y la comparte con un par que comenta en
+\textit{timestamps} específicos sin necesidad de coincidir
+temporalmente.
+
+\begin{table}[ht]
+\centering\footnotesize
+\renewcommand{\arraystretch}{1.2}
+\begin{tabularx}{\linewidth}{@{}p{3.6cm} Y@{}}
+\toprule
+\textbf{Criterio} & \textbf{Evaluación} \\
+\midrule
+Usabilidad & Flexible, no requiere coordinación de horarios; pierde
+la presión propia de hablar en vivo, que es parte central del
+entrenamiento. \\
+Costo de implementación & Medio; requiere almacenamiento S3 y
+sistema de comentarios anclados, sin WebRTC. \\
+Accesibilidad & Beneficiosa para \sk{6} y \sk{7} cuando requieren
+mayor tiempo de procesamiento. \\
+Riesgo técnico & Bajo; sin la complejidad de la conectividad P2P. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\noindent\textbf{Decisión:} no elegida como modalidad principal; se
+incorpora como funcionalidad complementaria mediante los comentarios
+anclados a \textit{timestamps} (\rf{11}) dentro del flujo síncrono.
+
+\subsubsection*{Alternativa 4B — Videollamada externa sin métricas compartidas}
+Los usuarios se conectan por una plataforma de terceros (Zoom o Meet)
+mientras el candidato realiza la entrevista con el LLM; el observador
+asiste sin acceso a las métricas en vivo.
+
+\begin{table}[ht]
+\centering\footnotesize
+\renewcommand{\arraystretch}{1.2}
+\begin{tabularx}{\linewidth}{@{}p{3.6cm} Y@{}}
+\toprule
+\textbf{Criterio} & \textbf{Evaluación} \\
+\midrule
+Usabilidad & Familiaridad con la plataforma, pero el observador no
+accede al aura ni puede anclar comentarios; se diluye el valor
+diferencial del \textit{peer mock}. \\
+Costo de implementación & Bajo en integración; alto en dependencia
+externa. \\
+Accesibilidad & Sujeta a la accesibilidad de la plataforma de
+terceros, fuera del control del proyecto. \\
+Riesgo técnico & Bajo en lo técnico, alto en gobernanza y pérdida de
+funcionalidad. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\noindent\textbf{Decisión:} descartada. La ausencia de métricas
+compartidas vacía de contenido al módulo.
+
+\subsubsection*{Alternativa 4C — Síncrona con WebRTC y panel del observador en vivo (elegida)}
+Conexión \textit{peer-to-peer} en tiempo real vía WebRTC con
+señalización por servidor propio. Un usuario asume el rol candidato y
+otro el de observador con un panel lateral que muestra las métricas
+en vivo y permite anclar comentarios; al cierre, los pares pueden
+intercambiar roles.
+
+\begin{table}[ht]
+\centering\footnotesize
+\renewcommand{\arraystretch}{1.2}
+\begin{tabularx}{\linewidth}{@{}p{3.6cm} Y@{}}
+\toprule
+\textbf{Criterio} & \textbf{Evaluación} \\
+\midrule
+Usabilidad & Reproduce la presión real de la entrevista; el
+intercambio de roles desarrolla la perspectiva del entrevistador. \\
+Costo de implementación & Alto; requiere servidor de señalización,
+servidor TURN como respaldo, sincronía de métricas y panel del
+observador. \\
+Accesibilidad & El canal de chat textual paralelo garantiza la
+participación de \sk{5}; el consentimiento de grabación es
+obligatorio antes del inicio (\rf{21}). \\
+Riesgo técnico & Alto en conectividad P2P; mitigado con TURN y un
+modo asincrónico de respaldo cuando la conexión falla
+(\cu{03}, flujo alternativo 2a). \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\noindent\textbf{Decisión:} \textbf{opción elegida}. La práctica
+sincrónica con observador instrumentado es el diferencial del
+proyecto frente al estado del arte y resulta coherente con el
+objetivo de entrenar bajo presión real. Cubre \rf{10}, \rf{11},
+\rf{12} y el caso de uso \cu{03}.
+
+\subsection{Dimensión 5: adaptación de la dificultad de las preguntas}
+
+El módulo de personalización continua exige que la dificultad de las
+preguntas se ajuste al nivel del candidato. Se evaluaron tres
+estrategias.
+
+\subsubsection*{Alternativa 5A — Nivel fijo declarado por el usuario}
+El usuario selecciona su nivel (\textit{junior}, \textit{mid},
+\textit{senior}) al inicio y permanece constante en todas las
+sesiones.
+
+\begin{table}[ht]
+\centering\footnotesize
+\renewcommand{\arraystretch}{1.2}
+\begin{tabularx}{\linewidth}{@{}p{3.6cm} Y@{}}
+\toprule
+\textbf{Criterio} & \textbf{Evaluación} \\
+\midrule
+Usabilidad & Predecible para el usuario; ignora la mejora longitudinal
+y entrega preguntas de dificultad estática. \\
+Costo de implementación & Muy bajo. \\
+Riesgo técnico & Muy bajo. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\noindent\textbf{Decisión:} descartada. Contradice el módulo de
+personalización continua exigido por el enunciado.
+
+\subsubsection*{Alternativa 5B — Reglas heurísticas escritas por el equipo}
+Conjunto de reglas fijas (por ejemplo, ``si el puntaje de las últimas
+tres respuestas supera 80, subir nivel'') que ajustan la dificultad
+de forma determinista.
+
+\begin{table}[ht]
+\centering\footnotesize
+\renewcommand{\arraystretch}{1.2}
+\begin{tabularx}{\linewidth}{@{}p{3.6cm} Y@{}}
+\toprule
+\textbf{Criterio} & \textbf{Evaluación} \\
+\midrule
+Usabilidad & Comportamiento predecible si las reglas son
+transparentes; las reglas globales no distinguen entre competencias,
+de modo que un candidato con desempeño dispar entre comunicación y
+contenido técnico recibe una calibración única. \\
+Costo de implementación & Bajo-medio; lógica de negocio sin modelos
+estadísticos. \\
+Riesgo técnico & Bajo; la mantenibilidad se degrada al crecer el
+catálogo de industrias y roles. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\noindent\textbf{Decisión:} descartada como modelo principal. Se
+emplea durante la primera sesión, mientras el sistema acumula
+historial suficiente para activar el modelo más complejo.
+
+\subsubsection*{Alternativa 5C — Adaptación con Teoría de Respuesta al Ítem (IRT) (elegida)}
+Modelo estadístico basado en IRT que estima la habilidad del candidato
+por competencia (comunicación verbal, contenido técnico, manejo del
+estrés, lenguaje corporal) de forma independiente, se actualiza tras
+cada respuesta y selecciona la siguiente pregunta según el nivel
+estimado.
+
+\begin{table}[ht]
+\centering\footnotesize
+\renewcommand{\arraystretch}{1.2}
+\begin{tabularx}{\linewidth}{@{}p{3.6cm} Y@{}}
+\toprule
+\textbf{Criterio} & \textbf{Evaluación} \\
+\midrule
+Usabilidad & Adaptación precisa por competencia: el sistema puede
+formular preguntas de mayor dificultad técnica y de menor dificultad
+en manejo del estrés en una misma sesión, según el desempeño. \\
+Costo de implementación & Alto; requiere parametrizar el banco de
+preguntas con dificultad y discriminación, e implementar el estimador
+de habilidad. Se adopta una versión inicial con modelo 1PL
+(Rasch), evolutiva hacia 2PL/3PL. \\
+Accesibilidad & El modelo opera sobre métricas derivadas, no sobre
+video crudo, por lo que no penaliza a \sk{4}--\sk{7} cuando utilizan
+las métricas alternativas previstas para sus rutas accesibles. \\
+Riesgo técnico & Medio-alto al inicio por escasez de datos; mitigado
+arrancando con la alternativa 5B y activando el IRT cuando se
+alcanza un volumen mínimo de sesiones registradas. \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\noindent\textbf{Decisión:} \textbf{opción elegida}. Es la única que
+realiza personalización por competencia y mejora con el uso. La
+implementación adopta el modelo 1PL como punto de partida. Cubre
+\rf{09} y el módulo opcional de personalización continua.
+
+\subsection{Síntesis comparativa}
+
+La tabla \ref{tab:alternativas-resumen} consolida las cinco
+dimensiones, las opciones evaluadas y la decisión adoptada, con la
+trazabilidad agregada a requerimientos.
+
+\begin{table}[ht]
+\centering\footnotesize
+\renewcommand{\arraystretch}{1.25}
+\begin{tabularx}{\linewidth}{@{}p{3.4cm} Y p{3.0cm} p{3.0cm}@{}}
+\toprule
+\textbf{Dimensión} & \textbf{Opciones evaluadas} &
+\textbf{Decisión} & \textbf{Trazabilidad} \\
+\midrule
+1. Métricas en sesión & Paneles laterales · Indicadores radiales ·
+Aura procedural & Aura procedural & \rf{05}, \rf{15}, \rnf{01},
+\rnf{03} \\
+\addlinespace
+2. Representación del entrevistador & Solo voz · Avatar 2D · Avatar 3D
+estilizado & Avatar 3D estilizado & \rf{05}, \rnf{03} \\
+\addlinespace
+3. Tecnología del aura & Canvas 2D · SVG con GSAP · WebGL/Three.js &
+WebGL/Three.js (\textit{fallback} SVG) & \rf{05}, \rnf{01}, \rnf{03} \\
+\addlinespace
+4. \textit{Peer mock} & Asincrónico · Videollamada externa · WebRTC
+con panel del observador & WebRTC con observador instrumentado &
+\rf{10}--\rf{12}, \cu{03} \\
+\addlinespace
+5. Adaptación de dificultad & Nivel fijo · Reglas heurísticas · IRT
+por competencia & IRT por competencia (1PL inicial) & \rf{09} \\
+\bottomrule
+\end{tabularx}
+\caption{Síntesis de alternativas evaluadas y decisiones adoptadas
+por dimensión.}
+\label{tab:alternativas-resumen}
+\end{table}
