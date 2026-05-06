@@ -1,0 +1,175 @@
+\section{Diagrama de Gantt del proyecto}
+\label{sec:gantt}
+
+Esta sección concreta el \textit{roadmap} de doce semanas planteado en
+la propuesta original (sección 7 del documento de propuesta) en un
+plan calendarizado con responsables por fase, hitos académicos y
+dependencias entre fases. La fecha de inicio del proyecto es el 23 de
+abril de 2026 y la fecha de entrega final del MVP es el 16 de julio
+de 2026.
+
+\subsection{Tabla de fases, fechas y responsables}
+
+La tabla \ref{tab:gantt-fases} resume las siete fases del plan, con
+sus duraciones, responsables y entregables.
+
+\begin{table}[ht]
+\centering\footnotesize
+\renewcommand{\arraystretch}{1.2}
+\begin{tabularx}{\linewidth}{@{}c p{3.4cm} c c c c Y@{}}
+\toprule
+\textbf{Fase} & \textbf{Nombre} & \textbf{Sem.} & \textbf{Inicio} &
+\textbf{Fin} & \textbf{Resp.} & \textbf{Entregables} \\
+\midrule
+F0 & Setup y configuración base & 1   & 23 abr & 29 abr & AD &
+Repo, LICENSE, README, CI/CD, esqueleto \textit{back+front} \\
+\addlinespace
+F1 & Entrevista individual básica & 3 & 30 abr & 20 may & AD, WP &
+Sala virtual, avatar LLM, voz bidireccional, aura mínima, una
+industria \\
+\addlinespace
+F2 & Personalización y adaptación & 2 & 21 may & 03 jun & AD &
+Historial, plan de mejora del LLM \textit{Coach}, perfil de
+industria, calibración IRT \\
+\addlinespace
+F3 & \textit{Peer mock} y comunidad & 2 & 04 jun & 17 jun & AD, MS &
+WebRTC, panel del observador, comentarios anclados, intercambio
+de roles \\
+\addlinespace
+F4 & Gamificación & 1.5  & 18 jun & 27 jun & AD &
+Rangos por competencia, \textit{badges}, ligas, \textit{ranking}
+semanal \\
+\addlinespace
+F5 & Accesibilidad, ayuda y pulido & 1.5 & 28 jun & 08 jul & WP, AD &
+\textit{Tooltips} del aura, asistente LLM contextual, tour guiado,
+WCAG 2.2 AA \\
+\addlinespace
+F6 & Documentación y demo final & 1   & 09 jul & 16 jul & Todos &
+Manual de usuario, documentación técnica, video demo, presentación \\
+\bottomrule
+\end{tabularx}
+\caption{Fases del proyecto, duraciones, responsables y entregables.
+Total: 12 semanas (23 abr 2026 -- 16 jul 2026).}
+\label{tab:gantt-fases}
+\end{table}
+
+\subsection{Diagrama de Gantt}
+
+La figura \ref{fig:gantt} renderiza el plan como diagrama de Gantt
+con \texttt{pgfgantt}, marcando las cuatro entregas académicas
+(\textit{milestones} del rombo).
+
+\begin{figure}[ht]
+\centering
+\resizebox{\linewidth}{!}{%
+\begin{ganttchart}[
+  hgrid,
+  vgrid,
+  x unit=0.55cm,
+  y unit chart=0.55cm,
+  y unit title=0.7cm,
+  bar/.append style={fill=azulUNI!75,draw=azulUNI},
+  bar height=0.55,
+  group/.append style={fill=azulUNI!30,draw=azulUNI},
+  milestone/.append style={fill=red!70,draw=red!70!black},
+  title/.style={draw=azulUNI,fill=azulUNI!10},
+  title label font=\footnotesize\bfseries,
+  bar label font=\footnotesize,
+  group label font=\footnotesize\bfseries,
+  milestone label font=\footnotesize\itshape,
+]{1}{84}
+  \gantttitle{Abril}{8}
+  \gantttitle{Mayo}{31}
+  \gantttitle{Junio}{30}
+  \gantttitle{Julio}{16} \\
+  \gantttitlelist{23,...,30}{1}
+  \gantttitlelist{1,...,31}{1}
+  \gantttitlelist{1,...,30}{1}
+  \gantttitlelist{1,...,16}{1} \\
+
+  \ganttgroup{F0 · Setup}{1}{7} \\
+  \ganttbar{Repo, CI/CD, esqueleto}{1}{7} \\
+
+  \ganttgroup{F1 · Entrevista individual}{8}{28} \\
+  \ganttbar{Sala virtual + avatar}{8}{14} \\
+  \ganttbar{Voz bidireccional}{15}{21} \\
+  \ganttbar{Aura mínima + industria}{22}{28} \\
+
+  \ganttgroup{F2 · Personalización}{29}{42} \\
+  \ganttbar{Historial longitudinal}{29}{35} \\
+  \ganttbar{Plan de mejora + IRT}{36}{42} \\
+
+  \ganttgroup{F3 · Peer mock}{43}{56} \\
+  \ganttbar{WebRTC + señalización}{43}{49} \\
+  \ganttbar{Observador + comentarios}{50}{56} \\
+
+  \ganttgroup{F4 · Gamificación}{57}{66} \\
+  \ganttbar{Rangos + badges}{57}{61} \\
+  \ganttbar{Ligas + ranking}{62}{66} \\
+
+  \ganttgroup{F5 · Accesibilidad y pulido}{67}{77} \\
+  \ganttbar{WCAG 2.2 AA + earcons}{67}{71} \\
+  \ganttbar{Tour + tooltips + asistente}{72}{77} \\
+
+  \ganttgroup{F6 · Documentación}{78}{84} \\
+  \ganttbar{Documentación técnica}{78}{81} \\
+  \ganttbar{Video demo + presentación}{82}{84} \\
+
+  \ganttmilestone{PC02}{13} \\
+  \ganttmilestone{Demo F1}{28} \\
+  \ganttmilestone{Demo F3}{56} \\
+  \ganttmilestone{Entrega final}{84}
+\end{ganttchart}%
+}
+\caption{Diagrama de Gantt del plan de desarrollo (23 abr 2026 --
+16 jul 2026). Los rombos marcan los hitos académicos.}
+\label{fig:gantt}
+\end{figure}
+
+\subsection{Dependencias entre fases}
+
+La tabla \ref{tab:gantt-dependencias} consolida las dependencias
+lógicas que justifican la secuenciación adoptada.
+
+\begin{table}[ht]
+\centering\footnotesize
+\renewcommand{\arraystretch}{1.25}
+\begin{tabularx}{\linewidth}{@{}p{3.0cm} Y@{}}
+\toprule
+\textbf{Dependencia} & \textbf{Justificación} \\
+\midrule
+F0 $\rightarrow$ F1 & El repositorio y la integración continua deben
+estar operativos antes de comenzar cualquier desarrollo de
+funcionalidad. \\
+\addlinespace
+F1 $\rightarrow$ F2 & El historial longitudinal y el plan de mejora
+requieren que las sesiones ya generen y persistan métricas. \\
+\addlinespace
+F1 $\rightarrow$ F3 & El \textit{peer mock} extiende la entrevista
+individual; ambos roles requieren que la sala virtual de F1 sea
+funcional. \\
+\addlinespace
+F2 + F3 $\rightarrow$ F4 & La gamificación necesita sesiones con
+métricas persistidas (F2) y \textit{peer mock} operativo para
+soportar los retos grupales (F3). \\
+\addlinespace
+F1\,\dots\,F4 $\rightarrow$ F5 & El pulido de accesibilidad opera
+sobre las funcionalidades ya construidas, aunque los criterios WCAG
+se verifican en CI desde F1. \\
+\addlinespace
+F5 $\rightarrow$ F6 & La documentación técnica describe el sistema
+completo y requiere que el pulido de F5 esté terminado. \\
+\bottomrule
+\end{tabularx}
+\caption{Dependencias entre fases del plan.}
+\label{tab:gantt-dependencias}
+\end{table}
+
+\subsection{Posición de la PC02 en el plan}
+
+La entrega de la PC02 (5 de mayo de 2026) cae dentro de la fase F1.
+En ese punto el sistema no dispone de código completo, lo cual es
+coherente con los criterios de evaluación de la PC02, que valoran el
+reporte de avance y el prototipo de fidelidad media en lugar del
+producto terminado. Las fases F2 a F6 quedan planificadas para las
+ocho semanas restantes hasta la entrega del MVP.
