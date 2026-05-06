@@ -22,6 +22,7 @@ Reclutador basado en LLM que adapta sus preguntas a la industria y nivel del can
 - [`docs/propuesta/PropuestaProyecto.pdf`](docs/propuesta/PropuestaProyecto.pdf) — propuesta inicial del proyecto.
 - [`docs/informe-pc02/main.pdf`](docs/informe-pc02/main.pdf) — informe de avance PC02 (PDF compilado).
 - [`docs/informe-pc02/`](docs/informe-pc02/) — fuentes LaTeX del informe, prompts versionados y figuras.
+- [`docs/prototype/recorrido-prototipo.mp4`](docs/prototype/recorrido-prototipo.mp4) — recorrido del prototipo de fidelidad media (video).
 
 ## Estado
 

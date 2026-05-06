@@ -23,11 +23,10 @@ visualización de patrones lingüísticos (palabras frecuentes,
 referencias profesionales, muletillas) sobre la transcripción. No
 analizaba video ni emitía un puntaje cuantitativo y no contemplaba
 adaptación dinámica de la dificultad ni interacción con otros usuarios.
-Es relevante señalar que Google decidió \textbf{archivar} la
-herramienta como parte de una reorganización de su programa
-educativo; varias universidades que la recomendaban (UPenn, Lafayette
-College, Pepperdine, entre otras) han migrado a alternativas como
-InterviewGuru. Se mantiene en el relevamiento como referencia
+Google archivó la herramienta como parte de una reorganización de su
+programa educativo y varias universidades que la recomendaban (UPenn,
+Lafayette College, Pepperdine, entre otras) han migrado a alternativas
+como InterviewGuru. Se mantiene en el relevamiento como referencia
 histórica del enfoque \textit{text-to-speech} con análisis ligero.
 
 \paragraph{Big Interview.} Suite comercial con planes individuales e
@@ -131,53 +130,53 @@ El relevamiento muestra que el espacio de soluciones evolucionó
 notablemente en el último año: el análisis multimodal en tiempo real
 dejó de ser exclusivo de productos premium y aparece ya en Big
 Interview y Yoodli, y la práctica entre pares incorporó capa de IA en
-Exponent Practice. Sin embargo, ninguna herramienta combina
-simultáneamente los siguientes cinco rasgos, que constituyen el núcleo
-diferenciador del presente proyecto.
+Exponent Practice. Aun así, ninguna herramienta combina simultáneamente
+los cinco rasgos que se detallan a continuación, sobre los que se
+apoya la diferenciación del proyecto.
 
-Primero, el \textit{aura luminosa procedural} alrededor del avatar
-reemplaza el patrón dominante de \textit{dashboard} lateral o reporte
-post-sesión, y materializa la metáfora del \textit{Warachikuy} para
+El \textit{aura luminosa procedural} alrededor del avatar reemplaza el
+patrón dominante de \textit{dashboard} lateral o reporte post-sesión,
+y traduce visualmente la metáfora del \textit{Warachikuy} para
 sostener la inmersión durante la entrevista. Ningún competidor relevado
-abandona el paradigma de panel/reporte; todos los productos asistidos
+abandona el paradigma de panel o reporte: todos los productos asistidos
 por IA muestran las métricas como tarjetas, gráficos o
-\textit{Action Plans} separados del contenido conversacional (cubre
-\rf{05} y \rf{15}).
+\textit{Action Plans} separados del contenido conversacional (\rf{05}
+y \rf{15}).
 
-Segundo, el análisis de video del candidato se ejecuta en su totalidad
-en el navegador mediante \textit{MediaPipe}, sin envío de imagen
-cruda a servicios externos. Big Interview y Yoodli no documentan esta
-restricción de privacidad y procesan el video del lado servidor; el
-diseño \textit{client-side} mejora simultáneamente la privacidad del
-usuario, el cumplimiento de la Ley N${}^\circ$ 29733 (Perú) y el costo
-operativo del proyecto (\rnf{05}).
+El análisis de video del candidato se ejecuta en su totalidad en el
+navegador mediante \textit{MediaPipe}, sin envío de imagen cruda a
+servicios externos. Big Interview y Yoodli no documentan esta
+restricción de privacidad y procesan el video del lado del servidor; el
+diseño \textit{client-side} mejora a la vez la privacidad del usuario,
+el cumplimiento de la Ley N${}^\circ$ 29733 (Perú) y el costo operativo
+del proyecto (\rnf{05}).
 
-Tercero, el modelo de habilidad por competencia con \textbf{calibración
-adaptativa por IRT} ajusta la dificultad de la pregunta siguiente en
+El modelo de habilidad por competencia con \textbf{calibración
+adaptativa por IRT} ajusta la dificultad de la siguiente pregunta en
 función de la calidad de la respuesta previa, y converge sobre el
 nivel real del candidato tras tres sesiones. Ninguno de los cinco
 productos relevados expone una adaptación dinámica de este tipo:
-Big Interview e Interview Warmup operan sobre bancos curados,
-Yoodli y Final Round AI no adaptan la dificultad, y Exponent
-Practice depende del nivel del par humano emparejado (\rf{09}).
+Big Interview e Interview Warmup operan sobre bancos curados, Yoodli y
+Final Round AI no adaptan la dificultad, y Exponent Practice depende
+del nivel del par humano emparejado (\rf{09}).
 
-Cuarto, la sesión \textit{peer mock} sobre WebRTC se complementa con
-un \textbf{panel del observador instrumentado}: el peer entrevistador
-ve el aura del candidato en vivo, ancla comentarios en
-\textit{timestamps} específicos y completa una rúbrica estructurada al
-cierre. Exponent Practice ofrece \textit{transcripts} y rúbricas
-post-sesión calculadas por IA, pero el peer humano no dispone de
-métricas multimodales del candidato durante la entrevista. Esta
-combinación de práctica humana y análisis multimodal es ausente del
-estado del arte relevado (\rf{10}--\rf{12}).
+La sesión \textit{peer mock} sobre WebRTC se complementa con un
+\textbf{panel del observador instrumentado}: el peer entrevistador ve
+el aura del candidato en vivo, ancla comentarios en \textit{timestamps}
+específicos y completa una rúbrica estructurada al cierre. Exponent
+Practice ofrece \textit{transcripts} y rúbricas post-sesión calculadas
+por IA, pero el peer humano no dispone de métricas multimodales del
+candidato durante la entrevista. La combinación de práctica humana con
+análisis multimodal en vivo está ausente del estado del arte relevado
+(\rf{10}--\rf{12}).
 
-Quinto, la accesibilidad se trata como requerimiento de primer nivel y
-no como adición tardía: todos los canales del aura tienen sustituto
-auditivo o textual y la operación total del simulador es posible con
-teclado, conmutadores o voz, conforme a WCAG 2.2 nivel AA. Ninguno de
-los productos relevados documenta conformidad explícita con WCAG; la
-oferta actual asume usuarios sin discapacidad sensorial ni motora
-(\rf{17}--\rf{20} y \rnf{08}).
+La accesibilidad se trata como requerimiento de primer nivel y no
+como adición tardía: todos los canales del aura tienen sustituto
+auditivo o textual, y la operación total del simulador es posible
+con teclado, conmutadores o voz, conforme a WCAG 2.2 nivel AA.
+Ninguno de los productos relevados documenta conformidad explícita
+con WCAG; la oferta actual asume usuarios sin discapacidad sensorial
+ni motora (\rf{17}--\rf{20} y \rnf{08}).
 
 Este posicionamiento orienta también el alcance del MVP: el equipo
 prioriza completar las capacidades diferenciadoras antes de replicar
