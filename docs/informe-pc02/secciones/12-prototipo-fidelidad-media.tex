@@ -4,15 +4,15 @@
 Esta sección presenta el prototipo de fidelidad media del simulador,
 elaborado durante la PC02 como simulación visual del flujo principal
 del producto. El prototipo cubre las siete pantallas que estructuran
-el ciclo de uso del candidato y materializa las decisiones de diseño
-documentadas en las secciones anteriores: el aura procedural en lugar
-de paneles laterales (sección \ref{sec:alternativas}, dimensión 1),
-el avatar 3D estilizado del entrevistador (dimensión 2), el panel
-del observador en el modo \textit{peer mock} (dimensión 4) y la
-gamificación basada en mejora relativa (módulo opcional 3 de la
-sección \ref{sec:modulos}). Cada pantalla se enlaza con los
-requerimientos funcionales y con los casos de uso a los que da
-soporte.
+el ciclo de uso del candidato y traduce a una propuesta visual las
+decisiones de diseño tomadas en las secciones anteriores: el aura
+procedural en lugar de paneles laterales (sección
+\ref{sec:alternativas}, dimensión 1), el avatar 3D estilizado del
+entrevistador (dimensión 2), el panel del observador en el modo
+\textit{peer mock} (dimensión 4) y la gamificación basada en mejora
+relativa (módulo opcional 3 de la sección \ref{sec:modulos}). Cada
+pantalla se enlaza con los requerimientos funcionales y con los casos
+de uso a los que da soporte.
 
 \subsection{Pantalla de inicio}
 
@@ -56,11 +56,10 @@ y preferencias de accesibilidad antes de la primera sesión.}
 \subsection{Sala virtual --- vista del candidato}
 
 La sala virtual desde la perspectiva del candidato
-(figura \ref{fig:sala-candidato}) materializa el módulo de interfaz
+(figura \ref{fig:sala-candidato}) concreta el módulo de interfaz
 gráfica no convencional: el avatar 3D estilizado del entrevistador
-ocupa el centro de la composición y está rodeado por el aura
-luminosa procedural que codifica las métricas multimodales
-(\rf{05}). En lugar de \textit{dashboards} laterales, los elementos
+ocupa el centro de la composición y está rodeado por el aura luminosa
+procedural que codifica las métricas multimodales (\rf{05}). En lugar de \textit{dashboards} laterales, los elementos
 de control y estado (privacidad, línea de tiempo circular, forma de
 onda, miniatura del candidato y subtítulos opcionales) se reparten
 discretamente por las esquinas. Cubre el flujo principal de \cu{01}
@@ -120,8 +119,8 @@ sesión, con puntaje por competencia y ejercicios priorizados.}
 
 \subsection{Mi progreso}
 
-La pantalla \textit{Mi progreso} (figura \ref{fig:mi-progreso})
-materializa el módulo opcional de personalización continua. Reúne
+La pantalla \textit{Mi progreso} (figura \ref{fig:mi-progreso}) cubre
+el módulo opcional de personalización continua. Reúne
 la línea de tiempo de sesiones --donde cada nodo se pinta según la
 valencia del aura final--, los \textit{sparklines} de tendencias por
 competencia y el grid de \textit{badges} obtenidos. Un asistente
@@ -140,8 +139,8 @@ del desempeño del candidato y acceso al asistente lateral.}
 
 \subsection{Ranking y reto grupal}
 
-La pantalla de ranking y reto grupal (figura \ref{fig:ranking})
-materializa el módulo opcional de gamificación. La clasificación
+La pantalla de ranking y reto grupal (figura \ref{fig:ranking}) cubre
+el módulo opcional de gamificación. La clasificación
 semanal se calcula sobre la mejora relativa del usuario respecto a
 su propia línea base, no sobre puntajes absolutos comparados entre
 candidatos: la decisión evita penalizar a usuarios principiantes y
@@ -175,7 +174,7 @@ que forman el ciclo longitudinal de personalización y gamificación.
 
 \begin{figure}[H]
 \centering
-\includegraphics[width=0.95\linewidth]{diagrama-interacciones.jpeg}
+\includegraphics[width=0.6\linewidth]{diagrama-interacciones.jpeg}
 \caption{Diagrama esquemático de las interacciones entre las
 siete pantallas del prototipo.}
 \label{fig:flujo}
