@@ -23,6 +23,7 @@ Reclutador basado en LLM que adapta sus preguntas a la industria y nivel del can
 - [`docs/informe-pc02/main.pdf`](docs/informe-pc02/main.pdf) — informe de avance PC02 (PDF compilado).
 - [`docs/informe-pc02/`](docs/informe-pc02/) — fuentes LaTeX del informe, prompts versionados y figuras.
 - [`docs/prototype/recorrido-prototipo.mp4`](docs/prototype/recorrido-prototipo.mp4) — recorrido del prototipo de fidelidad media (video).
+- [Prototipo interactivo en Figma](https://www.figma.com/proto/hZttO5TGjofestkKuw73nY/Warachikuy?node-id=2014-3672&p=f&t=AekkWhjgguGksNPE-1&scaling=scale-down&content-scaling=fixed&page-id=0%3A1&starting-point-node-id=2014%3A3604) — flujo navegable del prototipo de fidelidad media.
 
 ## Estado
 
