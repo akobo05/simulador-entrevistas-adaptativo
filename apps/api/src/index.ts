@@ -26,4 +26,12 @@ async function main(): Promise<void> {
   }
 }
 
-void main();
+// Catch-all para rejections que no esten dentro de un try/catch interno
+// (p. ej. `buildServer` fallando al registrar un plugin de Fastify).
+// Sin esto, Node loguea un UnhandledPromiseRejection feo y el codigo
+// de salida queda fuera de nuestro control.
+main().catch((err: unknown) => {
+  console.error('Fallo durante el arranque del backend:');
+  console.error(err);
+  process.exit(1);
+});
