@@ -15,13 +15,11 @@ interface SpeechRecognitionEvent extends Event {
 }
 interface SpeechRecognitionResultList {
   readonly length: number;
-  item(index: number): SpeechRecognitionResult;
   [index: number]: SpeechRecognitionResult;
 }
 interface SpeechRecognitionResult {
   readonly isFinal: boolean;
   readonly length: number;
-  item(index: number): SpeechRecognitionAlternative;
   [index: number]: SpeechRecognitionAlternative;
 }
 interface SpeechRecognitionAlternative {
@@ -52,7 +50,9 @@ function createRecognition(): WebSpeechRecognition {
   return new Ctor();
 }
 
+// sessionId es requerido por el schema — se pasa al crear el controlador
 export function createSttController(
+  sessionId: string,
   onTranscript: TranscriptCallback,
   recognitionFactory: () => WebSpeechRecognition = createRecognition,
 ): SttController {
@@ -73,7 +73,7 @@ export function createSttController(
         const alt = result[0];
         if (!alt) continue;
         const raw = {
-          type: 'candidate.transcript' as const,
+          sessionId,
           text: alt.transcript,
           isFinal: result.isFinal,
           timestamp: Date.now(),

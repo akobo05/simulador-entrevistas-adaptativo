@@ -27,8 +27,10 @@ describe('voice-pipeline package', () => {
 });
 
 describe('createSttController', () => {
+  const SESSION_ID = '550e8400-e29b-41d4-a716-446655440000';
+
   it('no lanza error al iniciar y detener', () => {
-    const controller = createSttController(() => {});
+    const controller = createSttController(SESSION_ID, () => {});
     expect(() => {
       controller.start();
       controller.stop();
@@ -46,7 +48,7 @@ describe('createSttController', () => {
         }
       },
     );
-    const controller = createSttController(() => {});
+    const controller = createSttController(SESSION_ID, () => {});
     controller.start();
     controller.start();
     expect(instances.length).toBe(1);
@@ -55,20 +57,18 @@ describe('createSttController', () => {
   it('invoca el callback con el transcript parseado cuando onresult se dispara', () => {
     const received: unknown[] = [];
 
-    // Factory que devuelve un mock controlado: onresult se puede disparar después de start()
     const fakeRec = new MockSpeechRecognition();
     const controller = createSttController(
+      SESSION_ID,
       (t) => received.push(t),
       () => fakeRec as unknown as ReturnType<(typeof fakeRec)['start']>,
     );
     controller.start();
 
-    // Simular un evento de resultado después de que el controller setea onresult
     fakeRec.onresult?.({
       resultIndex: 0,
       results: {
         length: 1,
-        item: () => ({ isFinal: true, length: 1, 0: { transcript: 'hola', confidence: 0.9 } }),
         0: { isFinal: true, length: 1, 0: { transcript: 'hola', confidence: 0.9 } },
       },
     } as unknown as Parameters<NonNullable<typeof fakeRec.onresult>>[0]);
