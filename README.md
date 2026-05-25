@@ -74,7 +74,9 @@ pnpm build         # build de todas las apps
 
 ## Tablero del proyecto
 
-Roadmap, issues y avance por fase: [Warachikuy — Roadmap](https://github.com/users/akobo05/projects).
+Roadmap, issues y avance por fase: [Warachikuy — Roadmap](https://github.com/users/akobo05/projects/4).
+
+Columnas: `Backlog` · `Ready` · `In Progress` · `In Review` · `Done`.
 
 ## Estado
 
