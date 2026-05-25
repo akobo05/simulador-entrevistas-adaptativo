@@ -47,6 +47,13 @@ describe('buildServer', () => {
       url: '/health',
       headers: { origin: 'http://evil.example.com' },
     });
+    // El servidor sigue respondiendo 200 con el cuerpo normal. CORS es
+    // un mecanismo del navegador: el backend NO rechaza la peticion, solo
+    // omite el header que autoriza al JS cliente a leer la respuesta.
+    // Asertar el statusCode ademas de la ausencia del header ancla este
+    // contrato y atrapa cambios futuros de @fastify/cors que respondieran
+    // 403 o 500 (cuyo header tambien estaria ausente).
+    expect(response.statusCode).toBe(200);
     expect(response.headers['access-control-allow-origin']).toBeUndefined();
   });
 });
