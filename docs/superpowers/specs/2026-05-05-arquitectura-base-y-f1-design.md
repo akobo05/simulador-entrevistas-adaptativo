@@ -23,17 +23,26 @@ Se adopta **TypeScript end-to-end** para minimizar el número de lenguajes princ
 |---|---|
 | Frontend PWA | TypeScript, React, Vite |
 | Visualización 3D del aura | Three.js (WebGL) |
-| Análisis multimodal en cliente | MediaPipe Web Tasks API |
+| Análisis multimodal en cliente | MediaPipe Web Tasks API ejecutado en un Web Worker mediante Comlink |
 | Voz en cliente | Web Speech API para STT y TTS por defecto |
 | Comunicación tiempo real | WebSocket nativo |
 | Comunicación punto a punto (F3) | WebRTC nativo |
 | Backend | Node.js, TypeScript, Fastify |
 | Modelo de lenguaje | Gemini API (rol entrevistador y rol coach) |
-| Base de datos | PostgreSQL |
+| Base de datos | PostgreSQL accedida con Drizzle ORM |
 | Caché y colas auxiliares | Redis |
 | Validación de mensajes en tiempo de ejecución | Zod |
+| Logger del backend | Pino (incluido por defecto en Fastify) con `traceId` por sesión |
 
-### 1.1 Punto abierto — evaluación de LLM auto-hospedado
+### 1.1 Por qué Drizzle ORM y no Prisma
+
+Se adopta Drizzle ORM porque sus esquemas conviven naturalmente con los esquemas Zod del paquete `shared-types` y mantienen el contrato extremo a extremo completamente tipado sin duplicar tipos. Es además más liviano que Prisma (no genera un cliente externo) y expone SQL legible, lo que reduce la curva de aprendizaje cuando un desarrollador necesita entender qué hace una consulta. Prisma se descartó por la dependencia del cliente generado y por la duplicación que introduce respecto a los tipos ya validados con Zod.
+
+### 1.2 Por qué MediaPipe corre en Web Worker
+
+La inferencia de MediaPipe Web Tasks API es computacionalmente pesada (ejecuta redes neuronales). Si corre en el hilo principal del navegador bloquea el bucle de renderizado y rompe el RNF-03 (30 fps sostenidos) en cuanto se activa el aura. Se aísla en un Web Worker dedicado y se comunica con el hilo principal mediante `Comlink`, que ofrece una interfaz basada en promesas transparentes y elimina el manejo manual de `postMessage`.
+
+### 1.3 Punto abierto — evaluación de LLM auto-hospedado
 
 Existe la intención de probar un modelo local (Qwen2.5 7B sobre Ollama) corriendo en una laptop gamer del equipo. Se documenta como punto abierto, sin bloquear F1. Acciones previstas:
 
@@ -322,6 +331,7 @@ GitHub Actions corre en cada `pull request` con los siguientes pasos:
 3. `pnpm typecheck` — `tsc --noEmit` en todo el workspace
 4. `pnpm test` — Vitest en todos los paquetes con tests
 5. `pnpm build` — verifica que ambas aplicaciones compilen
+6. **Lighthouse CI** — corre auditorías de accesibilidad y rendimiento sobre el *build* del frontend, con umbral mínimo Accessibility ≥ 95 conforme a RNF-08
 
 Sin estas verificaciones en verde no se permite el merge.
 
@@ -347,9 +357,13 @@ Español neutro, modo declarativo: "Se agrega el endpoint X", "Se ajusta el mane
 
 - Prettier con configuración por defecto (zero-config).
 - ESLint con `@typescript-eslint/recommended` y `react/recommended`.
-- Husky con `lint-staged` corre Prettier y ESLint sobre los archivos modificados en cada `git commit`.
+- Husky con `lint-staged` corre Prettier, ESLint y `tsc --noEmit` sobre los archivos modificados en cada `git commit`. La verificación de tipos en el *pre-commit* atrapa errores que ESLint no detecta sin agregar latencia perceptible en máquinas modernas.
 
-### 7.5 Gestión de tareas
+### 7.5 Accesibilidad durante el desarrollo
+
+Adicional a la verificación en CI con Lighthouse, el paquete `@axe-core/react` se activa únicamente en modo desarrollo (`NODE_ENV === 'development'`). Imprime advertencias en la consola del navegador sobre violaciones WCAG mientras se codifica, lo que permite corregir el problema en el momento en lugar de descubrirlo al cierre de la fase.
+
+### 7.6 Gestión de tareas
 
 El trabajo se organiza en GitHub Projects v2 sobre el mismo repositorio:
 
@@ -369,6 +383,13 @@ La configuración inicial del Project board se hace como última tarea de F0.
 | El TTS del navegador entrega calidad muy desigual entre sistemas operativos | Documentar voz recomendada por SO y dejar preparada la migración a TTS de IA en F5 |
 | Gemini API queda fuera de cuota gratuita antes del fin del proyecto | Compartir clave de producción solo en `main`, cada desarrollador usa su clave personal en dev. *Spike* de LLM local como contingencia |
 | Falla de WebSocket en redes con NAT estricto | Usar transporte fallback a HTTP long-polling si la conexión WS no se establece en 5 segundos |
+
+### 8.1 Herramientas diferidas hasta F5
+
+Las siguientes herramientas se evaluaron como recomendaciones generales de arquitectura y se descartaron del alcance de F0–F4 por no aportar valor proporcional al costo durante esas fases. Quedan documentadas como candidatas a incorporar en F5 (pulido y pruebas con usuarios reales):
+
+- **Sentry para captura de excepciones en frontend.** Útil cuando hay usuarios reales en producción y se necesita visibilidad sobre crashes no reproducibles en local. En F1–F3 el equipo es a la vez desarrollador y único probador, las consolas del navegador y los logs del backend son suficientes. Si las pruebas moderadas de F5 con representantes de los perfiles primarios (S1–S7) revelan fallos no reproducibles, se incorpora.
+- **SonarCloud o Codecov con Quality Gates bloqueantes.** Útil en equipos grandes y producción de largo plazo para evitar degradación de cobertura. En un MVP académico de 12 semanas la fricción de bloquear *pull requests* por variaciones pequeñas de cobertura supera al valor. Se sustituye por un umbral simple en `vitest.config.ts` que reporta cobertura sin bloquear.
 
 ## 9. Próximos pasos
 
