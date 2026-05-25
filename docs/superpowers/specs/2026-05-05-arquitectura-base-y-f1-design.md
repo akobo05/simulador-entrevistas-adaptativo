@@ -1,9 +1,13 @@
-# Arquitectura base — Simulador de Entrevistas Laborales Adaptativo
+# Arquitectura base y especificación de la Fase F1 — Simulador de Entrevistas Laborales Adaptativo
 
 **Fecha:** 2026-05-05
 **Versión:** 1.0
 **Estado:** Aprobada
-**Alcance:** Documento fundacional que define el stack, la estructura del repositorio, los contratos de la Fase 1 (entrevista individual básica), el entorno de desarrollo, el despliegue y las convenciones del equipo. Las fases F2 a F6 tendrán cada una su propia especificación que se apoyará en esta.
+**Alcance:** Este documento cumple dos roles complementarios.
+
+1. **Arquitectura base del proyecto (foundational, secciones 1, 2, 4, 5, 6, 7).** Define el stack, la estructura del repositorio, el entorno de desarrollo, el despliegue, la integración continua y las convenciones de equipo. Estas decisiones aplican a la totalidad del proyecto (Fases F0 a F6) y no cambian entre fases.
+
+2. **Especificación de la Fase F1 (sección 3).** Define los contratos de datos, los mensajes de WebSocket y los endpoints REST necesarios exclusivamente para la entrevista individual básica. Las fases posteriores (F2 personalización, F3 *peer mock*, F4 gamificación, F5 accesibilidad y *auth*, F6 documentación) tendrán cada una su propia especificación que reusará la arquitectura base y extenderá los contratos del paquete `shared-types` con sus propios tipos.
 
 ## 0. Contexto y propósito
 
