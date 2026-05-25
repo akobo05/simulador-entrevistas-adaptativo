@@ -1,8 +1,20 @@
-import { loadEnv } from './config/env.js';
+import { loadEnv, EnvValidationError, type Env } from './config/env.js';
 import { buildServer } from './server.js';
 
 async function main(): Promise<void> {
-  const env = loadEnv();
+  let env: Env;
+  try {
+    env = loadEnv();
+  } catch (err) {
+    if (err instanceof EnvValidationError) {
+      console.error(err.message);
+      console.error(JSON.stringify(err.issues, null, 2));
+    } else {
+      console.error(err);
+    }
+    process.exit(1);
+  }
+
   const server = await buildServer(env);
 
   try {

@@ -22,12 +22,28 @@ const envSchema = z.object({
 
 export type Env = z.infer<typeof envSchema>;
 
+/**
+ * Error lanzado por loadEnv cuando las variables de entorno no validan.
+ * Se modela como clase para que el caller pueda discriminarlo con
+ * `err instanceof EnvValidationError` y manejarlo distinto de errores
+ * genericos.
+ */
+export class EnvValidationError extends Error {
+  constructor(public readonly issues: z.ZodFormattedError<unknown>) {
+    super('Variables de entorno invalidas');
+    this.name = 'EnvValidationError';
+  }
+}
+
+/**
+ * Valida y devuelve las variables de entorno tipadas.
+ * No mata el proceso. El caller decide que hacer si lanza
+ * EnvValidationError (tipicamente en `index.ts`: loguear y salir).
+ */
 export function loadEnv(source: NodeJS.ProcessEnv = process.env): Env {
   const parsed = envSchema.safeParse(source);
   if (!parsed.success) {
-    console.error('Variables de entorno inválidas:');
-    console.error(parsed.error.format());
-    process.exit(1);
+    throw new EnvValidationError(parsed.error.format());
   }
   return parsed.data;
 }
