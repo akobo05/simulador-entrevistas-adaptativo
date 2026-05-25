@@ -1,6 +1,6 @@
 # Simulador de Entrevistas Laborales Adaptativo
 
-Reclutador basado en LLM que adapta sus preguntas a la industria y nivel del candidato, analizando en tiempo real la voz (fluidez, muletillas, pausas, tono) y el lenguaje corporal por webcam (contacto visual, postura, gestualidad). Habilita *mock interviews* colaborativas entre estudiantes con roles intercambiables.
+Reclutador basado en LLM que adapta sus preguntas a la industria y nivel del candidato, analizando en tiempo real la voz (fluidez, muletillas, pausas, tono) y el lenguaje corporal por webcam (contacto visual, postura, gestualidad). Habilita _mock interviews_ colaborativas entre estudiantes con roles intercambiables.
 
 **Repositorio:** https://github.com/akobo05/simulador-entrevistas-adaptativo
 
@@ -13,11 +13,11 @@ Reclutador basado en LLM que adapta sus preguntas a la industria y nivel del can
 
 ## Integrantes
 
-| Nombre | Iniciales |
-|---|---|
-| Aaron Davila Santos | AD |
-| Max Serrano Arostegui | MS |
-| Walter Poma Navarro | WP |
+| Nombre                | Iniciales |
+| --------------------- | --------- |
+| Aaron Davila Santos   | AD        |
+| Max Serrano Arostegui | MS        |
+| Walter Poma Navarro   | WP        |
 
 ## Documentación
 
