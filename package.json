@@ -1,0 +1,29 @@
+{
+  "name": "simulador-entrevistas-adaptativo",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Simulador de Entrevistas Laborales Adaptativo — CC451 UNI 2026-I",
+  "scripts": {
+    "lint": "pnpm -r lint",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test",
+    "build": "pnpm -r build",
+    "dev": "pnpm -r --parallel dev",
+    "format": "prettier --write \"**/*.{ts,tsx,js,jsx,json,md,yml,yaml}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,jsx,json,md,yml,yaml}\"",
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.5",
+    "typescript": "^5.7.2",
+    "prettier": "^3.4.2",
+    "husky": "^9.1.7",
+    "lint-staged": "^15.3.0"
+  },
+  "engines": {
+    "node": ">=22.0.0",
+    "pnpm": ">=10.0.0"
+  },
+  "packageManager": "pnpm@10.0.0"
+}

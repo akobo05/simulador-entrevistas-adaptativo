@@ -61,3 +61,23 @@ temp/
 *.snm
 *.vrb
 docs/**/build/
+
+# pnpm
+.pnpm-store/
+
+# build outputs por app
+apps/*/dist/
+apps/*/build/
+packages/*/dist/
+packages/*/build/
+
+# env files
+!.env.example
+
+# OS (completo)
+
+# IDE (completo)
+
+# logs (completo)
+
+# tests (completo)
