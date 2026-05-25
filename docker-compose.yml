@@ -37,7 +37,13 @@ services:
       PORT: 3000
       DATABASE_URL: postgresql://warachikuy:warachikuy@postgres:5432/warachikuy
       REDIS_URL: redis://redis:6379
-      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      # ${VAR:?msg} hace que `docker compose up` falle inmediatamente con
+      # el mensaje indicado si la variable no esta definida o esta vacia.
+      # Evita dos problemas: (1) arrancar el container y descubrir el
+      # error recien cuando Zod valida adentro; (2) tomar silenciosamente
+      # una GEMINI_API_KEY que el dev tenga exportada en su shell para
+      # otro proyecto y filtrarla al container.
+      GEMINI_API_KEY: ${GEMINI_API_KEY:?define GEMINI_API_KEY en .env de la raiz}
     depends_on:
       postgres:
         condition: service_healthy
