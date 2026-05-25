@@ -462,10 +462,13 @@ git commit -m "Se crea el paquete voice-pipeline con smoke test"
   "dependencies": {
     "@warachikuy/shared-types": "workspace:*",
     "fastify": "^5.2.1",
+    "drizzle-orm": "^0.38.3",
+    "postgres": "^3.4.5",
     "zod": "^3.24.1"
   },
   "devDependencies": {
     "@types/node": "^22.10.5",
+    "drizzle-kit": "^0.30.1",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2",
     "vitest": "^3.0.5"
@@ -677,6 +680,7 @@ git commit -m "Se crea apps/api con endpoint /health y validacion de env"
     "react-dom": "^19.0.0"
   },
   "devDependencies": {
+    "@axe-core/react": "^4.10.1",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.1.0",
     "@types/react": "^19.0.7",
@@ -689,6 +693,21 @@ git commit -m "Se crea apps/api con endpoint /health y validacion de env"
   }
 }
 ```
+
+Nota: `@axe-core/react` se incluye como dependencia de desarrollo. Su activación efectiva ocurre en el `main.tsx` con un guard de entorno (se hace en el plan de F1 cuando haya componentes reales que auditar).
+
+Plantilla del `main.tsx` definitivo (será aplicada en F1, no en este F0):
+
+```typescript
+if (import.meta.env.DEV) {
+  const axe = await import('@axe-core/react');
+  const React = await import('react');
+  const ReactDOM = await import('react-dom');
+  axe.default(React.default, ReactDOM.default, 1000);
+}
+```
+
+Por ahora, el `main.tsx` de F0 queda simple (sin axe). El plan de F1 frontend agrega el guard.
 
 - [ ] **Step 2: Crear `apps/web/tsconfig.json`**
 
@@ -1033,10 +1052,19 @@ pnpm exec lint-staged
 
 ```javascript
 export default {
-  '*.{ts,tsx}': ['eslint --fix', 'prettier --write'],
+  '*.{ts,tsx}': [
+    'eslint --fix',
+    'prettier --write',
+    // Verificación de tipos sobre los archivos staged.
+    // Si el monorepo crece y este paso se vuelve lento, se reemplaza
+    // por `pnpm typecheck` sobre los paquetes afectados.
+    () => 'pnpm -r typecheck',
+  ],
   '*.{js,jsx,json,md,yml,yaml}': ['prettier --write'],
 };
 ```
+
+Nota: el `tsc --noEmit` se ejecuta sobre el workspace completo (no por archivo) porque TypeScript necesita el contexto de los tipos importados para validar correctamente. En máquinas modernas esto toma ~3 segundos para el monorepo de F0.
 
 - [ ] **Step 4: Hacer un cambio trivial y verificar que el hook corre**
 
@@ -1237,10 +1265,11 @@ git commit -m "Se agrega docker-compose con web, api, postgres y redis"
 
 ---
 
-## Task 10: Configurar GitHub Actions CI
+## Task 10: Configurar GitHub Actions CI (con Lighthouse)
 
 **Files:**
 - Create: `.github/workflows/ci.yml`
+- Create: `.lighthouserc.json` (raíz, configura el umbral de Accessibility ≥ 95)
 
 - [ ] **Step 1: Crear `.github/workflows/ci.yml`**
 
@@ -1286,23 +1315,80 @@ jobs:
 
       - name: Build
         run: pnpm build
+
+  lighthouse:
+    name: Lighthouse CI (accesibilidad)
+    runs-on: ubuntu-latest
+    needs: verify
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.0.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build web
+        run: pnpm --filter @warachikuy/web build
+
+      - name: Run Lighthouse CI
+        uses: treosh/lighthouse-ci-action@v12
+        with:
+          configPath: .lighthouserc.json
+          uploadArtifacts: true
+          temporaryPublicStorage: true
 ```
+
+Y crear el archivo de configuración de Lighthouse CI en la raíz como `.lighthouserc.json`:
+
+```json
+{
+  "ci": {
+    "collect": {
+      "staticDistDir": "./apps/web/dist",
+      "numberOfRuns": 1
+    },
+    "assert": {
+      "preset": "lighthouse:no-pwa",
+      "assertions": {
+        "categories:accessibility": ["error", { "minScore": 0.95 }],
+        "categories:performance": ["warn", { "minScore": 0.7 }]
+      }
+    },
+    "upload": {
+      "target": "temporary-public-storage"
+    }
+  }
+}
+```
+
+Esto enforza el umbral RNF-08 (Accessibility ≥ 95) y reporta performance como warning (más laxo en F0 porque no hay todavía la app real).
 
 - [ ] **Step 2: Commit y push para disparar la CI**
 
 ```bash
-git add .github/workflows/ci.yml
-git commit -m "Se agrega CI de GitHub Actions con lint, typecheck, test y build"
+git add .github/workflows/ci.yml .lighthouserc.json
+git commit -m "Se agrega CI de GitHub Actions con verificacion y Lighthouse"
 git push -u origin chore/f0-setup
 ```
 
 - [ ] **Step 3: Verificar que el workflow corre en GitHub**
 
-Abrir https://github.com/akobo05/simulador-entrevistas-adaptativo/actions y confirmar que el job `verify` aparece y termina en verde.
+Abrir https://github.com/akobo05/simulador-entrevistas-adaptativo/actions y confirmar que aparecen dos jobs: `verify` (lint/typecheck/test/build) y `lighthouse` (auditoría de accesibilidad sobre el build del frontend).
 
-Expected: ✅ pasa en menos de ~5 minutos.
+Expected: ✅ `verify` en ~3-5 min, ✅ `lighthouse` en ~2-3 min adicionales.
 
-Si falla, leer los logs, corregir localmente, hacer commit y push, y volver a verificar.
+Si `verify` falla, leer los logs, corregir localmente, hacer commit y push. Si `lighthouse` falla por accesibilidad, leer el reporte (link en el output del job) y corregir el componente afectado.
 
 ---
 
