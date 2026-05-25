@@ -21,22 +21,27 @@ Reclutador basado en LLM que adapta sus preguntas a la industria y nivel del can
 
 ## Estructura del repositorio
 
+Estado actual del código. El stack objetivo descrito en `docs/superpowers/specs/` se alcanza progresivamente fase por fase.
+
 ```
 .
 ├── apps/
-│   ├── web/                 # Frontend PWA (React 19 + Vite + Three.js)
-│   └── api/                 # Backend (Node + Fastify + Gemini)
+│   ├── web/                 # Frontend SPA con React 19 + Vite
+│   │                          (Three.js para el aura llega en F1; soporte PWA en F5)
+│   └── api/                 # Backend Node + Fastify
+│                              (integración Gemini llega en F1; Drizzle queda como
+│                               dependencia, los schemas se modelan en F1)
 ├── packages/
-│   ├── shared-types/        # Contratos JSON con Zod
-│   └── voice-pipeline/      # STT, TTS y MediaPipe en Web Worker
+│   ├── shared-types/        # Paquete vacío, listo para los schemas Zod de F1
+│   └── voice-pipeline/      # Paquete vacío, listo para STT/TTS/MediaPipe de F1
 ├── docs/
 │   ├── informe-pc02/        # Informe de la PC02
 │   ├── prototype/           # Recorrido del prototipo (video)
 │   └── superpowers/
 │       ├── specs/           # Especificaciones por fase
 │       └── plans/           # Planes de implementación
-├── docker-compose.yml       # Stack completo en local
-└── .github/workflows/ci.yml # Integración continua
+├── docker-compose.yml       # Stack completo en local (web, api, postgres, redis)
+└── .github/workflows/ci.yml # CI: lint, typecheck, test, build y Lighthouse
 ```
 
 ## Cómo arrancar el proyecto en local
