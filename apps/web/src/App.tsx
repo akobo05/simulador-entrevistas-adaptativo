@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { createSttController, metricsWorkerApi } from '@warachikuy/voice-pipeline';
+import { createSttController, createSpeechMetricsTracker } from '@warachikuy/voice-pipeline';
 import type { CandidateTranscript, AuraMetric } from '@warachikuy/shared-types';
 
 // Página de prueba temporal — eliminar antes del PR final
@@ -8,13 +8,17 @@ function VoicePipelineTest() {
   const [metrics, setMetrics] = useState<AuraMetric[]>([]);
   const [running, setRunning] = useState(false);
   const controllerRef = useRef<ReturnType<typeof createSttController> | null>(null);
+  const trackerRef = useRef(createSpeechMetricsTracker());
 
   // sessionId real vendrá del backend (POST /api/v1/sessions) — valor fijo solo para prueba manual
   const TEST_SESSION_ID = '550e8400-e29b-41d4-a716-446655440000';
 
   function handleStart() {
+    const tracker = trackerRef.current;
     const ctrl = createSttController(TEST_SESSION_ID, (t) => {
       setTranscripts((prev) => [...prev.slice(-9), t]);
+      tracker.onTranscript(t);
+      setMetrics(tracker.getMetrics());
     });
     ctrl.start();
     controllerRef.current = ctrl;
@@ -27,9 +31,7 @@ function VoicePipelineTest() {
   }
 
   function handleMetrics() {
-    const fakeFrame = { width: 640, height: 480, data: new Uint8ClampedArray(0) } as ImageData;
-    const result = metricsWorkerApi.processFrame(fakeFrame);
-    if (result.length > 0) setMetrics(result);
+    setMetrics(trackerRef.current.getMetrics());
   }
 
   return (

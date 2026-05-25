@@ -1,46 +1,82 @@
 /**
- * Web Worker que corre MediaPipe FaceMesh/Holistic y emite AuraMetrics.
- * Se comunica con el hilo principal a través de Comlink.
+ * Web Worker — calcula eye_contact con MediaPipe FaceLandmarker.
+ * Se comunica con el hilo principal via Comlink.
  * Throttle: máximo 4 Hz (250 ms entre frames procesados).
  */
-import type { AuraMetric, MetricName } from '@warachikuy/shared-types';
+import { expose } from 'comlink';
+import { FaceLandmarker, FilesetResolver } from '@mediapipe/tasks-vision';
+import type { AuraMetric } from '@warachikuy/shared-types';
 
-const THROTTLE_MS = 250; // 4 Hz
+const THROTTLE_MS = 250;
+const WASM_URL = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision/wasm';
+const MODEL_URL =
+  'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task';
+
+// Índices de landmarks para los iris y esquinas del ojo izquierdo
+const LEFT_IRIS_CENTER = 473;
+const LEFT_EYE_LEFT = 33;
+const LEFT_EYE_RIGHT = 133;
+
+let landmarker: FaceLandmarker | null = null;
+let lastProcessedAt = 0;
+
+async function initialize(): Promise<void> {
+  if (landmarker) return;
+  const vision = await FilesetResolver.forVisionTasks(WASM_URL);
+  landmarker = await FaceLandmarker.createFromOptions(vision, {
+    baseOptions: { modelAssetPath: MODEL_URL, delegate: 'GPU' },
+    runningMode: 'IMAGE',
+    numFaces: 1,
+  });
+}
+
+function computeEyeContact(imageData: ImageData): number {
+  if (!landmarker) return 50;
+
+  const result = landmarker.detect(imageData);
+  if (!result.faceLandmarks || result.faceLandmarks.length === 0) return 0;
+
+  const landmarks = result.faceLandmarks[0];
+  if (!landmarks) return 50;
+  const leftIris = landmarks[LEFT_IRIS_CENTER];
+  const leftEyeLeft = landmarks[LEFT_EYE_LEFT];
+  const leftEyeRight = landmarks[LEFT_EYE_RIGHT];
+
+  if (!leftIris || !leftEyeLeft || !leftEyeRight) return 50;
+
+  const eyeWidth = Math.abs(leftEyeRight.x - leftEyeLeft.x);
+  if (eyeWidth < 0.001) return 50;
+
+  const eyeCenterX = (leftEyeLeft.x + leftEyeRight.x) / 2;
+  const eyeCenterY = (leftEyeLeft.y + leftEyeRight.y) / 2;
+
+  // Desviación del iris respecto al centro del ojo, normalizada por el ancho del ojo
+  const dx = Math.abs(leftIris.x - eyeCenterX) / eyeWidth;
+  const dy = Math.abs(leftIris.y - eyeCenterY) / eyeWidth;
+  const deviation = Math.sqrt(dx * dx + dy * dy);
+
+  // 0 desviación → 100 puntos, desviación ≥ 0.3 → 0 puntos
+  return Math.max(0, Math.min(100, Math.round((1 - Math.min(deviation / 0.3, 1)) * 100)));
+}
+
+function processFrame(imageData: ImageData): AuraMetric[] {
+  const now = Date.now();
+  if (now - lastProcessedAt < THROTTLE_MS) return [];
+  lastProcessedAt = now;
+
+  return [
+    {
+      name: 'eye_contact',
+      value: computeEyeContact(imageData),
+      confidence: landmarker ? 'high' : 'low',
+      timestamp: now,
+    },
+  ];
+}
 
 export interface MetricsWorkerApi {
+  initialize: () => Promise<void>;
   processFrame: (imageData: ImageData) => AuraMetric[];
 }
 
-let lastProcessedAt = 0;
-
-// MediaPipe se carga dinámicamente en el worker para no bloquear el hilo principal.
-// En F1 usamos estimaciones heurísticas simples sobre los landmarks hasta tener
-// la integración completa con @mediapipe/tasks-vision.
-function estimateMetrics(imageData: ImageData): AuraMetric[] {
-  // Heurística temporal: valores derivados del tamaño del frame.
-  // Serán reemplazados por landmarks reales de MediaPipe en F2.
-  const now = Date.now();
-  const base = (imageData.width * imageData.height) % 100;
-
-  const metrics: { name: MetricName; value: number }[] = [
-    { name: 'fluency', value: Math.min(100, base + 40) },
-    { name: 'eye_contact', value: Math.min(100, base + 20) },
-    { name: 'speech_rate', value: Math.min(100, base + 30) },
-  ];
-
-  return metrics.map((m) => ({
-    name: m.name,
-    value: m.value,
-    confidence: 'low' as const, // heurística, no modelo real
-    timestamp: now,
-  }));
-}
-
-export const metricsWorkerApi: MetricsWorkerApi = {
-  processFrame(imageData: ImageData): AuraMetric[] {
-    const now = Date.now();
-    if (now - lastProcessedAt < THROTTLE_MS) return [];
-    lastProcessedAt = now;
-    return estimateMetrics(imageData);
-  },
-};
+expose({ initialize, processFrame });

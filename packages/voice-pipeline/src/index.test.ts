@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { voicePipelineVersion, createSttController, metricsWorkerApi } from './index';
+import { voicePipelineVersion, createSttController, createSpeechMetricsTracker } from './index';
 
 // ── Mock de Web Speech API ────────────────────────────────────────────────────
 
@@ -56,7 +56,6 @@ describe('createSttController', () => {
 
   it('invoca el callback con el transcript parseado cuando onresult se dispara', () => {
     const received: unknown[] = [];
-
     const fakeRec = new MockSpeechRecognition();
     const controller = createSttController(
       SESSION_ID,
@@ -78,17 +77,69 @@ describe('createSttController', () => {
   });
 });
 
-describe('metricsWorkerApi', () => {
-  it('processFrame devuelve 3 métricas en la primera llamada', () => {
-    const imageData = { width: 640, height: 480, data: new Uint8ClampedArray(0) } as ImageData;
-    const metrics = metricsWorkerApi.processFrame(imageData);
-    expect(metrics).toHaveLength(3);
-    expect(metrics.map((m) => m.name).sort()).toEqual(['eye_contact', 'fluency', 'speech_rate']);
+describe('createSpeechMetricsTracker', () => {
+  const SESSION_ID = '550e8400-e29b-41d4-a716-446655440000';
+  const now = Date.now();
+
+  it('devuelve fluency 100 y speech_rate neutro sin transcripts', () => {
+    const tracker = createSpeechMetricsTracker();
+    const metrics = tracker.getMetrics();
+    const fluency = metrics.find((m) => m.name === 'fluency');
+    expect(fluency?.value).toBe(100);
+  });
+
+  it('detecta muletillas y baja fluency', () => {
+    const tracker = createSpeechMetricsTracker();
+    tracker.onTranscript({
+      sessionId: SESSION_ID,
+      text: 'este bueno yo creo que sí',
+      isFinal: true,
+      timestamp: now,
+    });
+    const metrics = tracker.getMetrics();
+    const fluency = metrics.find((m) => m.name === 'fluency');
+    // "este" y "bueno" son muletillas → fluency < 100
+    expect(fluency?.value).toBeLessThan(100);
+  });
+
+  it('ignora transcripts parciales (isFinal: false)', () => {
+    const tracker = createSpeechMetricsTracker();
+    tracker.onTranscript({
+      sessionId: SESSION_ID,
+      text: 'este este este',
+      isFinal: false,
+      timestamp: now,
+    });
+    const metrics = tracker.getMetrics();
+    const fluency = metrics.find((m) => m.name === 'fluency');
+    // No procesó nada → sigue en 100
+    expect(fluency?.value).toBe(100);
+  });
+
+  it('speech_rate sube al 100 con ritmo ideal (130-160 wpm)', () => {
+    const tracker = createSpeechMetricsTracker();
+    // Simular 75 palabras en 30 segundos = 150 wpm (ideal)
+    const words = Array(75).fill('hola').join(' ');
+    tracker.onTranscript({
+      sessionId: SESSION_ID,
+      text: words,
+      isFinal: true,
+      timestamp: now - 30_000,
+    });
+    const metrics = tracker.getMetrics();
+    const speechRate = metrics.find((m) => m.name === 'speech_rate');
+    expect(speechRate?.value).toBe(100);
   });
 
   it('cada métrica tiene value entre 0 y 100', () => {
-    const imageData = { width: 640, height: 480, data: new Uint8ClampedArray(0) } as ImageData;
-    const metrics = metricsWorkerApi.processFrame(imageData);
+    const tracker = createSpeechMetricsTracker();
+    tracker.onTranscript({
+      sessionId: SESSION_ID,
+      text: 'me llamo Walter y soy estudiante de la UNI',
+      isFinal: true,
+      timestamp: now,
+    });
+    const metrics = tracker.getMetrics();
     for (const m of metrics) {
       expect(m.value).toBeGreaterThanOrEqual(0);
       expect(m.value).toBeLessThanOrEqual(100);
