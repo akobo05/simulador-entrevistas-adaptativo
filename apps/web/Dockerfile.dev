@@ -1,13 +1,26 @@
 FROM node:22-alpine
 
+# Habilitamos pnpm via corepack como root (necesario porque escribe en
+# /usr/local). El resto del trabajo pasa a correr como usuario `node`.
 RUN corepack enable && corepack prepare pnpm@10.0.0 --activate
 
 WORKDIR /workspace
 
-COPY pnpm-workspace.yaml package.json pnpm-lock.yaml tsconfig.base.json ./
-COPY apps/web ./apps/web
-COPY packages/shared-types ./packages/shared-types
-COPY packages/voice-pipeline ./packages/voice-pipeline
+# COPY con --chown=node:node desde el inicio asegura que los archivos
+# escritos por el contenedor a traves del bind mount (./apps/web/src) no
+# aparezcan como root-owned en el host. La imagen base node:22-alpine ya
+# trae el usuario `node` con UID 1000, que coincide con el primer usuario
+# de la mayoria de instalaciones Linux.
+COPY --chown=node:node pnpm-workspace.yaml package.json pnpm-lock.yaml tsconfig.base.json ./
+COPY --chown=node:node apps/web ./apps/web
+COPY --chown=node:node packages/shared-types ./packages/shared-types
+COPY --chown=node:node packages/voice-pipeline ./packages/voice-pipeline
+
+# El WORKDIR se creo como root: lo entregamos a `node` antes de cambiar
+# de usuario para que pnpm install pueda escribir archivos temporales.
+RUN chown -R node:node /workspace
+
+USER node
 
 RUN pnpm install --frozen-lockfile
 
