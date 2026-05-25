@@ -65,19 +65,5 @@ docs/**/build/
 # pnpm
 .pnpm-store/
 
-# build outputs por app
-apps/*/dist/
-apps/*/build/
-packages/*/dist/
-packages/*/build/
-
-# env files
+# Excepción a .env*.local: la plantilla SÍ se versiona
 !.env.example
-
-# OS (completo)
-
-# IDE (completo)
-
-# logs (completo)
-
-# tests (completo)
