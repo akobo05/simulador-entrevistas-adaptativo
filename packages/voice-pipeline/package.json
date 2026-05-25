@@ -1,0 +1,30 @@
+{
+  "name": "@warachikuy/voice-pipeline",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "development": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "lint": "eslint src",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "build": "tsc",
+    "dev": "tsc --watch --preserveWatchOutput"
+  },
+  "dependencies": {
+    "@warachikuy/shared-types": "workspace:*"
+  },
+  "devDependencies": {
+    "happy-dom": "^16.5.0",
+    "typescript": "^5.7.2",
+    "vitest": "^3.0.5"
+  }
+}

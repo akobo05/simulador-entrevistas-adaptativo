@@ -1,6 +1,6 @@
 # Simulador de Entrevistas Laborales Adaptativo
 
-Reclutador basado en LLM que adapta sus preguntas a la industria y nivel del candidato, analizando en tiempo real la voz (fluidez, muletillas, pausas, tono) y el lenguaje corporal por webcam (contacto visual, postura, gestualidad). Habilita *mock interviews* colaborativas entre estudiantes con roles intercambiables.
+Reclutador basado en LLM que adapta sus preguntas a la industria y nivel del candidato, analizando en tiempo real la voz (fluidez, muletillas, pausas, tono) y el lenguaje corporal por webcam (contacto visual, postura, gestualidad). Habilita _mock interviews_ colaborativas entre estudiantes con roles intercambiables.
 
 **Repositorio:** https://github.com/akobo05/simulador-entrevistas-adaptativo
 
@@ -13,11 +13,59 @@ Reclutador basado en LLM que adapta sus preguntas a la industria y nivel del can
 
 ## Integrantes
 
-| Nombre | Iniciales |
-|---|---|
-| Aaron Davila Santos | AD |
-| Max Serrano Arostegui | MS |
-| Walter Poma Navarro | WP |
+| Nombre                | Iniciales |
+| --------------------- | --------- |
+| Aaron Davila Santos   | AD        |
+| Max Serrano Arostegui | MS        |
+| Walter Poma Navarro   | WP        |
+
+## Estructura del repositorio
+
+Estado actual del código. El stack objetivo descrito en `docs/superpowers/specs/` se alcanza progresivamente fase por fase.
+
+```
+.
+├── apps/
+│   ├── web/                 # Frontend SPA con React 19 + Vite
+│   │                          (Three.js para el aura llega en F1; soporte PWA en F5)
+│   └── api/                 # Backend Node + Fastify
+│                              (integración Gemini llega en F1; Drizzle queda como
+│                               dependencia, los schemas se modelan en F1)
+├── packages/
+│   ├── shared-types/        # Paquete vacío, listo para los schemas Zod de F1
+│   └── voice-pipeline/      # Paquete vacío, listo para STT/TTS/MediaPipe de F1
+├── docs/
+│   ├── informe-pc02/        # Informe de la PC02
+│   ├── prototype/           # Recorrido del prototipo (video)
+│   └── superpowers/
+│       ├── specs/           # Especificaciones por fase
+│       └── plans/           # Planes de implementación
+├── docker-compose.yml       # Stack completo en local (web, api, postgres, redis)
+└── .github/workflows/ci.yml # CI: lint, typecheck, test, build y Lighthouse
+```
+
+## Cómo arrancar el proyecto en local
+
+1. Instalar pre-requisitos: Node.js 22 LTS, pnpm 10, Docker Desktop, gh CLI.
+2. Clonar el repositorio.
+3. Copiar `.env.example` a `.env` y completar `GEMINI_API_KEY` con una clave personal.
+4. Levantar el stack:
+
+   ```bash
+   docker compose up --build
+   ```
+
+5. Abrir http://localhost:5173 (frontend) y http://localhost:3000/health (backend).
+
+## Cómo correr tests, lint y typecheck
+
+```bash
+pnpm install       # solo la primera vez
+pnpm lint          # ESLint sobre todo el workspace
+pnpm typecheck     # tsc --noEmit
+pnpm test          # Vitest
+pnpm build         # build de todas las apps
+```
 
 ## Documentación
 
@@ -26,10 +74,18 @@ Reclutador basado en LLM que adapta sus preguntas a la industria y nivel del can
 - [`docs/informe-pc02/`](docs/informe-pc02/) — fuentes LaTeX del informe, prompts versionados y figuras.
 - [`docs/prototype/recorrido-prototipo.mp4`](docs/prototype/recorrido-prototipo.mp4) — recorrido del prototipo de fidelidad media (video).
 - [Prototipo interactivo en Figma](https://www.figma.com/proto/hZttO5TGjofestkKuw73nY/Warachikuy?node-id=2014-3672&p=f&t=AekkWhjgguGksNPE-1&scaling=scale-down&content-scaling=fixed&page-id=0%3A1&starting-point-node-id=2014%3A3604) — flujo navegable del prototipo de fidelidad media.
+- [`docs/superpowers/specs/`](docs/superpowers/specs/) — especificaciones técnicas por fase.
+- [`docs/superpowers/plans/`](docs/superpowers/plans/) — planes de implementación detallados.
+
+## Tablero del proyecto
+
+Roadmap, issues y avance por fase: [Warachikuy — Roadmap](https://github.com/users/akobo05/projects/4).
+
+Columnas: `Backlog` · `Ready` · `In Progress` · `In Review` · `Done`.
 
 ## Estado
 
-Fase de definición formal del proyecto (PC02). El código fuente del MVP se incorporará en iteraciones posteriores.
+F0 (setup del monorepo) completada. En curso: F1 — Entrevista individual básica.
 
 ## Licencia
 

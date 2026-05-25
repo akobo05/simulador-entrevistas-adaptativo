@@ -61,3 +61,9 @@ temp/
 *.snm
 *.vrb
 docs/**/build/
+
+# pnpm
+.pnpm-store/
+
+# Excepción a .env*.local: la plantilla SÍ se versiona
+!.env.example
