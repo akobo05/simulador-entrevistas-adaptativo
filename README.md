@@ -19,6 +19,49 @@ Reclutador basado en LLM que adapta sus preguntas a la industria y nivel del can
 | Max Serrano Arostegui | MS        |
 | Walter Poma Navarro   | WP        |
 
+## Estructura del repositorio
+
+```
+.
+├── apps/
+│   ├── web/                 # Frontend PWA (React 19 + Vite + Three.js)
+│   └── api/                 # Backend (Node + Fastify + Gemini)
+├── packages/
+│   ├── shared-types/        # Contratos JSON con Zod
+│   └── voice-pipeline/      # STT, TTS y MediaPipe en Web Worker
+├── docs/
+│   ├── informe-pc02/        # Informe de la PC02
+│   ├── prototype/           # Recorrido del prototipo (video)
+│   └── superpowers/
+│       ├── specs/           # Especificaciones por fase
+│       └── plans/           # Planes de implementación
+├── docker-compose.yml       # Stack completo en local
+└── .github/workflows/ci.yml # Integración continua
+```
+
+## Cómo arrancar el proyecto en local
+
+1. Instalar pre-requisitos: Node.js 22 LTS, pnpm 10, Docker Desktop, gh CLI.
+2. Clonar el repositorio.
+3. Copiar `.env.example` a `.env` y completar `GEMINI_API_KEY` con una clave personal.
+4. Levantar el stack:
+
+   ```bash
+   docker compose up --build
+   ```
+
+5. Abrir http://localhost:5173 (frontend) y http://localhost:3000/health (backend).
+
+## Cómo correr tests, lint y typecheck
+
+```bash
+pnpm install       # solo la primera vez
+pnpm lint          # ESLint sobre todo el workspace
+pnpm typecheck     # tsc --noEmit
+pnpm test          # Vitest
+pnpm build         # build de todas las apps
+```
+
 ## Documentación
 
 - [`docs/propuesta/PropuestaProyecto.pdf`](docs/propuesta/PropuestaProyecto.pdf) — propuesta inicial del proyecto.
@@ -26,10 +69,16 @@ Reclutador basado en LLM que adapta sus preguntas a la industria y nivel del can
 - [`docs/informe-pc02/`](docs/informe-pc02/) — fuentes LaTeX del informe, prompts versionados y figuras.
 - [`docs/prototype/recorrido-prototipo.mp4`](docs/prototype/recorrido-prototipo.mp4) — recorrido del prototipo de fidelidad media (video).
 - [Prototipo interactivo en Figma](https://www.figma.com/proto/hZttO5TGjofestkKuw73nY/Warachikuy?node-id=2014-3672&p=f&t=AekkWhjgguGksNPE-1&scaling=scale-down&content-scaling=fixed&page-id=0%3A1&starting-point-node-id=2014%3A3604) — flujo navegable del prototipo de fidelidad media.
+- [`docs/superpowers/specs/`](docs/superpowers/specs/) — especificaciones técnicas por fase.
+- [`docs/superpowers/plans/`](docs/superpowers/plans/) — planes de implementación detallados.
+
+## Tablero del proyecto
+
+Roadmap, issues y avance por fase: [Warachikuy — Roadmap](https://github.com/users/akobo05/projects).
 
 ## Estado
 
-Fase de definición formal del proyecto (PC02). El código fuente del MVP se incorporará en iteraciones posteriores.
+F0 (setup del monorepo) completada. En curso: F1 — Entrevista individual básica.
 
 ## Licencia
 
