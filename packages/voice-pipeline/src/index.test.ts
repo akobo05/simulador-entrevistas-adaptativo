@@ -107,6 +107,31 @@ describe('createSttController', () => {
     expect(fakeRec.lang).toBe('es-PE');
   });
 
+  it('detiene auto-restart tras 5 InvalidStateError consecutivos en onend', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const fakeRec = new MockSpeechRecognition();
+    let startCount = 0;
+    fakeRec.start = vi.fn(() => {
+      startCount++;
+      // start inicial OK; reintentos via onend lanzan InvalidStateError
+      if (startCount > 1) throw new Error('InvalidStateError');
+    });
+    const controller = createSttController(
+      SESSION_ID,
+      () => {},
+      {},
+      () => fakeRec as unknown as ReturnType<(typeof fakeRec)['start']>,
+    );
+    controller.start();
+    // 6 onend: el 6to no debe intentar restart porque ya se alcanzaron 5 fallos
+    for (let i = 0; i < 6; i++) {
+      fakeRec.onend?.();
+    }
+    expect(startCount).toBe(6); // 1 inicial + 5 reintentos
+    expect(warnSpy).toHaveBeenCalled();
+    warnSpy.mockRestore();
+  });
+
   it('loguea parsed.error cuando safeParse rechaza el transcript', () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const fakeRec = new MockSpeechRecognition();

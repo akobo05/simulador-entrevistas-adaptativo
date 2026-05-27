@@ -104,9 +104,27 @@ export function createSttController(
       if (TERMINAL_ERRORS.has(event.error)) active = false;
     };
 
-    // auto-restart on end (Web Speech API stops after silence)
+    // auto-restart on end (Web Speech API stops after silence).
+    // Chrome puede lanzar InvalidStateError si la instancia previa no se libero;
+    // contamos fallos consecutivos y apagamos tras MAX para no bloquear el event loop.
+    let restartAttempts = 0;
+    const MAX_RESTART_ATTEMPTS = 5;
     recognition.onend = () => {
-      if (active) recognition?.start();
+      if (!active) return;
+      try {
+        recognition?.start();
+        restartAttempts = 0;
+      } catch {
+        restartAttempts++;
+        if (restartAttempts >= MAX_RESTART_ATTEMPTS) {
+          active = false;
+          if (typeof console !== 'undefined') {
+            console.warn(
+              `STT auto-restart abandonado tras ${MAX_RESTART_ATTEMPTS} fallos consecutivos`,
+            );
+          }
+        }
+      }
     };
 
     // active=true antes de start() para que si start() lanza sincrono podamos
