@@ -42,14 +42,14 @@ Se usa `@fastify/websocket` (oficial, compatible con Fastify 5). La ruta se regi
 El flujo del handshake es:
 
 1. Cliente envía `GET /v1/sessions/:sessionId/ws?token=<hex64>` con `Upgrade: websocket`.
-2. Un hook `preValidation` corre en HTTP normal (antes del upgrade). Lee `session:<sessionId>` en Redis y aplica esta tabla de decisión:
+2. Un hook `preValidation` corre en HTTP normal (antes del upgrade). Primero valida el shape del query con Zod (`z.object({ token: z.string().regex(/^[0-9a-f]{64}$/) })`). Esto rechaza tokens malformados y, de paso, defiende contra el caso `?token=A&token=B` si el querystring parser de Fastify cambiara en el futuro a uno que devuelve array: `z.string()` rechaza arrays automáticamente. Después lee `session:<sessionId>` en Redis y aplica esta tabla de decisión:
 
 | Condición | Respuesta HTTP |
 |---|---|
+| `query.token` no pasa el schema (ausente, no string, no 64 hex chars) | `400` con `ApiError { code: 'invalid_input' }` |
 | Key no existe en Redis | `404` con `ApiError { code: 'session_not_found' }` |
 | `state.token !== query.token` | `401` con `ApiError { code: 'invalid_token' }` |
 | `state.status !== 'active'` | `410` con `ApiError { code: 'session_expired' }` |
-| `query.token` no es 64 hex chars | `400` con `ApiError { code: 'invalid_input' }` |
 | Todo OK | Continúa el upgrade |
 
 3. Si el handshake fue aceptado, `@fastify/websocket` completa el upgrade y dispara `onConnection`.
@@ -129,18 +129,26 @@ on('connection', socket, req)
   → log.info('ws connected')
 
 on('message', raw)
-  → const parsed = ClientToServerMessageSchema.safeParse(JSON.parse(raw))
-  → si falla parsing JSON o safeParse:
-      invalidCount++
-      socket.send({ type: 'error', payload: { code: 'invalid_message', message, recoverable: true } })
-      log.warn({ invalidCount }, 'invalid ws message')
-      si invalidCount >= MAX_CONSECUTIVE_INVALID_MESSAGES:
-        socket.close(1008, 'policy_violation')
-  → si OK:
-      invalidCount = 0                              // reset al primer válido
-      log.debug({ type: parsed.data.type }, 'ws message received')
-      // F1.2: sin lógica de negocio; la generación de respuesta
-      // (interviewer.message) llega en un issue posterior.
+  → let json: unknown
+    try {
+      json = JSON.parse(raw.toString())
+    } catch {
+      handleInvalid('json_parse_error'); return
+    }
+  → const parsed = ClientToServerMessageSchema.safeParse(json)
+  → si !parsed.success:
+      handleInvalid('schema_validation_failed'); return
+  → invalidCount = 0                              // reset al primer válido
+    log.debug({ type: parsed.data.type }, 'ws message received')
+    // F1.2: sin lógica de negocio; la generación de respuesta
+    // (interviewer.message) llega en un issue posterior.
+
+function handleInvalid(reason):
+  invalidCount++
+  socket.send({ type: 'error', payload: { code: 'invalid_message', message: reason, recoverable: true } })
+  log.warn({ invalidCount, reason }, 'invalid ws message')
+  if invalidCount >= MAX_CONSECUTIVE_INVALID_MESSAGES:
+    socket.close(1008, 'policy_violation')
 
 on('pong')
   → markAlive(socket)                               // resetea timer del heartbeat
@@ -239,6 +247,9 @@ Esto cubre el WS y cualquier ruta futura que reciba un token por query string.
 ### 7.1 Archivos nuevos y modificados
 
 ```
+packages/shared-types/src/
+└── ws.ts                                     (modifica) agrega WS_CLOSE_CODES + WsCloseCode
+
 apps/api/src/
 ├── config/
 │   └── env.ts                                (no cambia)
@@ -281,6 +292,24 @@ Codes que emite el backend, con la semántica esperada del frontend:
 | `4001` | `session_expired` (server validó y el state ya no está activo) | No |
 
 El rango 4000-4999 está reservado por RFC 6455 para uso de aplicación. El frontend debe mantener este mapeo para no reconectar ciegamente en bucle cuando el motivo del cierre es intencional.
+
+### 8.1 Exportación en `shared-types`
+
+Para que backend y frontend usen la misma fuente de verdad y no aparezcan magic numbers desperdigados, los códigos se exportan en `packages/shared-types/src/ws.ts`:
+
+```typescript
+export const WS_CLOSE_CODES = {
+  NORMAL: 1000,
+  POLICY_VIOLATION: 1008,
+  KEEPALIVE_FAILURE: 1011,
+  SESSION_REPLACED: 4000,
+  SESSION_EXPIRED: 4001,
+} as const;
+
+export type WsCloseCode = (typeof WS_CLOSE_CODES)[keyof typeof WS_CLOSE_CODES];
+```
+
+El backend importa estas constantes en `connection-registry.ts`, `handler.ts` y `heartbeat.ts`. Cuando el frontend implemente el cliente WS (F1 de Max), evaluará `event.code` contra el mismo objeto.
 
 ## 9. Constantes y configuración
 
