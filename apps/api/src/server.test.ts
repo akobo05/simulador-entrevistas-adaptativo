@@ -54,4 +54,29 @@ describe('buildServer', () => {
     expect(res.statusCode).toBe(200);
     expect(res.headers['access-control-allow-origin']).toBeUndefined();
   });
+
+  it('redacta ?token= en los logs de request', async () => {
+    // Capturamos el output del logger de Fastify pasandole un stream que
+    // acumula los chunks. Usamos un sub-server con LOG_LEVEL=info y
+    // destination custom para no contaminar la suite con logs reales.
+    const writes: string[] = [];
+    const captureStream = {
+      write: (chunk: string) => {
+        writes.push(chunk);
+        return true;
+      },
+    };
+    const captureEnv = { ...testEnv, LOG_LEVEL: 'info' as const };
+    const sub = await buildServer(captureEnv, { redis, loggerDestination: captureStream });
+
+    await sub.inject({
+      method: 'GET',
+      url: '/health?token=' + 'a'.repeat(64),
+    });
+
+    const joined = writes.join('');
+    expect(joined).toContain('REDACTED');
+    expect(joined).not.toContain('a'.repeat(64));
+    await sub.close();
+  });
 });

@@ -18,11 +18,29 @@ declare module 'fastify' {
 export interface BuildServerDeps {
   /** Cliente Redis a usar. Si no se provee, se construye con `buildRedisClient(env)`. */
   redis?: Redis;
+  /** Destino opcional para los logs (usado en tests para capturar output). */
+  loggerDestination?: { write(chunk: string): boolean | void };
 }
 
 export async function buildServer(env: Env, deps: BuildServerDeps = {}): Promise<FastifyInstance> {
+  // Redacta el query param `token` en req.url antes de loguearlo. Pino
+  // por defecto loguea la URL completa, lo que filtraria el token de
+  // sesion (que es secreto, ver spec §6.1). Aplica a CUALQUIER ruta que
+  // reciba un token por query string, no solo al WS.
+  const redactTokenInUrl = (url: string): string => url.replace(/([?&]token=)[^&]+/g, '$1REDACTED');
+
   const server = Fastify({
-    logger: { level: env.LOG_LEVEL },
+    logger: {
+      level: env.LOG_LEVEL,
+      serializers: {
+        req: (req) => ({
+          method: req.method,
+          url: redactTokenInUrl(req.url),
+          remoteAddress: req.ip,
+        }),
+      },
+      ...(deps.loggerDestination ? { stream: deps.loggerDestination } : {}),
+    },
   });
 
   const redis = deps.redis ?? buildRedisClient(env);
