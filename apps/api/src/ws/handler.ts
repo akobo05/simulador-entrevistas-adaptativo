@@ -57,9 +57,11 @@ export function attachHandlers(ctx: HandlerContext): void {
   socket.on('message', (raw) => {
     let json: unknown;
     try {
-      // raw puede ser Buffer, ArrayBuffer o Buffer[]. toString() funciona
-      // para los dos primeros casos; el tercero es raro con maxPayload
-      // pequeno pero igual normalizamos.
+      // `ws` emite Buffer para frames de texto (binaryType default) y a veces
+      // Buffer[] si la libreria fragmenta internamente. toString() decodifica
+      // el Buffer y Buffer.concat() acumula el array antes de decodificar.
+      // Con maxPayload=16KB el caso de Buffer[] es practicamente inalcanzable
+      // pero la normalizamos por defensa.
       const text = Array.isArray(raw) ? Buffer.concat(raw).toString('utf8') : raw.toString();
       json = JSON.parse(text);
     } catch {
