@@ -217,6 +217,17 @@ describe('CreateSessionResponseSchema', () => {
       }).success,
     ).toBe(false);
   });
+
+  it('rechaza token con caracteres fuera de [0-9a-f]', () => {
+    // 64 chars pero con G mayuscula (fuera del rango hex minusculas)
+    expect(
+      CreateSessionResponseSchema.safeParse({
+        sessionId: '550e8400-e29b-41d4-a716-446655440000',
+        websocketUrl: 'ws://localhost:3000',
+        token: 'G'.repeat(64),
+      }).success,
+    ).toBe(false);
+  });
 });
 
 describe('SessionStateSchema', () => {
