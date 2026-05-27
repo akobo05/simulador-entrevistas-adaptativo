@@ -59,6 +59,7 @@ describe('createSttController', () => {
     const controller = createSttController(
       SESSION_ID,
       () => {},
+      {},
       () => fakeRec as unknown as ReturnType<(typeof fakeRec)['start']>,
     );
     controller.start();
@@ -73,6 +74,7 @@ describe('createSttController', () => {
     const controller = createSttController(
       SESSION_ID,
       () => {},
+      {},
       () => fakeRec as unknown as ReturnType<(typeof fakeRec)['start']>,
     );
     controller.start();
@@ -81,12 +83,84 @@ describe('createSttController', () => {
     expect(fakeRec.start).toHaveBeenCalledTimes(1); // solo la vez inicial, no reinicia
   });
 
+  it('respeta options.lang cuando se especifica', () => {
+    const fakeRec = new MockSpeechRecognition();
+    const controller = createSttController(
+      SESSION_ID,
+      () => {},
+      { lang: 'en-US' },
+      () => fakeRec as unknown as ReturnType<(typeof fakeRec)['start']>,
+    );
+    controller.start();
+    expect(fakeRec.lang).toBe('en-US');
+  });
+
+  it('usa es-PE por defecto cuando no se pasa options.lang', () => {
+    const fakeRec = new MockSpeechRecognition();
+    const controller = createSttController(
+      SESSION_ID,
+      () => {},
+      {},
+      () => fakeRec as unknown as ReturnType<(typeof fakeRec)['start']>,
+    );
+    controller.start();
+    expect(fakeRec.lang).toBe('es-PE');
+  });
+
+  it('detiene auto-restart tras 5 InvalidStateError consecutivos en onend', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const fakeRec = new MockSpeechRecognition();
+    let startCount = 0;
+    fakeRec.start = vi.fn(() => {
+      startCount++;
+      // start inicial OK; reintentos via onend lanzan InvalidStateError
+      if (startCount > 1) throw new Error('InvalidStateError');
+    });
+    const controller = createSttController(
+      SESSION_ID,
+      () => {},
+      {},
+      () => fakeRec as unknown as ReturnType<(typeof fakeRec)['start']>,
+    );
+    controller.start();
+    // 6 onend: el 6to no debe intentar restart porque ya se alcanzaron 5 fallos
+    for (let i = 0; i < 6; i++) {
+      fakeRec.onend?.();
+    }
+    expect(startCount).toBe(6); // 1 inicial + 5 reintentos
+    expect(warnSpy).toHaveBeenCalled();
+    warnSpy.mockRestore();
+  });
+
+  it('loguea parsed.error cuando safeParse rechaza el transcript', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const fakeRec = new MockSpeechRecognition();
+    // sessionId no-UUID hace que CandidateTranscriptSchema.safeParse rechace
+    const controller = createSttController(
+      'not-a-uuid',
+      () => {},
+      {},
+      () => fakeRec as unknown as ReturnType<(typeof fakeRec)['start']>,
+    );
+    controller.start();
+    fakeRec.onresult?.({
+      resultIndex: 0,
+      results: {
+        length: 1,
+        0: { isFinal: true, length: 1, 0: { transcript: 'hola', confidence: 0.9 } },
+      },
+    } as unknown as Parameters<NonNullable<typeof fakeRec.onresult>>[0]);
+    expect(warnSpy).toHaveBeenCalled();
+    warnSpy.mockRestore();
+  });
+
   it('invoca el callback con el transcript parseado cuando onresult se dispara', () => {
     const received: unknown[] = [];
     const fakeRec = new MockSpeechRecognition();
     const controller = createSttController(
       SESSION_ID,
       (t) => received.push(t),
+      {},
       () => fakeRec as unknown as ReturnType<(typeof fakeRec)['start']>,
     );
     controller.start();

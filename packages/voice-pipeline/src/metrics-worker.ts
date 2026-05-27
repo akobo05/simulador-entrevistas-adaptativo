@@ -48,24 +48,28 @@ function dispose(): void {
   landmarker = null;
 }
 
-function computeEyeContact(imageData: ImageData, timestamp: number): number {
-  if (!landmarker) return 50;
+// Retorna null cuando no hay medicion confiable (sin landmarker, sin rostro,
+// landmarks incompletos, ojo degenerado, o exception del detector). El caller
+// debe filtrar los null antes de emitir metricas, conforme a la spec 3.4:
+// "Si una metrica no tiene confianza suficiente para reportarse, se omite del array".
+function computeEyeContact(imageData: ImageData, timestamp: number): number | null {
+  if (!landmarker) return null;
 
   try {
     // detectForVideo requiere timestamp en ms (no unix epoch, sino tiempo relativo)
     const result = landmarker.detectForVideo(imageData, timestamp);
-    if (!result.faceLandmarks || result.faceLandmarks.length === 0) return 0;
+    if (!result.faceLandmarks || result.faceLandmarks.length === 0) return null;
 
     const landmarks = result.faceLandmarks[0];
-    if (!landmarks) return 50;
+    if (!landmarks) return null;
     const leftIris = landmarks[LEFT_IRIS_CENTER];
     const leftEyeLeft = landmarks[LEFT_EYE_LEFT];
     const leftEyeRight = landmarks[LEFT_EYE_RIGHT];
 
-    if (!leftIris || !leftEyeLeft || !leftEyeRight) return 50;
+    if (!leftIris || !leftEyeLeft || !leftEyeRight) return null;
 
     const eyeWidth = Math.abs(leftEyeRight.x - leftEyeLeft.x);
-    if (eyeWidth < 0.001) return 50;
+    if (eyeWidth < 0.001) return null;
 
     const eyeCenterX = (leftEyeLeft.x + leftEyeRight.x) / 2;
     const eyeCenterY = (leftEyeLeft.y + leftEyeRight.y) / 2;
@@ -76,7 +80,7 @@ function computeEyeContact(imageData: ImageData, timestamp: number): number {
 
     return Math.max(0, Math.min(100, Math.round((1 - Math.min(deviation / 0.3, 1)) * 100)));
   } catch {
-    return 50;
+    return null;
   }
 }
 
@@ -90,13 +94,14 @@ function processFrame(buffer: ArrayBuffer, width: number, height: number): AuraM
   const imageData = new ImageData(new Uint8ClampedArray(buffer), width, height);
   const eyeValue = computeEyeContact(imageData, now);
 
-  if (typeof eyeValue !== 'number') return [];
+  // null = sin medicion confiable, omitimos la metrica del snapshot
+  if (eyeValue === null) return [];
 
   return [
     {
       name: 'eye_contact',
       value: eyeValue,
-      confidence: landmarker ? 'high' : 'low',
+      confidence: 'high',
       timestamp: now,
     },
   ];

@@ -3,6 +3,11 @@ import type { CandidateTranscript } from '@warachikuy/shared-types';
 
 export type TranscriptCallback = (transcript: CandidateTranscript) => void;
 
+export interface SttOptions {
+  /** Locale BCP-47 que se pasa a `SpeechRecognition.lang`. Default: 'es-PE'. */
+  lang?: string;
+}
+
 export interface SttController {
   start: () => void;
   stop: () => void;
@@ -57,8 +62,10 @@ function createRecognition(): WebSpeechRecognition {
 export function createSttController(
   sessionId: string,
   onTranscript: TranscriptCallback,
+  options: SttOptions = {},
   recognitionFactory: () => WebSpeechRecognition = createRecognition,
 ): SttController {
+  const lang = options.lang ?? 'es-PE';
   let recognition: WebSpeechRecognition | null = null;
   let active = false;
 
@@ -67,7 +74,7 @@ export function createSttController(
     recognition = recognitionFactory();
     recognition.continuous = true;
     recognition.interimResults = true;
-    recognition.lang = 'es-PE';
+    recognition.lang = lang;
 
     recognition.onresult = (event: SpeechRecognitionEvent) => {
       for (let i = event.resultIndex; i < event.results.length; i++) {
@@ -82,7 +89,12 @@ export function createSttController(
           timestamp: Date.now(),
         };
         const parsed = CandidateTranscriptSchema.safeParse(raw);
-        if (parsed.success) onTranscript(parsed.data);
+        if (parsed.success) {
+          onTranscript(parsed.data);
+        } else if (typeof console !== 'undefined') {
+          // En produccion conviene enviar esto al sink de errores del cliente (Sentry)
+          console.warn('Transcript rechazado por schema', parsed.error.issues);
+        }
       }
     };
 
@@ -92,13 +104,39 @@ export function createSttController(
       if (TERMINAL_ERRORS.has(event.error)) active = false;
     };
 
-    // auto-restart on end (Web Speech API stops after silence)
+    // auto-restart on end (Web Speech API stops after silence).
+    // Chrome puede lanzar InvalidStateError si la instancia previa no se libero;
+    // contamos fallos consecutivos y apagamos tras MAX para no bloquear el event loop.
+    let restartAttempts = 0;
+    const MAX_RESTART_ATTEMPTS = 5;
     recognition.onend = () => {
-      if (active) recognition?.start();
+      if (!active) return;
+      try {
+        recognition?.start();
+        restartAttempts = 0;
+      } catch {
+        restartAttempts++;
+        if (restartAttempts >= MAX_RESTART_ATTEMPTS) {
+          active = false;
+          if (typeof console !== 'undefined') {
+            console.warn(
+              `STT auto-restart abandonado tras ${MAX_RESTART_ATTEMPTS} fallos consecutivos`,
+            );
+          }
+        }
+      }
     };
 
-    recognition.start();
+    // active=true antes de start() para que si start() lanza sincrono podamos
+    // resetear estado limpio en el catch sin dejar la instancia colgando
     active = true;
+    try {
+      recognition.start();
+    } catch (err) {
+      active = false;
+      recognition = null;
+      throw err;
+    }
   }
 
   function stop() {
