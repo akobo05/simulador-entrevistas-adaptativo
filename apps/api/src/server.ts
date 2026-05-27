@@ -4,6 +4,7 @@ import rateLimit from '@fastify/rate-limit';
 import type Redis from 'ioredis';
 import { type Env } from './config/env.js';
 import { buildRedisClient } from './services/redis.js';
+import { registerSessionsRoutes } from './routes/sessions.js';
 
 // Aumentamos el tipo de FastifyInstance para que `server.redis` y `server.env`
 // sean accesibles desde handlers y plugins sin casts.
@@ -40,6 +41,13 @@ export async function buildServer(env: Env, deps: BuildServerDeps = {}): Promise
     redis,
     global: false,
   });
+
+  await server.register(
+    async (api) => {
+      await registerSessionsRoutes(api);
+    },
+    { prefix: '/api/v1' },
+  );
 
   server.get('/health', async () => ({ status: 'ok' }));
 
