@@ -1,12 +1,19 @@
 import { wrap, type Remote } from 'comlink';
 import type { MetricsWorkerApi } from './metrics-worker';
 
+export interface MetricsWorkerClient {
+  api: Remote<MetricsWorkerApi>;
+  terminate: () => void;
+}
+
 /**
- * Crea una instancia del Web Worker de métricas y devuelve su API via Comlink.
- * Todos los métodos devuelven Promises porque cruzan el límite del worker.
- * Llamar una vez al montar el componente de la sala de entrevista.
+ * Crea una instancia del Web Worker de métricas.
+ * Llamar una vez al montar el componente; llamar terminate() al desmontar.
  */
-export function createMetricsWorker(): Remote<MetricsWorkerApi> {
+export function createMetricsWorker(): MetricsWorkerClient {
   const worker = new Worker(new URL('./metrics-worker.ts', import.meta.url), { type: 'module' });
-  return wrap<MetricsWorkerApi>(worker);
+  return {
+    api: wrap<MetricsWorkerApi>(worker),
+    terminate: () => worker.terminate(),
+  };
 }

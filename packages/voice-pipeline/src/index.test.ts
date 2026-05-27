@@ -8,7 +8,7 @@ class MockSpeechRecognition {
   interimResults = false;
   lang = '';
   onresult: ((e: unknown) => void) | null = null;
-  onerror: (() => void) | null = null;
+  onerror: ((e: { error: string }) => void) | null = null;
   onend: (() => void) | null = null;
   start = vi.fn();
   stop = vi.fn();
@@ -54,6 +54,33 @@ describe('createSttController', () => {
     expect(instances.length).toBe(1);
   });
 
+  it('no desactiva active con error no-speech (debe seguir activo para auto-restart)', () => {
+    const fakeRec = new MockSpeechRecognition();
+    const controller = createSttController(
+      SESSION_ID,
+      () => {},
+      () => fakeRec as unknown as ReturnType<(typeof fakeRec)['start']>,
+    );
+    controller.start();
+    fakeRec.onerror?.({ error: 'no-speech' });
+    // onend debe disparar restart porque active sigue en true
+    fakeRec.onend?.();
+    expect(fakeRec.start).toHaveBeenCalledTimes(2); // una vez en start(), otra en onend
+  });
+
+  it('desactiva active con error terminal not-allowed', () => {
+    const fakeRec = new MockSpeechRecognition();
+    const controller = createSttController(
+      SESSION_ID,
+      () => {},
+      () => fakeRec as unknown as ReturnType<(typeof fakeRec)['start']>,
+    );
+    controller.start();
+    fakeRec.onerror?.({ error: 'not-allowed' });
+    fakeRec.onend?.();
+    expect(fakeRec.start).toHaveBeenCalledTimes(1); // solo la vez inicial, no reinicia
+  });
+
   it('invoca el callback con el transcript parseado cuando onresult se dispara', () => {
     const received: unknown[] = [];
     const fakeRec = new MockSpeechRecognition();
@@ -88,7 +115,7 @@ describe('createSpeechMetricsTracker', () => {
     expect(fluency?.value).toBe(100);
   });
 
-  it('detecta muletillas y baja fluency', () => {
+  it('detecta muletillas simples y baja fluency', () => {
     const tracker = createSpeechMetricsTracker();
     tracker.onTranscript({
       sessionId: SESSION_ID,
@@ -96,9 +123,20 @@ describe('createSpeechMetricsTracker', () => {
       isFinal: true,
       timestamp: now,
     });
-    const metrics = tracker.getMetrics();
-    const fluency = metrics.find((m) => m.name === 'fluency');
-    // "este" y "bueno" son muletillas → fluency < 100
+    const fluency = tracker.getMetrics().find((m) => m.name === 'fluency');
+    expect(fluency?.value).toBeLessThan(100);
+  });
+
+  it('detecta muletillas de varias palabras como "o sea"', () => {
+    const tracker = createSpeechMetricsTracker();
+    tracker.onTranscript({
+      sessionId: SESSION_ID,
+      text: 'o sea yo creo que sí',
+      isFinal: true,
+      timestamp: now,
+    });
+    const fluency = tracker.getMetrics().find((m) => m.name === 'fluency');
+    // "o sea" debe detectarse → fluency < 100
     expect(fluency?.value).toBeLessThan(100);
   });
 
@@ -118,13 +156,13 @@ describe('createSpeechMetricsTracker', () => {
 
   it('speech_rate sube al 100 con ritmo ideal (130-160 wpm)', () => {
     const tracker = createSpeechMetricsTracker();
-    // Simular 75 palabras en 30 segundos = 150 wpm (ideal)
+    // 75 palabras con inicio hace ~29 s → ~155 wpm (ideal 130-160)
     const words = Array(75).fill('hola').join(' ');
     tracker.onTranscript({
       sessionId: SESSION_ID,
       text: words,
       isFinal: true,
-      timestamp: now - 30_000,
+      timestamp: Date.now() - 29_000,
     });
     const metrics = tracker.getMetrics();
     const speechRate = metrics.find((m) => m.name === 'speech_rate');

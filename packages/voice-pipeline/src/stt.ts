@@ -26,12 +26,15 @@ interface SpeechRecognitionAlternative {
   readonly transcript: string;
   readonly confidence: number;
 }
+interface SpeechRecognitionErrorEvent extends Event {
+  readonly error: string;
+}
 interface WebSpeechRecognition extends EventTarget {
   continuous: boolean;
   interimResults: boolean;
   lang: string;
   onresult: ((event: SpeechRecognitionEvent) => void) | null;
-  onerror: ((event: Event) => void) | null;
+  onerror: ((event: SpeechRecognitionErrorEvent) => void) | null;
   onend: (() => void) | null;
   start(): void;
   stop(): void;
@@ -83,8 +86,10 @@ export function createSttController(
       }
     };
 
-    recognition.onerror = () => {
-      active = false;
+    // Solo detener en errores terminales — no-speech ocurre en silencio y no es fatal
+    const TERMINAL_ERRORS = new Set(['not-allowed', 'audio-capture', 'service-not-allowed']);
+    recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
+      if (TERMINAL_ERRORS.has(event.error)) active = false;
     };
 
     // auto-restart on end (Web Speech API stops after silence)
