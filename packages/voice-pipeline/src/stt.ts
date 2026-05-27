@@ -6,6 +6,13 @@ export type TranscriptCallback = (transcript: CandidateTranscript) => void;
 export interface SttOptions {
   /** Locale BCP-47 que se pasa a `SpeechRecognition.lang`. Default: 'es-PE'. */
   lang?: string;
+  /**
+   * Se invoca cuando el pipeline se detiene de forma terminal. El argumento es
+   * el `event.error` del navegador (`'not-allowed'`, `'audio-capture'`,
+   * `'service-not-allowed'`) o el sentinel `'max-restart-attempts-exceeded'`
+   * cuando se agota el contador de reintentos del auto-restart.
+   */
+  onError?: (errorCode: string) => void;
 }
 
 export interface SttController {
@@ -101,7 +108,10 @@ export function createSttController(
     // Solo detener en errores terminales — no-speech ocurre en silencio y no es fatal
     const TERMINAL_ERRORS = new Set(['not-allowed', 'audio-capture', 'service-not-allowed']);
     recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
-      if (TERMINAL_ERRORS.has(event.error)) active = false;
+      if (TERMINAL_ERRORS.has(event.error)) {
+        active = false;
+        options.onError?.(event.error);
+      }
     };
 
     // auto-restart on end (Web Speech API stops after silence).
@@ -118,6 +128,7 @@ export function createSttController(
         restartAttempts++;
         if (restartAttempts >= MAX_RESTART_ATTEMPTS) {
           active = false;
+          options.onError?.('max-restart-attempts-exceeded');
           if (typeof console !== 'undefined') {
             console.warn(
               `STT auto-restart abandonado tras ${MAX_RESTART_ATTEMPTS} fallos consecutivos`,
