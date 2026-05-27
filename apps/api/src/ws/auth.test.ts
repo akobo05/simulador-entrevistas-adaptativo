@@ -83,4 +83,12 @@ describe('validateUpgrade', () => {
     const result = await validateUpgrade(redis, id, VALID_TOKEN);
     expect(result).toEqual({ ok: false, status: 500, code: 'internal_error' });
   });
+
+  it('rechaza con status=500 si el payload en Redis no es JSON valido', async () => {
+    const redis = new RedisMock() as unknown as Redis;
+    const id = '550e8400-e29b-41d4-a716-446655440000';
+    await redis.set(`session:${id}`, 'not-json-at-all', 'EX', 3600);
+    const result = await validateUpgrade(redis, id, VALID_TOKEN);
+    expect(result).toEqual({ ok: false, status: 500, code: 'internal_error' });
+  });
 });
