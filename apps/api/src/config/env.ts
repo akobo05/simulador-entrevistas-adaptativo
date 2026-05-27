@@ -18,6 +18,7 @@ const envSchema = z.object({
         .map((o) => o.trim())
         .filter(Boolean),
     ),
+  WS_BASE_URL: z.string().url().default('ws://localhost:3000'),
 });
 
 export type Env = z.infer<typeof envSchema>;

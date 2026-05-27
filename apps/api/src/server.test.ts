@@ -10,6 +10,7 @@ const testEnv: Env = {
   GEMINI_API_KEY: 'test-key',
   LOG_LEVEL: 'info',
   CORS_ORIGINS: ['http://localhost:5173'],
+  WS_BASE_URL: 'ws://localhost:3000',
 };
 
 describe('buildServer', () => {
