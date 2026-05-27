@@ -143,6 +143,10 @@ async function handler(req, reply) {
 ### 3.4 Servicio `createSession`
 
 ```typescript
+// Nota: import explicito de 'node:crypto'. El crypto global de Node 22
+// implementa Web Crypto API y NO expone randomBytes.
+import crypto from 'node:crypto';
+
 export async function createSession(
   redis: Redis,
   request: CreateSessionRequest,
@@ -171,8 +175,8 @@ export async function createSession(
 
 ### 3.5 Cambios en `server.ts`
 
-- Registrar `@fastify/rate-limit` con 60 requests por hora por IP, aplicado únicamente a `POST /api/v1/sessions`.
 - Construir el cliente Redis con `buildRedisClient(env)` y decorar `server.redis`.
+- Registrar `@fastify/rate-limit` con 60 requests por hora por IP, aplicado únicamente a `POST /api/v1/sessions`. **El plugin reusa la misma instancia de Redis** (`redis: server.redis` en sus opciones) para no abrir una conexión paralela.
 - Decorar `server.env` para acceso desde handlers.
 - Registrar las rutas con prefix `/api/v1`.
 
