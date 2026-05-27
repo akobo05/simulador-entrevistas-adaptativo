@@ -9,6 +9,13 @@ import {
   ClientToServerMessageSchema,
   ServerToClientMessageSchema,
   ApiErrorSchema,
+  IndustrySchema,
+  LevelSchema,
+  CreateSessionRequestSchema,
+  CreateSessionResponseSchema,
+  SessionPhaseSchema,
+  SessionStatusSchema,
+  SessionStateSchema,
 } from './index';
 
 const SESSION_ID = '550e8400-e29b-41d4-a716-446655440000';
@@ -149,5 +156,109 @@ describe('ApiErrorSchema', () => {
       error: { code: 'not_found', message: 'Sesión no encontrada' },
     });
     expect(result.success).toBe(true);
+  });
+});
+
+describe('IndustrySchema', () => {
+  it('acepta los 4 valores de F1', () => {
+    expect(IndustrySchema.safeParse('backend').success).toBe(true);
+    expect(IndustrySchema.safeParse('frontend').success).toBe(true);
+    expect(IndustrySchema.safeParse('data').success).toBe(true);
+    expect(IndustrySchema.safeParse('fullstack').success).toBe(true);
+  });
+
+  it('rechaza un valor desconocido', () => {
+    expect(IndustrySchema.safeParse('mobile').success).toBe(false);
+  });
+});
+
+describe('LevelSchema', () => {
+  it('acepta junior, mid y senior', () => {
+    expect(LevelSchema.safeParse('junior').success).toBe(true);
+    expect(LevelSchema.safeParse('mid').success).toBe(true);
+    expect(LevelSchema.safeParse('senior').success).toBe(true);
+  });
+
+  it('rechaza otro nivel', () => {
+    expect(LevelSchema.safeParse('principal').success).toBe(false);
+  });
+});
+
+describe('CreateSessionRequestSchema', () => {
+  it('valida un request bien formado', () => {
+    const result = CreateSessionRequestSchema.safeParse({
+      industry: 'backend',
+      level: 'mid',
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('rechaza request sin industry', () => {
+    expect(CreateSessionRequestSchema.safeParse({ level: 'mid' }).success).toBe(false);
+  });
+});
+
+describe('CreateSessionResponseSchema', () => {
+  it('valida response con shape esperada', () => {
+    const result = CreateSessionResponseSchema.safeParse({
+      sessionId: '550e8400-e29b-41d4-a716-446655440000',
+      websocketUrl: 'ws://localhost:3000/v1/sessions/abc/ws?token=xyz',
+      token: 'a'.repeat(64),
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('rechaza token con longitud distinta de 64', () => {
+    expect(
+      CreateSessionResponseSchema.safeParse({
+        sessionId: '550e8400-e29b-41d4-a716-446655440000',
+        websocketUrl: 'ws://localhost:3000',
+        token: 'short',
+      }).success,
+    ).toBe(false);
+  });
+});
+
+describe('SessionStateSchema', () => {
+  it('valida un estado inicial coherente', () => {
+    const result = SessionStateSchema.safeParse({
+      id: '550e8400-e29b-41d4-a716-446655440000',
+      industry: 'backend',
+      level: 'mid',
+      status: 'active',
+      phase: 'warmup',
+      turnNumber: 0,
+      startedAt: 1700000000000,
+      token: 'a'.repeat(64),
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('rechaza turnNumber negativo', () => {
+    const result = SessionStateSchema.safeParse({
+      id: '550e8400-e29b-41d4-a716-446655440000',
+      industry: 'backend',
+      level: 'mid',
+      status: 'active',
+      phase: 'warmup',
+      turnNumber: -1,
+      startedAt: 1700000000000,
+      token: 'a'.repeat(64),
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it('acepta los 3 valores válidos de phase', () => {
+    for (const phase of ['warmup', 'interviewing', 'closing'] as const) {
+      const result = SessionPhaseSchema.safeParse(phase);
+      expect(result.success).toBe(true);
+    }
+  });
+
+  it('acepta los 3 valores válidos de status', () => {
+    for (const status of ['active', 'ended', 'expired'] as const) {
+      const result = SessionStatusSchema.safeParse(status);
+      expect(result.success).toBe(true);
+    }
   });
 });
