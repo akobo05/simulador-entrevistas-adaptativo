@@ -109,8 +109,16 @@ export function createSttController(
       if (active) recognition?.start();
     };
 
-    recognition.start();
+    // active=true antes de start() para que si start() lanza sincrono podamos
+    // resetear estado limpio en el catch sin dejar la instancia colgando
     active = true;
+    try {
+      recognition.start();
+    } catch (err) {
+      active = false;
+      recognition = null;
+      throw err;
+    }
   }
 
   function stop() {
