@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import RedisMock from 'ioredis-mock';
 import type Redis from 'ioredis';
+import { SessionStateSchema } from '@warachikuy/shared-types';
 import { createSession } from './sessions.service';
 import type { Env } from '../config/env';
 
@@ -42,16 +43,20 @@ describe('createSession', () => {
     expect(res.token).toMatch(/^[0-9a-f]{64}$/);
   });
 
-  it('llama redis.set con TTL 3600 segundos', async () => {
+  it('llama redis.set con TTL 3600 y payload conforme a SessionStateSchema', async () => {
     const setSpy = vi.fn().mockResolvedValue('OK');
     const redis = { set: setSpy } as unknown as Redis;
     await createSession(redis, { industry: 'backend', level: 'mid' }, fakeEnv);
-    expect(setSpy).toHaveBeenCalledWith(
-      expect.stringMatching(/^session:/),
-      expect.any(String),
-      'EX',
-      3600,
-    );
+    expect(setSpy).toHaveBeenCalledOnce();
+    // Capturamos los args explicitamente y validamos cada uno. El payload
+    // se parsea como JSON y se valida contra SessionStateSchema para que un
+    // payload garbled o parcial rompa el test, no solo "que sea string".
+    const [key, payload, flag, ttl] = setSpy.mock.calls[0] as [string, string, string, number];
+    expect(key).toMatch(/^session:/);
+    expect(flag).toBe('EX');
+    expect(ttl).toBe(3600);
+    const parsed = SessionStateSchema.safeParse(JSON.parse(payload));
+    expect(parsed.success).toBe(true);
   });
 
   it('inicializa SessionState con status=active, phase=warmup, turnNumber=0', async () => {
