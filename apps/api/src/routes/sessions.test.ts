@@ -98,9 +98,14 @@ describe('POST /api/v1/sessions', () => {
     });
     expect(res.statusCode).toBe(500);
     const body = JSON.parse(res.body);
-    expect(body.error.code).toBe('internal_error');
+    // Aserto la shape estricta para detectar cualquier key extra que pudiera
+    // filtrarse en el futuro (stack, stackTrace, details con info interna, etc),
+    // no solo el sustring 'stack' que es fragil.
+    expect(body).toStrictEqual({
+      error: { code: 'internal_error', message: 'No se pudo crear la sesion' },
+    });
+    // Verificacion adicional: el mensaje del error original tampoco se filtra.
     expect(JSON.stringify(body)).not.toContain('connection refused');
-    expect(JSON.stringify(body)).not.toContain('stack');
 
     await brokenServer.close();
   });
