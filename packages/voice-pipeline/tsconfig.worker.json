@@ -5,8 +5,7 @@
     "rootDir": "./src",
     "declaration": true,
     "declarationMap": true,
-    "lib": ["ES2022", "DOM"]
+    "lib": ["ES2022", "WebWorker"]
   },
-  "include": ["src/**/*"],
-  "exclude": ["src/metrics-worker.ts"]
+  "include": ["src/metrics-worker.ts"]
 }
