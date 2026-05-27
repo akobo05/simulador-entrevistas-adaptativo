@@ -89,7 +89,12 @@ export function createSttController(
           timestamp: Date.now(),
         };
         const parsed = CandidateTranscriptSchema.safeParse(raw);
-        if (parsed.success) onTranscript(parsed.data);
+        if (parsed.success) {
+          onTranscript(parsed.data);
+        } else if (typeof console !== 'undefined') {
+          // En produccion conviene enviar esto al sink de errores del cliente (Sentry)
+          console.warn('Transcript rechazado por schema', parsed.error.issues);
+        }
       }
     };
 

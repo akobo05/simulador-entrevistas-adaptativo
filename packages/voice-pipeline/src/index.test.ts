@@ -107,6 +107,28 @@ describe('createSttController', () => {
     expect(fakeRec.lang).toBe('es-PE');
   });
 
+  it('loguea parsed.error cuando safeParse rechaza el transcript', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const fakeRec = new MockSpeechRecognition();
+    // sessionId no-UUID hace que CandidateTranscriptSchema.safeParse rechace
+    const controller = createSttController(
+      'not-a-uuid',
+      () => {},
+      {},
+      () => fakeRec as unknown as ReturnType<(typeof fakeRec)['start']>,
+    );
+    controller.start();
+    fakeRec.onresult?.({
+      resultIndex: 0,
+      results: {
+        length: 1,
+        0: { isFinal: true, length: 1, 0: { transcript: 'hola', confidence: 0.9 } },
+      },
+    } as unknown as Parameters<NonNullable<typeof fakeRec.onresult>>[0]);
+    expect(warnSpy).toHaveBeenCalled();
+    warnSpy.mockRestore();
+  });
+
   it('invoca el callback con el transcript parseado cuando onresult se dispara', () => {
     const received: unknown[] = [];
     const fakeRec = new MockSpeechRecognition();
