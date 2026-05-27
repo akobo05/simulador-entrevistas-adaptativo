@@ -59,6 +59,7 @@ describe('createSttController', () => {
     const controller = createSttController(
       SESSION_ID,
       () => {},
+      {},
       () => fakeRec as unknown as ReturnType<(typeof fakeRec)['start']>,
     );
     controller.start();
@@ -73,6 +74,7 @@ describe('createSttController', () => {
     const controller = createSttController(
       SESSION_ID,
       () => {},
+      {},
       () => fakeRec as unknown as ReturnType<(typeof fakeRec)['start']>,
     );
     controller.start();
@@ -81,12 +83,37 @@ describe('createSttController', () => {
     expect(fakeRec.start).toHaveBeenCalledTimes(1); // solo la vez inicial, no reinicia
   });
 
+  it('respeta options.lang cuando se especifica', () => {
+    const fakeRec = new MockSpeechRecognition();
+    const controller = createSttController(
+      SESSION_ID,
+      () => {},
+      { lang: 'en-US' },
+      () => fakeRec as unknown as ReturnType<(typeof fakeRec)['start']>,
+    );
+    controller.start();
+    expect(fakeRec.lang).toBe('en-US');
+  });
+
+  it('usa es-PE por defecto cuando no se pasa options.lang', () => {
+    const fakeRec = new MockSpeechRecognition();
+    const controller = createSttController(
+      SESSION_ID,
+      () => {},
+      {},
+      () => fakeRec as unknown as ReturnType<(typeof fakeRec)['start']>,
+    );
+    controller.start();
+    expect(fakeRec.lang).toBe('es-PE');
+  });
+
   it('invoca el callback con el transcript parseado cuando onresult se dispara', () => {
     const received: unknown[] = [];
     const fakeRec = new MockSpeechRecognition();
     const controller = createSttController(
       SESSION_ID,
       (t) => received.push(t),
+      {},
       () => fakeRec as unknown as ReturnType<(typeof fakeRec)['start']>,
     );
     controller.start();

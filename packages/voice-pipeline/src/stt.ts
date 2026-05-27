@@ -3,6 +3,11 @@ import type { CandidateTranscript } from '@warachikuy/shared-types';
 
 export type TranscriptCallback = (transcript: CandidateTranscript) => void;
 
+export interface SttOptions {
+  /** Locale BCP-47 que se pasa a `SpeechRecognition.lang`. Default: 'es-PE'. */
+  lang?: string;
+}
+
 export interface SttController {
   start: () => void;
   stop: () => void;
@@ -57,8 +62,10 @@ function createRecognition(): WebSpeechRecognition {
 export function createSttController(
   sessionId: string,
   onTranscript: TranscriptCallback,
+  options: SttOptions = {},
   recognitionFactory: () => WebSpeechRecognition = createRecognition,
 ): SttController {
+  const lang = options.lang ?? 'es-PE';
   let recognition: WebSpeechRecognition | null = null;
   let active = false;
 
@@ -67,7 +74,7 @@ export function createSttController(
     recognition = recognitionFactory();
     recognition.continuous = true;
     recognition.interimResults = true;
-    recognition.lang = 'es-PE';
+    recognition.lang = lang;
 
     recognition.onresult = (event: SpeechRecognitionEvent) => {
       for (let i = event.resultIndex; i < event.results.length; i++) {
