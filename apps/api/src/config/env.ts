@@ -5,7 +5,7 @@ const envSchema = z.object({
   DATABASE_URL: z.string().url(),
   REDIS_URL: z.string().url(),
   GEMINI_API_KEY: z.string().min(1, 'GEMINI_API_KEY es obligatoria'),
-  LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
+  LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
   // Origenes permitidos para CORS, separados por coma. Por defecto el
   // frontend de desarrollo (Vite). En produccion el deploy de Vercel
   // debe agregar su propio dominio aqui.
@@ -18,6 +18,7 @@ const envSchema = z.object({
         .map((o) => o.trim())
         .filter(Boolean),
     ),
+  WS_BASE_URL: z.string().url().default('ws://localhost:3000'),
 });
 
 export type Env = z.infer<typeof envSchema>;
