@@ -228,7 +228,7 @@ export type CreateSessionRequest = z.infer<typeof CreateSessionRequestSchema>;
 export const CreateSessionResponseSchema = z.object({
   sessionId: z.string().uuid(),
   websocketUrl: z.string().url(),
-  token: z.string().length(64),
+  token: z.string().regex(/^[0-9a-f]{64}$/, 'token debe ser 64 chars hex'),
 });
 export type CreateSessionResponse = z.infer<typeof CreateSessionResponseSchema>;
 
@@ -246,7 +246,7 @@ export const SessionStateSchema = z.object({
   phase: SessionPhaseSchema,
   turnNumber: z.number().int().nonnegative(),
   startedAt: z.number().int(),
-  token: z.string().length(64),
+  token: z.string().regex(/^[0-9a-f]{64}$/, 'token debe ser 64 chars hex'),
 });
 export type SessionState = z.infer<typeof SessionStateSchema>;
 ```
