@@ -36,10 +36,19 @@ export async function buildServer(env: Env, deps: BuildServerDeps = {}): Promise
 
   // El plugin de rate-limit usa la misma instancia de Redis para no abrir
   // una conexión paralela. `global: false` deja que cada ruta opte-in via
-  // su config local.
+  // su config local. `errorResponseBuilder` hace que el 429 cumpla el
+  // envelope ApiError documentado en la spec 3.6 en vez del default del
+  // plugin (que es { statusCode, error: 'Too Many Requests', message }).
   await server.register(rateLimit, {
     redis,
     global: false,
+    errorResponseBuilder: (_req, context) => ({
+      error: {
+        code: 'rate_limited',
+        message: `Limite excedido. Intenta de nuevo en ${context.after}.`,
+        details: { max: context.max, ttl: context.ttl },
+      },
+    }),
   });
 
   await server.register(
