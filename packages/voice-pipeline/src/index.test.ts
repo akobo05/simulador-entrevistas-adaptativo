@@ -107,6 +107,55 @@ describe('createSttController', () => {
     expect(fakeRec.lang).toBe('es-PE');
   });
 
+  it('invoca options.onError con el code cuando un error terminal apaga active', () => {
+    const errorSpy = vi.fn();
+    const fakeRec = new MockSpeechRecognition();
+    const controller = createSttController(
+      SESSION_ID,
+      () => {},
+      { onError: errorSpy },
+      () => fakeRec as unknown as ReturnType<(typeof fakeRec)['start']>,
+    );
+    controller.start();
+    fakeRec.onerror?.({ error: 'not-allowed' });
+    expect(errorSpy).toHaveBeenCalledWith('not-allowed');
+  });
+
+  it('no invoca options.onError con errores no terminales como no-speech', () => {
+    const errorSpy = vi.fn();
+    const fakeRec = new MockSpeechRecognition();
+    const controller = createSttController(
+      SESSION_ID,
+      () => {},
+      { onError: errorSpy },
+      () => fakeRec as unknown as ReturnType<(typeof fakeRec)['start']>,
+    );
+    controller.start();
+    fakeRec.onerror?.({ error: 'no-speech' });
+    expect(errorSpy).not.toHaveBeenCalled();
+  });
+
+  it('invoca options.onError con max-restart-attempts-exceeded cuando se agota el contador', () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const errorSpy = vi.fn();
+    const fakeRec = new MockSpeechRecognition();
+    let startCount = 0;
+    fakeRec.start = vi.fn(() => {
+      startCount++;
+      if (startCount > 1) throw new Error('InvalidStateError');
+    });
+    const controller = createSttController(
+      SESSION_ID,
+      () => {},
+      { onError: errorSpy },
+      () => fakeRec as unknown as ReturnType<(typeof fakeRec)['start']>,
+    );
+    controller.start();
+    for (let i = 0; i < 6; i++) fakeRec.onend?.();
+    expect(errorSpy).toHaveBeenCalledWith('max-restart-attempts-exceeded');
+    warnSpy.mockRestore();
+  });
+
   it('detiene auto-restart tras 5 InvalidStateError consecutivos en onend', () => {
     const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const fakeRec = new MockSpeechRecognition();

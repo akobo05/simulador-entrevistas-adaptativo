@@ -23,23 +23,40 @@ const LEFT_EYE_RIGHT = 133;
 let landmarker: FaceLandmarker | null = null;
 let lastProcessedAt = 0;
 
+// Lanza Error('model_load_failed') con .cause si ni GPU ni CPU pueden cargar
+// el modelo, para que el caller (main thread via Comlink) lo distinga de un
+// rechazo generico y pueda mostrar un mensaje claro al usuario.
 async function initialize(): Promise<void> {
   if (landmarker) return;
+
+  let vision: Awaited<ReturnType<typeof FilesetResolver.forVisionTasks>>;
   try {
-    const vision = await FilesetResolver.forVisionTasks(WASM_URL);
+    vision = await FilesetResolver.forVisionTasks(WASM_URL);
+  } catch (err) {
+    throw new Error('model_load_failed', { cause: err });
+  }
+
+  let gpuError: unknown;
+  try {
     landmarker = await FaceLandmarker.createFromOptions(vision, {
       baseOptions: { modelAssetPath: MODEL_URL, delegate: 'GPU' },
-      runningMode: 'VIDEO', // VIDEO para frames continuos, no IMAGE
+      runningMode: 'VIDEO',
       numFaces: 1,
     });
-  } catch {
-    // Fallback a CPU si GPU no está disponible
-    const vision = await FilesetResolver.forVisionTasks(WASM_URL);
+    return;
+  } catch (err) {
+    gpuError = err;
+  }
+
+  // GPU no disponible — intentamos CPU como fallback
+  try {
     landmarker = await FaceLandmarker.createFromOptions(vision, {
       baseOptions: { modelAssetPath: MODEL_URL, delegate: 'CPU' },
       runningMode: 'VIDEO',
       numFaces: 1,
     });
+  } catch (cpuError) {
+    throw new Error('model_load_failed', { cause: { gpuError, cpuError } });
   }
 }
 
