@@ -97,7 +97,7 @@ describe('WS /v1/sessions/:sessionId/ws (integration)', () => {
     const state = makeState();
     await seedSession(redis, state);
     const ws = new WebSocket(url(state, 'short'));
-    await new Promise<void>((resolve) => {
+    await new Promise<void>((resolve, reject) => {
       ws.on('unexpected-response', (_req, res) => {
         expect(res.statusCode).toBe(400);
         // Drenamos la respuesta y cerramos el socket para liberar la
@@ -107,6 +107,7 @@ describe('WS /v1/sessions/:sessionId/ws (integration)', () => {
         res.socket?.destroy();
         resolve();
       });
+      ws.on('upgrade', () => reject(new Error('Handshake debio ser rechazado')));
     });
   });
 
@@ -115,13 +116,14 @@ describe('WS /v1/sessions/:sessionId/ws (integration)', () => {
     // nunca fue sembrado en el contexto compartido de ioredis-mock.
     const ghost = makeState({ id: '00000000-0000-4000-a000-000000000000' });
     const ws = new WebSocket(url(ghost));
-    await new Promise<void>((resolve) => {
+    await new Promise<void>((resolve, reject) => {
       ws.on('unexpected-response', (_req, res) => {
         expect(res.statusCode).toBe(404);
         res.resume();
         res.socket?.destroy();
         resolve();
       });
+      ws.on('upgrade', () => reject(new Error('Handshake debio ser rechazado')));
     });
   });
 
@@ -129,13 +131,14 @@ describe('WS /v1/sessions/:sessionId/ws (integration)', () => {
     const state = makeState();
     await seedSession(redis, state);
     const ws = new WebSocket(url(state, 'b'.repeat(64)));
-    await new Promise<void>((resolve) => {
+    await new Promise<void>((resolve, reject) => {
       ws.on('unexpected-response', (_req, res) => {
         expect(res.statusCode).toBe(401);
         res.resume();
         res.socket?.destroy();
         resolve();
       });
+      ws.on('upgrade', () => reject(new Error('Handshake debio ser rechazado')));
     });
   });
 
@@ -143,13 +146,14 @@ describe('WS /v1/sessions/:sessionId/ws (integration)', () => {
     const state = makeState({ status: 'ended' });
     await seedSession(redis, state);
     const ws = new WebSocket(url(state));
-    await new Promise<void>((resolve) => {
+    await new Promise<void>((resolve, reject) => {
       ws.on('unexpected-response', (_req, res) => {
         expect(res.statusCode).toBe(410);
         res.resume();
         res.socket?.destroy();
         resolve();
       });
+      ws.on('upgrade', () => reject(new Error('Handshake debio ser rechazado')));
     });
   });
 

@@ -100,5 +100,11 @@ export function attachHandlers(ctx: HandlerContext): void {
 }
 
 function sendServer(socket: WebSocket, msg: ServerToClientMessage): void {
-  socket.send(JSON.stringify(msg));
+  // `ws` lanza synchronously si readyState no es OPEN. Esto puede pasar
+  // en escenarios de cierre en transit (ej: enviar error{recoverable:true}
+  // mientras llega el FIN del cliente). El error envelope simplemente se
+  // pierde, que es preferible a tumbar el handler con una excepcion.
+  if (socket.readyState === socket.OPEN) {
+    socket.send(JSON.stringify(msg));
+  }
 }

@@ -4,6 +4,16 @@ import { validateUpgrade } from '../ws/auth.js';
 import { attachHandlers } from '../ws/handler.js';
 import { apiError } from '../errors.js';
 
+// Extension del request para pasar el SessionState validado del
+// preValidation al handler sin re-leer Redis. Es `?:` porque solo se
+// setea en rutas WS que pasan por validateUpgrade, no en todas las
+// rutas del server.
+declare module 'fastify' {
+  interface FastifyRequest {
+    wsState?: SessionState;
+  }
+}
+
 export async function registerSessionsWsRoute(server: FastifyInstance): Promise<void> {
   server.get<{
     Params: { sessionId: string };
@@ -22,13 +32,13 @@ export async function registerSessionsWsRoute(server: FastifyInstance): Promise<
         if (!result.ok) {
           return reply.code(result.status).send(apiError(result.code, messageFor(result.code)));
         }
-        // Guardamos el state validado en el request para que el handler lo
-        // recupere sin tener que volver a leer Redis.
-        (req as unknown as { wsState: SessionState }).wsState = result.state;
+        req.wsState = result.state;
       },
     },
     (socket, req) => {
-      const state = (req as unknown as { wsState: SessionState }).wsState;
+      // wsState esta garantizado por el preValidation (si llegamos aca, el
+      // hook lo seteo). El `!` documenta el contrato.
+      const state = req.wsState!;
       const log = req.log.child({ sessionId: state.id, ws: true });
       attachHandlers({
         socket,

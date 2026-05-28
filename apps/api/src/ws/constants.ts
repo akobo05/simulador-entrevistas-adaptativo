@@ -10,12 +10,10 @@ export const MAX_WS_PAYLOAD_BYTES = 16384;
 // de schema, no 5 seguidos.
 export const MAX_CONSECUTIVE_INVALID_MESSAGES = 5;
 
-// Cada cuanto el server envia un ping para detectar clientes muertos.
+// Cada cuanto el server envia un ping para detectar clientes muertos. El
+// mismo intervalo sirve como ventana de tolerancia: si en el siguiente
+// tick no llego un pong, cerramos con 1011 (ver spec §5).
 export const HEARTBEAT_INTERVAL_MS = 30_000;
-
-// Documental: ver spec §5. El ciclo del setInterval ya da la ventana de
-// tolerancia (si no respondio en HEARTBEAT_INTERVAL_MS, cerramos).
-export const HEARTBEAT_TIMEOUT_MS = 10_000;
 
 // TTL renovado en Redis cada vez que llega un pong. Misma magnitud que el
 // TTL inicial fijado en createSession (3600s = 1h).
