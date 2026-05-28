@@ -120,3 +120,28 @@ describe('loadEnv', () => {
     });
   });
 });
+
+describe('WS_BASE_URL', () => {
+  const fullEnv = {
+    PORT: '3000',
+    DATABASE_URL: 'postgresql://x:x@x/x',
+    REDIS_URL: 'redis://x:6379',
+    GEMINI_API_KEY: 'k',
+    LOG_LEVEL: 'info',
+    CORS_ORIGINS: 'http://localhost:5173',
+  };
+
+  it('aplica ws://localhost:3000 por defecto cuando no se especifica', () => {
+    const env = loadEnv(fullEnv);
+    expect(env.WS_BASE_URL).toBe('ws://localhost:3000');
+  });
+
+  it('respeta WS_BASE_URL del entorno cuando se provee', () => {
+    const env = loadEnv({ ...fullEnv, WS_BASE_URL: 'wss://api.warachikuy.com' });
+    expect(env.WS_BASE_URL).toBe('wss://api.warachikuy.com');
+  });
+
+  it('rechaza WS_BASE_URL que no sea URL valida', () => {
+    expect(() => loadEnv({ ...fullEnv, WS_BASE_URL: 'not a url' })).toThrow();
+  });
+});

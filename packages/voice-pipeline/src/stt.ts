@@ -1,0 +1,160 @@
+import { CandidateTranscriptSchema } from '@warachikuy/shared-types';
+import type { CandidateTranscript } from '@warachikuy/shared-types';
+
+export type TranscriptCallback = (transcript: CandidateTranscript) => void;
+
+export interface SttOptions {
+  /** Locale BCP-47 que se pasa a `SpeechRecognition.lang`. Default: 'es-PE'. */
+  lang?: string;
+  /**
+   * Se invoca cuando el pipeline se detiene de forma terminal. El argumento es
+   * el `event.error` del navegador (`'not-allowed'`, `'audio-capture'`,
+   * `'service-not-allowed'`) o el sentinel `'max-restart-attempts-exceeded'`
+   * cuando se agota el contador de reintentos del auto-restart.
+   */
+  onError?: (errorCode: string) => void;
+}
+
+export interface SttController {
+  start: () => void;
+  stop: () => void;
+}
+
+// Web Speech API types not in lib.dom.d.ts by default — minimal declarations
+interface SpeechRecognitionEvent extends Event {
+  readonly resultIndex: number;
+  readonly results: SpeechRecognitionResultList;
+}
+interface SpeechRecognitionResultList {
+  readonly length: number;
+  [index: number]: SpeechRecognitionResult;
+}
+interface SpeechRecognitionResult {
+  readonly isFinal: boolean;
+  readonly length: number;
+  [index: number]: SpeechRecognitionAlternative;
+}
+interface SpeechRecognitionAlternative {
+  readonly transcript: string;
+  readonly confidence: number;
+}
+interface SpeechRecognitionErrorEvent extends Event {
+  readonly error: string;
+}
+interface WebSpeechRecognition extends EventTarget {
+  continuous: boolean;
+  interimResults: boolean;
+  lang: string;
+  onresult: ((event: SpeechRecognitionEvent) => void) | null;
+  onerror: ((event: SpeechRecognitionErrorEvent) => void) | null;
+  onend: (() => void) | null;
+  start(): void;
+  stop(): void;
+}
+declare const webkitSpeechRecognition: new () => WebSpeechRecognition;
+declare const SpeechRecognition: new () => WebSpeechRecognition;
+
+function createRecognition(): WebSpeechRecognition {
+  const Ctor =
+    typeof SpeechRecognition !== 'undefined'
+      ? SpeechRecognition
+      : typeof webkitSpeechRecognition !== 'undefined'
+        ? webkitSpeechRecognition
+        : null;
+  if (!Ctor) throw new Error('Web Speech API no disponible en este navegador');
+  return new Ctor();
+}
+
+// sessionId es requerido por el schema — se pasa al crear el controlador
+export function createSttController(
+  sessionId: string,
+  onTranscript: TranscriptCallback,
+  options: SttOptions = {},
+  recognitionFactory: () => WebSpeechRecognition = createRecognition,
+): SttController {
+  const lang = options.lang ?? 'es-PE';
+  let recognition: WebSpeechRecognition | null = null;
+  let active = false;
+
+  function start() {
+    if (active) return;
+    recognition = recognitionFactory();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = lang;
+
+    recognition.onresult = (event: SpeechRecognitionEvent) => {
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const result = event.results[i];
+        if (!result) continue;
+        const alt = result[0];
+        if (!alt) continue;
+        const raw = {
+          sessionId,
+          text: alt.transcript,
+          isFinal: result.isFinal,
+          timestamp: Date.now(),
+        };
+        const parsed = CandidateTranscriptSchema.safeParse(raw);
+        if (parsed.success) {
+          onTranscript(parsed.data);
+        } else if (typeof console !== 'undefined') {
+          // En produccion conviene enviar esto al sink de errores del cliente (Sentry)
+          console.warn('Transcript rechazado por schema', parsed.error.issues);
+        }
+      }
+    };
+
+    // Solo detener en errores terminales — no-speech ocurre en silencio y no es fatal
+    const TERMINAL_ERRORS = new Set(['not-allowed', 'audio-capture', 'service-not-allowed']);
+    recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
+      if (TERMINAL_ERRORS.has(event.error)) {
+        active = false;
+        options.onError?.(event.error);
+      }
+    };
+
+    // auto-restart on end (Web Speech API stops after silence).
+    // Chrome puede lanzar InvalidStateError si la instancia previa no se libero;
+    // contamos fallos consecutivos y apagamos tras MAX para no bloquear el event loop.
+    let restartAttempts = 0;
+    const MAX_RESTART_ATTEMPTS = 5;
+    recognition.onend = () => {
+      if (!active) return;
+      try {
+        recognition?.start();
+        restartAttempts = 0;
+      } catch {
+        restartAttempts++;
+        if (restartAttempts >= MAX_RESTART_ATTEMPTS) {
+          active = false;
+          options.onError?.('max-restart-attempts-exceeded');
+          if (typeof console !== 'undefined') {
+            console.warn(
+              `STT auto-restart abandonado tras ${MAX_RESTART_ATTEMPTS} fallos consecutivos`,
+            );
+          }
+        }
+      }
+    };
+
+    // active=true antes de start() para que si start() lanza sincrono podamos
+    // resetear estado limpio en el catch sin dejar la instancia colgando
+    active = true;
+    try {
+      recognition.start();
+    } catch (err) {
+      active = false;
+      recognition = null;
+      throw err;
+    }
+  }
+
+  function stop() {
+    active = false;
+    recognition?.stop();
+    recognition = null;
+  }
+
+  return { start, stop };
+}
