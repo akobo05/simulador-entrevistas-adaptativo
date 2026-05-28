@@ -57,11 +57,11 @@ export function attachHandlers(ctx: HandlerContext): void {
   socket.on('message', (raw) => {
     let json: unknown;
     try {
-      // `ws` emite Buffer para frames de texto (binaryType default) y a veces
-      // Buffer[] si la libreria fragmenta internamente. toString() decodifica
-      // el Buffer y Buffer.concat() acumula el array antes de decodificar.
-      // Con maxPayload=16KB el caso de Buffer[] es practicamente inalcanzable
-      // pero la normalizamos por defensa.
+      // `ws` agrega los frames internamente y emite un solo Buffer cuando
+      // binaryType es 'nodebuffer' (el default que usamos). Solo emitiria
+      // Buffer[] si configurasemos binaryType: 'fragments'. Mantenemos el
+      // Array.isArray como defensa por si alguien cambia esa opcion en el
+      // futuro: el handler sigue funcionando sin tocar este branch.
       const text = Array.isArray(raw) ? Buffer.concat(raw).toString('utf8') : raw.toString();
       json = JSON.parse(text);
     } catch {
