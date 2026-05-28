@@ -1,10 +1,26 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import RedisMock from 'ioredis-mock';
 import type Redis from 'ioredis';
+import type { FastifyBaseLogger } from 'fastify';
 import type { SessionState } from '@warachikuy/shared-types';
 import { validateUpgrade } from './auth';
 
 const VALID_TOKEN = 'a'.repeat(64);
+
+function silentLogger(): FastifyBaseLogger {
+  const log = {
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn(),
+    trace: vi.fn(),
+    fatal: vi.fn(),
+    child: () => log,
+    level: 'silent',
+    silent: vi.fn(),
+  } as unknown as FastifyBaseLogger;
+  return log;
+}
 
 function makeState(overrides: Partial<SessionState> = {}): SessionState {
   return {
@@ -29,7 +45,7 @@ describe('validateUpgrade', () => {
     const redis = new RedisMock() as unknown as Redis;
     const state = makeState();
     await seedSession(redis, state);
-    const result = await validateUpgrade(redis, state.id, VALID_TOKEN);
+    const result = await validateUpgrade(redis, state.id, VALID_TOKEN, silentLogger());
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.state.id).toBe(state.id);
@@ -39,13 +55,13 @@ describe('validateUpgrade', () => {
 
   it('rechaza con status=400 si el token tiene formato invalido', async () => {
     const redis = new RedisMock() as unknown as Redis;
-    const result = await validateUpgrade(redis, 'any-id', 'not-hex-64-chars');
+    const result = await validateUpgrade(redis, 'any-id', 'not-hex-64-chars', silentLogger());
     expect(result).toEqual({ ok: false, status: 400, code: 'invalid_input' });
   });
 
   it('rechaza con status=400 si el token es undefined', async () => {
     const redis = new RedisMock() as unknown as Redis;
-    const result = await validateUpgrade(redis, 'any-id', undefined);
+    const result = await validateUpgrade(redis, 'any-id', undefined, silentLogger());
     expect(result).toEqual({ ok: false, status: 400, code: 'invalid_input' });
   });
 
@@ -55,6 +71,7 @@ describe('validateUpgrade', () => {
       redis,
       '999e8400-e29b-41d4-a716-446655440000',
       VALID_TOKEN,
+      silentLogger(),
     );
     expect(result).toEqual({ ok: false, status: 404, code: 'session_not_found' });
   });
@@ -64,7 +81,7 @@ describe('validateUpgrade', () => {
     const state = makeState();
     await seedSession(redis, state);
     const wrong = 'b'.repeat(64);
-    const result = await validateUpgrade(redis, state.id, wrong);
+    const result = await validateUpgrade(redis, state.id, wrong, silentLogger());
     expect(result).toEqual({ ok: false, status: 401, code: 'invalid_token' });
   });
 
@@ -72,7 +89,7 @@ describe('validateUpgrade', () => {
     const redis = new RedisMock() as unknown as Redis;
     const state = makeState({ status: 'ended' });
     await seedSession(redis, state);
-    const result = await validateUpgrade(redis, state.id, VALID_TOKEN);
+    const result = await validateUpgrade(redis, state.id, VALID_TOKEN, silentLogger());
     expect(result).toEqual({ ok: false, status: 410, code: 'session_expired' });
   });
 
@@ -80,7 +97,7 @@ describe('validateUpgrade', () => {
     const redis = new RedisMock() as unknown as Redis;
     const id = '550e8400-e29b-41d4-a716-446655440000';
     await redis.set(`session:${id}`, '{"garbled": true}', 'EX', 3600);
-    const result = await validateUpgrade(redis, id, VALID_TOKEN);
+    const result = await validateUpgrade(redis, id, VALID_TOKEN, silentLogger());
     expect(result).toEqual({ ok: false, status: 500, code: 'internal_error' });
   });
 
@@ -88,7 +105,31 @@ describe('validateUpgrade', () => {
     const redis = new RedisMock() as unknown as Redis;
     const id = '550e8400-e29b-41d4-a716-446655440000';
     await redis.set(`session:${id}`, 'not-json-at-all', 'EX', 3600);
-    const result = await validateUpgrade(redis, id, VALID_TOKEN);
+    const result = await validateUpgrade(redis, id, VALID_TOKEN, silentLogger());
     expect(result).toEqual({ ok: false, status: 500, code: 'internal_error' });
+  });
+
+  it('loguea el error cuando el payload no es JSON valido (path catch)', async () => {
+    const redis = new RedisMock() as unknown as Redis;
+    const log = silentLogger();
+    const id = '550e8400-e29b-41d4-a716-446655440000';
+    await redis.set(`session:${id}`, 'not-json-at-all', 'EX', 3600);
+    await validateUpgrade(redis, id, VALID_TOKEN, log);
+    expect(log.error).toHaveBeenCalledWith(
+      expect.objectContaining({ sessionId: id, err: expect.any(Error) }),
+      'session payload no es JSON valido',
+    );
+  });
+
+  it('loguea el error cuando el payload no matchea el schema (path !success)', async () => {
+    const redis = new RedisMock() as unknown as Redis;
+    const log = silentLogger();
+    const id = '550e8400-e29b-41d4-a716-446655440000';
+    await redis.set(`session:${id}`, '{"garbled": true}', 'EX', 3600);
+    await validateUpgrade(redis, id, VALID_TOKEN, log);
+    expect(log.error).toHaveBeenCalledWith(
+      expect.objectContaining({ sessionId: id, schemaErrors: expect.any(Object) }),
+      'session payload no matchea SessionStateSchema',
+    );
   });
 });

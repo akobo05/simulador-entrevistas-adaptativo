@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import type Redis from 'ioredis';
+import type { FastifyBaseLogger } from 'fastify';
 import { SessionStateSchema, type SessionState } from '@warachikuy/shared-types';
 
 // Schema del query param. z.string() rechaza arrays automaticamente, lo
@@ -24,6 +25,7 @@ export async function validateUpgrade(
   redis: Redis,
   sessionId: string,
   token: string | undefined,
+  log: FastifyBaseLogger,
 ): Promise<ValidateUpgradeResult> {
   const tokenCheck = TokenQuerySchema.safeParse(token);
   if (!tokenCheck.success) {
@@ -42,10 +44,20 @@ export async function validateUpgrade(
   try {
     const parsed = SessionStateSchema.safeParse(JSON.parse(raw));
     if (!parsed.success) {
+      // Loguear el detalle de que campo del schema fallo. Esto pasa si Redis
+      // tiene un payload antiguo (cambio de schema), una migracion mal hecha,
+      // o si alguien manipulo la key manualmente con redis-cli.
+      log.error(
+        { sessionId, schemaErrors: parsed.error.format() },
+        'session payload no matchea SessionStateSchema',
+      );
       return { ok: false, status: 500, code: 'internal_error' };
     }
     state = parsed.data;
-  } catch {
+  } catch (err) {
+    // Loguear el SyntaxError de JSON.parse. Esto pasa si lo que esta en
+    // Redis no es JSON valido (corrupcion, escritura mal formada).
+    log.error({ err, sessionId }, 'session payload no es JSON valido');
     return { ok: false, status: 500, code: 'internal_error' };
   }
 

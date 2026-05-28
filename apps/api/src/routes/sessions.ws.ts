@@ -28,7 +28,7 @@ export async function registerSessionsWsRoute(server: FastifyInstance): Promise<
       preValidation: async (req, reply) => {
         const { sessionId } = req.params as { sessionId: string };
         const { token } = req.query as { token?: string };
-        const result = await validateUpgrade(server.redis, sessionId, token);
+        const result = await validateUpgrade(server.redis, sessionId, token, req.log);
         if (!result.ok) {
           return reply.code(result.status).send(apiError(result.code, messageFor(result.code)));
         }
