@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import { z } from 'zod';
 import type Redis from 'ioredis';
 import type { FastifyBaseLogger } from 'fastify';
@@ -61,7 +62,13 @@ export async function validateUpgrade(
     return { ok: false, status: 500, code: 'internal_error' };
   }
 
-  if (state.token !== tokenCheck.data) {
+  // Comparacion timing-safe. La comparacion con !== hace short-circuit en
+  // el primer byte distinto, lo que en teoria expone un side-channel de
+  // tiempo. crypto.timingSafeEqual recorre los bytes en tiempo constante.
+  // Ambos buffers son de 32 bytes (los regex garantizan 64 hex chars).
+  const expected = Buffer.from(state.token, 'hex');
+  const provided = Buffer.from(tokenCheck.data, 'hex');
+  if (!crypto.timingSafeEqual(expected, provided)) {
     return { ok: false, status: 401, code: 'invalid_token' };
   }
   if (state.status !== 'active') {
