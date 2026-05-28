@@ -1,0 +1,229 @@
+/* ── Variables ───────────────────────────────────────────── */
+:root {
+  --bg:        #130522;
+  --bg2:       #111118;
+  --accent:    #ff6b35;
+  --accent2:   #ffaa44;
+  --text:      #f0ede8;
+  --text-muted:#8a8790;
+  --border:    rgba(255,107,53,0.2);
+  --radius:    14px;
+  --font-display: 'Syne', sans-serif;
+  --font-body:    'DM Sans', sans-serif;
+}
+
+/* ── Google Fonts ────────────────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap');
+
+/* ── Reset ───────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+
+/* ── Home root ───────────────────────────────────────────── */
+.home-root {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  background: radial-gradient(ellipse 70% 60% at 50% 30%, #1a0f05 0%, var(--bg) 70%);
+}
+
+/* ── Stepper ─────────────────────────────────────────────── */
+.stepper {
+  position: absolute;
+  top: 28px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 0;
+  z-index: 10;
+}
+
+.step-circle {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-muted);
+  background: var(--bg2);
+  transition: all 0.3s ease;
+}
+
+.step-circle.active {
+  border-color: var(--accent);
+  color: var(--text);
+  background: rgba(255,107,53,0.15);
+  box-shadow: 0 0 14px rgba(255,107,53,0.3);
+}
+
+.step-line {
+  width: 48px;
+  height: 2px;
+  background: var(--border);
+}
+
+.step-line.active {
+  background: linear-gradient(90deg, var(--accent), var(--border));
+}
+
+.step-label {
+  position: absolute;
+  right: -96px;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  color: var(--text-muted);
+  font-family: var(--font-display);
+  white-space: nowrap;
+}
+
+/* ── Orbe ────────────────────────────────────────────────── */
+.orbe-container {
+  width: 340px;
+  height: 340px;
+  margin-top: 60px;
+  flex-shrink: 0;
+  position: relative;
+}
+
+/* glow detrás del orbe */
+.orbe-container::before {
+  content: '';
+  position: absolute;
+  inset: 15%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,107,53,0.18) 0%, transparent 70%);
+  pointer-events: none;
+  filter: blur(20px);
+}
+
+/* ── Contenido ───────────────────────────────────────────── */
+.home-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 0 24px 48px;
+  max-width: 600px;
+  gap: 0;
+}
+
+.home-subtitle {
+  font-family: var(--font-display);
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  color: var(--text-muted);
+  margin-bottom: 16px;
+}
+
+.home-title {
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 6vw, 3rem);
+  font-weight: 800;
+  line-height: 1.1;
+  color: var(--text);
+  margin-bottom: 16px;
+}
+
+.home-brand {
+  color: var(--accent);
+}
+
+.home-description {
+  font-size: 15px;
+  font-weight: 300;
+  color: var(--text-muted);
+  line-height: 1.7;
+  max-width: 420px;
+  margin-bottom: 32px;
+}
+
+/* ── Features ────────────────────────────────────────────── */
+.features-row {
+  display: flex;
+  gap: 28px;
+  margin-bottom: 40px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.feature-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.feature-icon-wrap {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: rgba(255,107,53,0.06);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--accent2);
+  transition: all 0.25s ease;
+}
+
+.feature-icon-wrap:hover {
+  background: rgba(255,107,53,0.14);
+  border-color: var(--accent);
+  transform: translateY(-2px);
+}
+
+.feature-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-family: var(--font-display);
+  letter-spacing: 0.05em;
+}
+
+/* ── CTA Button ──────────────────────────────────────────── */
+.cta-button {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 16px 40px;
+  border: none;
+  border-radius: 50px;
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 100%);
+  color: #fff;
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  box-shadow: 0 8px 32px rgba(255,107,53,0.35);
+  letter-spacing: 0.02em;
+}
+
+.cta-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 40px rgba(255,107,53,0.5);
+}
+
+.cta-button:active {
+  transform: translateY(0);
+}
+
+/* ── Responsive ──────────────────────────────────────────── */
+@media (max-width: 480px) {
+  .orbe-container { width: 260px; height: 260px; }
+  .step-label { display: none; }
+}
