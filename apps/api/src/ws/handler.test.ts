@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { WebSocket } from 'ws';
 import RedisMock from 'ioredis-mock';
 import type Redis from 'ioredis';
@@ -289,7 +289,12 @@ describe('WS /v1/sessions/:sessionId/ws (integration)', () => {
     const closedP = new Promise<void>((resolve) => ws.once('close', () => resolve()));
     ws.close();
     await closedP;
-    await new Promise((r) => setTimeout(r, 50));
-    expect(server.connections.size()).toBe(0);
+    // vi.waitFor hace polling cada 10ms con timeout 1s por default. Sustituye
+    // un setTimeout fijo que era flaky en CI bajo carga: el server-side
+    // 'close' listener puede tardar mas de 50ms antes de llamar
+    // connections.unregister.
+    await vi.waitFor(() => {
+      expect(server.connections.size()).toBe(0);
+    });
   });
 });
