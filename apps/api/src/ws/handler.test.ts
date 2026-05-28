@@ -219,6 +219,49 @@ describe('WS /v1/sessions/:sessionId/ws (integration)', () => {
     expect(closed.code).toBe(WS_CLOSE_CODES.POLICY_VIOLATION);
   });
 
+  it('un mensaje valido resetea el contador de invalidos consecutivos', async () => {
+    const state = makeState();
+    await seedSession(redis, state);
+    const ws = new WebSocket(url(state));
+    const queue = makeMessageQueue(ws);
+    await new Promise<void>((resolve) => ws.once('open', () => resolve()));
+    await queue(); // descarta el session.state inicial
+
+    // Mandamos MAX-1 invalidos. Cada uno responde con un envelope error.
+    for (let i = 0; i < MAX_CONSECUTIVE_INVALID_MESSAGES - 1; i++) {
+      ws.send('garbled');
+      const err = JSON.parse(await queue());
+      expect(err.payload.code).toBe('invalid_message');
+    }
+    expect(ws.readyState).toBe(WebSocket.OPEN);
+
+    // Mandamos un mensaje valido (metrics.update con AuraState minimo).
+    // F1.2 no responde a este tipo de mensajes, solo loguea con debug,
+    // asi que NO drenamos nada de la queue.
+    const validMsg = {
+      type: 'metrics.update',
+      payload: {
+        sessionId: state.id,
+        metrics: [],
+        collectedAt: Date.now(),
+      },
+    };
+    ws.send(JSON.stringify(validMsg));
+
+    // Otros MAX-1 invalidos. Sin reset, este lote llevaria el contador
+    // total a 2*(MAX-1) = 8 y el socket estaria cerrado. Con reset
+    // funcionando, el contador volvio a 0 con el valido y este lote
+    // solo llega a MAX-1, asi que el socket sigue abierto.
+    for (let i = 0; i < MAX_CONSECUTIVE_INVALID_MESSAGES - 1; i++) {
+      ws.send('garbled');
+      const err = JSON.parse(await queue());
+      expect(err.payload.code).toBe('invalid_message');
+    }
+    expect(ws.readyState).toBe(WebSocket.OPEN);
+
+    ws.close();
+  });
+
   it('cuando llega una segunda conexion al mismo sessionId, cierra la primera con 4000', async () => {
     const state = makeState();
     await seedSession(redis, state);
