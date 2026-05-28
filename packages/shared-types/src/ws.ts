@@ -36,3 +36,16 @@ export const ServerToClientMessageSchema = z.discriminatedUnion('type', [
   }),
 ]);
 export type ServerToClientMessage = z.infer<typeof ServerToClientMessageSchema>;
+
+// Codigos de cierre WebSocket. Backend y frontend importan este objeto
+// para no usar magic numbers. Los <4000 son del RFC 6455; los >=4000 son
+// del rango de aplicacion (4000-4999) y los definimos nosotros.
+export const WS_CLOSE_CODES = {
+  NORMAL: 1000,
+  POLICY_VIOLATION: 1008,
+  KEEPALIVE_FAILURE: 1011,
+  SESSION_REPLACED: 4000,
+  SESSION_EXPIRED: 4001,
+} as const;
+
+export type WsCloseCode = (typeof WS_CLOSE_CODES)[keyof typeof WS_CLOSE_CODES];
