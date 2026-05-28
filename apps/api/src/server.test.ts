@@ -79,4 +79,27 @@ describe('buildServer', () => {
     expect(joined).not.toContain('a'.repeat(64));
     await sub.close();
   });
+
+  it('handler de errores convierte excepciones no atrapadas al envelope ApiError', async () => {
+    // Registramos una ruta temporal que lanza para verificar el handler global.
+    server.get('/_test/throws-sync', () => {
+      throw new Error('boom');
+    });
+    const res = await server.inject({ method: 'GET', url: '/_test/throws-sync' });
+    expect(res.statusCode).toBe(500);
+    expect(JSON.parse(res.body)).toEqual({
+      error: { code: 'internal_error', message: 'Error interno' },
+    });
+  });
+
+  it('handler de errores convierte rechazos async al envelope ApiError', async () => {
+    server.get('/_test/throws-async', async () => {
+      await Promise.reject(new Error('async boom'));
+    });
+    const res = await server.inject({ method: 'GET', url: '/_test/throws-async' });
+    expect(res.statusCode).toBe(500);
+    expect(JSON.parse(res.body)).toEqual({
+      error: { code: 'internal_error', message: 'Error interno' },
+    });
+  });
 });

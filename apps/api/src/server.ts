@@ -9,6 +9,7 @@ import { registerSessionsRoutes } from './routes/sessions.js';
 import { MAX_WS_PAYLOAD_BYTES } from './ws/constants.js';
 import { ConnectionRegistry } from './services/connection-registry.js';
 import { registerSessionsWsRoute } from './routes/sessions.ws.js';
+import { apiError } from './errors.js';
 
 // Aumentamos el tipo de FastifyInstance para que `server.redis`, `server.env`
 // y `server.connections` sean accesibles desde handlers y plugins sin casts.
@@ -51,6 +52,24 @@ export async function buildServer(env: Env, deps: BuildServerDeps = {}): Promise
   const redis = deps.redis ?? buildRedisClient(env);
   server.decorate('redis', redis);
   server.decorate('env', env);
+
+  // Handler global de errores no atrapados. Garantiza que cualquier excepcion
+  // que escape de un handler o hook (ej: redis.get rechaza por conexion
+  // perdida) devuelva el envelope ApiError uniforme en vez del shape default
+  // de Fastify { statusCode, error, message }. Esto mantiene el contrato
+  // consistente para el cliente que parsea respuestas con ApiErrorSchema.
+  // Si el error ya trae un statusCode 4xx (ej: JSON malformado, validacion
+  // de Fastify) lo preservamos para no convertir errores del cliente en 500.
+  server.setErrorHandler((err, req, reply) => {
+    req.log.error({ err }, 'unhandled error');
+    const status =
+      typeof (err as { statusCode?: number }).statusCode === 'number' &&
+      (err as { statusCode?: number }).statusCode! >= 400 &&
+      (err as { statusCode?: number }).statusCode! < 500
+        ? (err as { statusCode: number }).statusCode
+        : 500;
+    reply.code(status).send(apiError('internal_error', 'Error interno'));
+  });
 
   await server.register(cors, {
     origin: env.CORS_ORIGINS,
