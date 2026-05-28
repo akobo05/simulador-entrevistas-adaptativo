@@ -1,17 +1,22 @@
 import Fastify, { type FastifyInstance } from 'fastify';
 import cors from '@fastify/cors';
 import rateLimit from '@fastify/rate-limit';
+import websocket from '@fastify/websocket';
 import type Redis from 'ioredis';
 import { type Env } from './config/env.js';
 import { buildRedisClient } from './services/redis.js';
 import { registerSessionsRoutes } from './routes/sessions.js';
+import { MAX_WS_PAYLOAD_BYTES } from './ws/constants.js';
+import { ConnectionRegistry } from './services/connection-registry.js';
+import { registerSessionsWsRoute } from './routes/sessions.ws.js';
 
-// Aumentamos el tipo de FastifyInstance para que `server.redis` y `server.env`
-// sean accesibles desde handlers y plugins sin casts.
+// Aumentamos el tipo de FastifyInstance para que `server.redis`, `server.env`
+// y `server.connections` sean accesibles desde handlers y plugins sin casts.
 declare module 'fastify' {
   interface FastifyInstance {
     redis: Redis;
     env: Env;
+    connections: ConnectionRegistry;
   }
 }
 
@@ -67,6 +72,22 @@ export async function buildServer(env: Env, deps: BuildServerDeps = {}): Promise
         details: { max: context.max, ttl: context.ttl },
       },
     }),
+  });
+
+  // ── WebSocket ──────────────────────────────────────────────────────────
+  // El plugin trae maxPayload por la opcion options. El handler completo
+  // se registra en routes/sessions.ws.ts.
+  await server.register(websocket, {
+    options: { maxPayload: MAX_WS_PAYLOAD_BYTES },
+  });
+
+  const connections = new ConnectionRegistry();
+  server.decorate('connections', connections);
+
+  // Registramos la ruta WS fuera del prefijo /api/v1 para matchear el
+  // contrato arquitectonico (spec 3.4): /v1/sessions/:id/ws
+  await server.register(async (api) => {
+    await registerSessionsWsRoute(api);
   });
 
   await server.register(
