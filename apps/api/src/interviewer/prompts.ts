@@ -31,7 +31,7 @@ export function buildSystemPrompt(input: SystemPromptInput): string {
     );
   } else if (phase === 'closing') {
     base.push(
-      'La entrevista termino: agradece al candidato y cierra cordialmente, sin hacer una nueva pregunta.',
+      'La entrevista TERMINO. Cierra la entrevista: agradece brevemente al candidato por su tiempo y deseale exito. NO hagas ninguna pregunta, NO plantees ningun tema nuevo. Solo el agradecimiento y la despedida cordial.',
     );
   }
 
