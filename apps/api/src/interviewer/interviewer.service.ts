@@ -14,12 +14,21 @@ export interface GenerateTurnInput {
 // Mapea el historial a turnos nativos de Gemini: candidate -> user,
 // interviewer -> model. El candidateText actual se agrega como ultimo turno
 // user. Asi los datos del candidato no tocan el system prompt.
+// Disparador minimo para el warmup. Gemini exige al menos un turno 'user' en
+// contents; en el warmup no hay historial ni respuesta del candidato, asi que
+// inyectamos este mensaje fijo de la app (NO dato del candidato) para que el
+// modelo arranque. Las instrucciones reales viven en el system prompt.
+const KICKOFF_TURN: GeminiTurn = { role: 'user', text: 'Comencemos la entrevista.' };
+
 function toContents(history: ConversationEntry[], candidateText?: string): GeminiTurn[] {
   const contents: GeminiTurn[] = history.map((e) => ({
     role: e.role === 'interviewer' ? 'model' : 'user',
     text: e.text,
   }));
   if (candidateText) contents.push({ role: 'user', text: candidateText });
+  // contents vacio solo ocurre en el warmup (sin historial ni candidateText).
+  // Gemini rechaza un contents vacio, asi que inyectamos el disparador.
+  if (contents.length === 0) contents.push(KICKOFF_TURN);
   return contents;
 }
 

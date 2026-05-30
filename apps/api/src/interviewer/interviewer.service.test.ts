@@ -80,4 +80,23 @@ describe('generateInterviewerMessage', () => {
     });
     expect(msg.text.length).toBeLessThanOrEqual(600);
   });
+
+  it('inyecta un turno de arranque cuando no hay historial ni candidateText (warmup)', async () => {
+    // Gemini rechaza un contents vacio (error "contents are required"). El
+    // warmup no tiene historial ni respuesta del candidato, asi que el service
+    // debe inyectar un turno user de arranque para que el modelo responda.
+    let captured: GeminiTurn[] = [];
+    const client: GeminiClient = {
+      generate: async (_system, contents) => {
+        captured = contents;
+        return 'Hola, contame de ti.';
+      },
+    };
+    await generateInterviewerMessage(client, {
+      state: makeState({ phase: 'warmup', turnNumber: 0 }),
+      history: [],
+    });
+    expect(captured.length).toBeGreaterThan(0);
+    expect(captured[0]!.role).toBe('user');
+  });
 });
