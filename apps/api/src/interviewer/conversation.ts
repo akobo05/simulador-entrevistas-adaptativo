@@ -1,0 +1,60 @@
+import type Redis from 'ioredis';
+import type { ConversationEntry, SessionState } from '@warachikuy/shared-types';
+import { SESSION_REFRESH_TTL_SECONDS } from '../ws/constants.js';
+
+function messagesKey(sessionId: string): string {
+  return `session:messages:${sessionId}`;
+}
+function askedKey(sessionId: string): string {
+  return `session:asked:${sessionId}`;
+}
+function sessionKey(sessionId: string): string {
+  return `session:${sessionId}`;
+}
+
+// Lee el historial completo de la conversacion en orden cronologico.
+export async function readHistory(redis: Redis, sessionId: string): Promise<ConversationEntry[]> {
+  const raw = await redis.lrange(messagesKey(sessionId), 0, -1);
+  return raw.map((s) => JSON.parse(s) as ConversationEntry);
+}
+
+// Persiste el turno inicial del entrevistador (warmup, sin respuesta previa
+// del candidato) y el SessionState, en un solo pipeline con TTL.
+export async function appendWarmupTurn(
+  redis: Redis,
+  state: SessionState,
+  interviewer: ConversationEntry,
+): Promise<void> {
+  const id = state.id;
+  await redis
+    .pipeline()
+    .rpush(messagesKey(id), JSON.stringify(interviewer))
+    .set(sessionKey(id), JSON.stringify(state))
+    .expire(messagesKey(id), SESSION_REFRESH_TTL_SECONDS)
+    .expire(sessionKey(id), SESSION_REFRESH_TTL_SECONDS)
+    .exec();
+}
+
+// Persiste ATOMICAMENTE el turno del candidato + la respuesta del
+// entrevistador + el SessionState actualizado + (opcional) la troncal usada,
+// todo en un pipeline. Solo se llama tras una generacion exitosa, para no
+// dejar dos turnos 'candidate' seguidos si el LLM fallo (ver spec seccion 6).
+export async function appendCandidateTurn(
+  redis: Redis,
+  state: SessionState,
+  candidate: ConversationEntry,
+  interviewer: ConversationEntry,
+  seedId?: string,
+): Promise<void> {
+  const id = state.id;
+  const pipe = redis
+    .pipeline()
+    .rpush(messagesKey(id), JSON.stringify(candidate), JSON.stringify(interviewer))
+    .set(sessionKey(id), JSON.stringify(state))
+    .expire(messagesKey(id), SESSION_REFRESH_TTL_SECONDS)
+    .expire(sessionKey(id), SESSION_REFRESH_TTL_SECONDS);
+  if (seedId) {
+    pipe.sadd(askedKey(id), seedId).expire(askedKey(id), SESSION_REFRESH_TTL_SECONDS);
+  }
+  await pipe.exec();
+}
