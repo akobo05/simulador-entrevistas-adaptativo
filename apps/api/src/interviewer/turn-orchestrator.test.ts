@@ -147,4 +147,44 @@ describe('runCandidateTurn', () => {
     expect(generate).not.toHaveBeenCalled();
     expect(d._socket.sent).toEqual([]);
   });
+
+  it('en la transicion al turno de cierre emite intent closing y pasa la fase a closing', async () => {
+    const gemini: GeminiClient = {
+      generate: async () => 'Gracias por tu tiempo, hemos terminado.',
+    };
+    const d = deps(gemini, new FakeSocket(), makeState({ turnNumber: 5, phase: 'interviewing' }));
+    await runCandidateTurn(d, 'mi ultima respuesta');
+    expect(d.state.turnNumber).toBe(6);
+    expect(d.state.phase).toBe('closing');
+    const msg = d._socket.sent.find((m) => m.type === 'interviewer.message');
+    expect(msg).toMatchObject({ payload: { intent: 'closing' } });
+  });
+
+  it('si la persistencia falla no avanza el turno y emite llm_unavailable', async () => {
+    const failingPipe = {
+      rpush: () => failingPipe,
+      set: () => failingPipe,
+      expire: () => failingPipe,
+      sadd: () => failingPipe,
+      exec: async () => [[new Error('pipeline fallo'), null]],
+    };
+    const redis = {
+      lrange: async () => [],
+      pipeline: () => failingPipe,
+    } as unknown as Redis;
+    const socket = new FakeSocket();
+    const gemini: GeminiClient = { generate: async () => 'pregunta generada ok' };
+    const d = {
+      socket: socket as unknown as WebSocket,
+      log: silentLog(),
+      redis,
+      gemini,
+      state: makeState({ turnNumber: 1, phase: 'interviewing' }),
+    };
+    await runCandidateTurn(d, 'respuesta');
+    expect(d.state.turnNumber).toBe(1); // no avanza
+    expect(socket.sent.some((m) => m.type === 'interviewer.message')).toBe(false);
+    const err = socket.sent.find((m) => m.type === 'error');
+    expect(err).toMatchObject({ payload: { code: 'llm_unavailable', recoverable: true } });
+  });
 });

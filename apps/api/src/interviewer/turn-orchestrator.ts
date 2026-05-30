@@ -18,7 +18,9 @@ export interface TurnDeps {
   log: FastifyBaseLogger;
   redis: Redis;
   gemini: GeminiClient;
-  state: SessionState; // mutado in-place al avanzar el turno (una conexion por sesion)
+  state: SessionState; // mutado in-place al avanzar el turno. PRECONDICION: el
+  // caller (handler) debe serializar las llamadas (lock 'generating'): el
+  // orquestador no es reentrante porque muta este estado compartido.
 }
 
 const FALLBACK_TEXT = 'No pude procesar bien tu ultima respuesta, podrias reformularla?';
