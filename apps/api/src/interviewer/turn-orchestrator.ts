@@ -127,6 +127,9 @@ export async function runCandidateTurn(deps: TurnDeps, candidateText: string): P
   }
 
   if (deps.socket.readyState !== deps.socket.OPEN) return; // se desconecto durante la generacion
+  // Nota: si el socket se cierra DURANTE el persist de abajo, el turno igual se
+  // persiste y avanza; Redis y deps.state quedan consistentes (el estado en
+  // memoria se descarta al cerrar). Aceptado para F1 (ver spec seccion 8).
 
   const candidate: ConversationEntry = {
     role: 'candidate',

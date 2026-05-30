@@ -12,6 +12,7 @@ import { MAX_CONSECUTIVE_INVALID_MESSAGES, SESSION_REFRESH_TTL_SECONDS } from '.
 import type { ConnectionRegistry } from '../services/connection-registry.js';
 import type { GeminiClient } from '../interviewer/gemini-client.js';
 import { runWarmupTurn, runCandidateTurn } from '../interviewer/turn-orchestrator.js';
+import { readHistory } from '../interviewer/conversation.js';
 
 export interface HandlerContext {
   socket: WebSocket;
@@ -46,10 +47,21 @@ export function attachHandlers(ctx: HandlerContext): void {
   let generating = false;
   const turnDeps = { socket, log, redis, gemini, state };
 
-  // Turno de warmup detras del lock: genera la primera pregunta, la persiste y
-  // emite la interviewer.message (el session.state ya se envio arriba).
+  // Arrancamos el warmup SOLO en una sesion fresca (historial vacio). En una
+  // reconexion a mitad de entrevista el historial ya existe; reproducir el
+  // warmup agregaria un segundo turno 'interviewer' seguido y corromperia la
+  // alternancia del historial. turnNumber no sirve como guardia: la warmup no
+  // lo avanza, asi que tras enviar la primera pregunta sigue en 0. El historial
+  // no vacio es la senal correcta de que el warmup ya ocurrio. En reconexion
+  // basta el session.state sincrono que ya se envio; el siguiente
+  // candidate.transcript reanuda el arco desde el turno actual.
   generating = true;
-  void runWarmupTurn(turnDeps).finally(() => {
+  void (async () => {
+    const history = await readHistory(redis, sessionId);
+    if (history.length === 0) {
+      await runWarmupTurn(turnDeps);
+    }
+  })().finally(() => {
     generating = false;
   });
 
