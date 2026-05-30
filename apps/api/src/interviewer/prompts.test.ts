@@ -36,4 +36,10 @@ describe('buildSystemPrompt', () => {
     expect(p.toLowerCase()).toContain('oraciones');
     expect(p.toLowerCase()).toContain('instrucciones');
   });
+
+  it('siempre instruye no dar feedback y una sola pregunta por turno', () => {
+    const p = buildSystemPrompt({ industry: 'backend', level: 'mid', phase: 'warmup' });
+    expect(p.toLowerCase()).toContain('feedback');
+    expect(p).toContain('UNA sola pregunta');
+  });
 });
