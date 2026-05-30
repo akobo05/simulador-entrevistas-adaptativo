@@ -75,4 +75,21 @@ describe('conversation', () => {
     await appendWarmupTurn(redis, state, iv('Hola'));
     expect(await redis.ttl(`session:messages:${state.id}`)).toBeGreaterThan(0);
   });
+
+  it('appendCandidateTurn lanza si un comando del pipeline falla', async () => {
+    // Stub de un pipeline cuyo exec reporta un fallo en un comando individual
+    // (ioredis-mock no permite inyectar este caso facilmente).
+    const failingPipe = {
+      rpush: () => failingPipe,
+      set: () => failingPipe,
+      expire: () => failingPipe,
+      sadd: () => failingPipe,
+      exec: async () => [[new Error('comando fallo'), null]],
+    };
+    const redis = { pipeline: () => failingPipe } as unknown as Redis;
+    const state = makeState({ turnNumber: 1, phase: 'interviewing' });
+    await expect(
+      appendCandidateTurn(redis, state, ca('respuesta'), iv('pregunta'), 'be-apis'),
+    ).rejects.toThrow('comando fallo');
+  });
 });
