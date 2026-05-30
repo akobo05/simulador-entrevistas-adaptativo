@@ -322,13 +322,19 @@ describe('WS /v1/sessions/:sessionId/ws (integration)', () => {
     const state = makeState();
     await seedSession(redis, state);
     const ws = new WebSocket(url(state));
-    const queue = makeMessageQueue(ws);
+    // Listener propio que acumula los mensajes. Permite esperar de forma
+    // deterministica con vi.waitFor en vez de un setTimeout fijo (flaky).
+    const received: Array<{
+      type: string;
+      payload: { intent?: string; turnNumber?: number; phase?: string };
+    }> = [];
+    ws.on('message', (d) => received.push(JSON.parse(d.toString())));
     await new Promise<void>((resolve) => ws.once('open', () => resolve()));
-    await drainConnect(queue); // session.state + warmup
-    // Cedemos el event loop varias veces para que el finally() del warmup libere
-    // 'generating' antes de enviar el transcript. Sin esto el handler veria
-    // generating=true y descartaria el mensaje silenciosamente.
-    await new Promise<void>((resolve) => setTimeout(resolve, 50));
+    // Los 2 mensajes de connect: session.state sincrono + warmup async. Cuando
+    // el de warmup llego, el warmup termino su send y el lock 'generating' se
+    // libera en el microtask siguiente, antes de que el server procese el
+    // proximo macrotask (el transcript). Por eso un unico envio es seguro.
+    await vi.waitFor(() => expect(received).toHaveLength(2));
     ws.send(
       JSON.stringify({
         type: 'candidate.transcript',
@@ -340,12 +346,14 @@ describe('WS /v1/sessions/:sessionId/ws (integration)', () => {
         },
       }),
     );
-    const msgs = [JSON.parse(await queue()), JSON.parse(await queue())];
-    const interviewer = msgs.find((m) => m.type === 'interviewer.message');
-    const st = msgs.find((m) => m.type === 'session.state');
-    expect(interviewer.payload.intent).toBe('followup');
-    expect(st.payload.turnNumber).toBe(1);
-    expect(st.payload.phase).toBe('interviewing');
+    // Esperamos las 2 respuestas del turno: interviewer.message + session.state.
+    await vi.waitFor(() => expect(received.length).toBeGreaterThanOrEqual(4));
+    const responses = received.slice(2);
+    const interviewer = responses.find((m) => m.type === 'interviewer.message');
+    const st = responses.find((m) => m.type === 'session.state');
+    expect(interviewer?.payload.intent).toBe('followup');
+    expect(st?.payload.turnNumber).toBe(1);
+    expect(st?.payload.phase).toBe('interviewing');
     ws.close();
   });
 
