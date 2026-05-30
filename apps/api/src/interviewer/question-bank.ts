@@ -44,7 +44,10 @@ export const BACKEND_QUESTION_BANK: SeedQuestion[] = [
 
 const BANKS: Record<Industry, SeedQuestion[]> = {
   backend: BACKEND_QUESTION_BANK,
-  // F2 agrega frontend, data, fullstack. En F1 solo existe backend.
+  // En F1 solo existe el banco de backend. Las demas industrias caen a el por
+  // ahora: una sesion no-backend recibe preguntas de backend sin error. F2
+  // agrega bancos propios de frontend, data y fullstack. El Record fuerza un
+  // error de compilacion si se agrega una industria nueva sin su banco.
   frontend: BACKEND_QUESTION_BANK,
   data: BACKEND_QUESTION_BANK,
   fullstack: BACKEND_QUESTION_BANK,

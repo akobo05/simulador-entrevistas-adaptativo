@@ -24,6 +24,12 @@ describe('question-bank', () => {
     expect(getQuestionBank('backend')).toBe(BACKEND_QUESTION_BANK);
   });
 
+  it('en F1 las industrias no-backend caen al banco de backend (contrato temporal)', () => {
+    expect(getQuestionBank('frontend')).toBe(BACKEND_QUESTION_BANK);
+    expect(getQuestionBank('data')).toBe(BACKEND_QUESTION_BANK);
+    expect(getQuestionBank('fullstack')).toBe(BACKEND_QUESTION_BANK);
+  });
+
   it('selectSeed devuelve la troncal por indice en turnos de interviewing', () => {
     expect(selectSeed('backend', 1)).toBe(BACKEND_QUESTION_BANK[0]);
     expect(selectSeed('backend', 5)).toBe(BACKEND_QUESTION_BANK[4]);
