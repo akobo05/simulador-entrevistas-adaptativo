@@ -12,6 +12,17 @@ function sessionKey(sessionId: string): string {
   return `session:${sessionId}`;
 }
 
+// ioredis exec() resuelve a un array de tuplas [err, result]: un fallo de un
+// comando individual NO rechaza la promesa, viene en su tupla. Lo revisamos y
+// lanzamos para que el orquestador trate el turno como fallido en vez de creer
+// que persistio. Sigue sin ser transaccional (pipeline, no MULTI/EXEC): es un
+// trade-off aceptado para F1 single-instance (ver spec seccion 6).
+async function execOrThrow(pipe: ReturnType<Redis['pipeline']>): Promise<void> {
+  const results = await pipe.exec();
+  const failed = results?.find(([err]) => err != null);
+  if (failed && failed[0]) throw failed[0];
+}
+
 // Lee el historial completo de la conversacion en orden cronologico.
 export async function readHistory(redis: Redis, sessionId: string): Promise<ConversationEntry[]> {
   const raw = await redis.lrange(messagesKey(sessionId), 0, -1);
@@ -26,19 +37,20 @@ export async function appendWarmupTurn(
   interviewer: ConversationEntry,
 ): Promise<void> {
   const id = state.id;
-  await redis
+  const pipe = redis
     .pipeline()
     .rpush(messagesKey(id), JSON.stringify(interviewer))
     .set(sessionKey(id), JSON.stringify(state))
     .expire(messagesKey(id), SESSION_REFRESH_TTL_SECONDS)
-    .expire(sessionKey(id), SESSION_REFRESH_TTL_SECONDS)
-    .exec();
+    .expire(sessionKey(id), SESSION_REFRESH_TTL_SECONDS);
+  await execOrThrow(pipe);
 }
 
-// Persiste ATOMICAMENTE el turno del candidato + la respuesta del
-// entrevistador + el SessionState actualizado + (opcional) la troncal usada,
-// todo en un pipeline. Solo se llama tras una generacion exitosa, para no
-// dejar dos turnos 'candidate' seguidos si el LLM fallo (ver spec seccion 6).
+// Persiste el turno del candidato + la respuesta del entrevistador + el
+// SessionState actualizado + (opcional) la troncal usada, en un solo pipeline
+// (batch, NO transaccional: ver spec seccion 6). Solo se llama tras una
+// generacion exitosa, para no dejar dos turnos 'candidate' seguidos si el LLM
+// fallo.
 export async function appendCandidateTurn(
   redis: Redis,
   state: SessionState,
@@ -56,5 +68,5 @@ export async function appendCandidateTurn(
   if (seedId) {
     pipe.sadd(askedKey(id), seedId).expire(askedKey(id), SESSION_REFRESH_TTL_SECONDS);
   }
-  await pipe.exec();
+  await execOrThrow(pipe);
 }
