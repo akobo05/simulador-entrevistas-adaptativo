@@ -45,6 +45,7 @@ export async function registerSessionsWsRoute(server: FastifyInstance): Promise<
         log,
         redis: server.redis,
         connections: server.connections,
+        gemini: server.gemini,
         state,
       });
     },

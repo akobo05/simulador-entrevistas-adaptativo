@@ -10,17 +10,22 @@ import {
 import { startHeartbeat } from './heartbeat.js';
 import { MAX_CONSECUTIVE_INVALID_MESSAGES, SESSION_REFRESH_TTL_SECONDS } from './constants.js';
 import type { ConnectionRegistry } from '../services/connection-registry.js';
+import type { GeminiClient } from '../interviewer/gemini-client.js';
+import { runWarmupTurn, runCandidateTurn } from '../interviewer/turn-orchestrator.js';
+import { readHistory } from '../interviewer/conversation.js';
+import { MAX_CANDIDATE_TEXT_LENGTH } from '../interviewer/constants.js';
 
 export interface HandlerContext {
   socket: WebSocket;
   log: FastifyBaseLogger;
   redis: Redis;
   connections: ConnectionRegistry;
+  gemini: GeminiClient;
   state: SessionState;
 }
 
 export function attachHandlers(ctx: HandlerContext): void {
-  const { socket, log, redis, connections, state } = ctx;
+  const { socket, log, redis, connections, gemini, state } = ctx;
   const sessionId = state.id;
 
   connections.register(sessionId, socket);
@@ -39,6 +44,43 @@ export function attachHandlers(ctx: HandlerContext): void {
 
   startHeartbeat(socket, log);
   log.info('ws connected');
+
+  let generating = false;
+  const turnDeps = { socket, log, redis, gemini, state };
+
+  // Arrancamos el warmup SOLO en una sesion fresca (historial vacio). En una
+  // reconexion a mitad de entrevista el historial ya existe; reproducir el
+  // warmup agregaria un segundo turno 'interviewer' seguido y corromperia la
+  // alternancia del historial. turnNumber no sirve como guardia: la warmup no
+  // lo avanza, asi que tras enviar la primera pregunta sigue en 0. El historial
+  // no vacio es la senal correcta de que el warmup ya ocurrio. En reconexion
+  // basta el session.state sincrono que ya se envio; el siguiente
+  // candidate.transcript reanuda el arco desde el turno actual.
+  generating = true;
+  void (async () => {
+    const history = await readHistory(redis, sessionId, log);
+    if (history.length === 0) {
+      await runWarmupTurn(turnDeps);
+    }
+  })()
+    .catch((err: unknown) => {
+      // El IIFE puede rechazar si readHistory falla (ej: Redis caido en el
+      // connect). runWarmupTurn maneja sus propios fallos internamente, asi que
+      // este catch cubre sobre todo ese read. Avisamos al cliente en vez de
+      // dejarlo colgado sin pregunta de warmup.
+      log.error({ err }, 'fallo el arranque del warmup');
+      sendServer(socket, {
+        type: 'error',
+        payload: {
+          code: 'llm_unavailable',
+          message: 'No se pudo iniciar la entrevista, intenta reconectar.',
+          recoverable: true,
+        },
+      });
+    })
+    .finally(() => {
+      generating = false;
+    });
 
   let invalidCount = 0;
 
@@ -75,8 +117,27 @@ export function attachHandlers(ctx: HandlerContext): void {
     }
     invalidCount = 0;
     log.debug({ type: parsed.data.type }, 'ws message received');
-    // F1.2: sin logica de negocio. La generacion de interviewer.message
-    // llega en un issue posterior (LLM Coach).
+    const data = parsed.data;
+    if (data.type === 'candidate.transcript' && data.payload.isFinal) {
+      if (generating) {
+        log.debug('turno en curso, se ignora el transcript');
+        return;
+      }
+      // Acotamos el texto del candidato: CandidateTranscriptSchema.text es un
+      // z.string() sin tope, asi que un cliente podria inflar el costo/latencia
+      // del LLM y el crecimiento del historial. Truncamos (no rechazamos) para
+      // no perder una respuesta larga legitima; el limite es generoso.
+      const candidateText = data.payload.text.slice(0, MAX_CANDIDATE_TEXT_LENGTH);
+      if (candidateText.length < data.payload.text.length) {
+        log.warn({ originalLength: data.payload.text.length }, 'transcript del candidato truncado');
+      }
+      generating = true;
+      void runCandidateTurn(turnDeps, candidateText).finally(() => {
+        generating = false;
+      });
+    }
+    // metrics.update, turn.event, voice.command y los parciales (isFinal=false)
+    // se ignoran (fuera del scope de #39).
   });
 
   socket.on('pong', () => {
@@ -89,6 +150,7 @@ export function attachHandlers(ctx: HandlerContext): void {
 
   socket.on('close', (code, reason) => {
     connections.unregister(sessionId, socket);
+    generating = false;
     log.info({ code, reason: reason?.toString() }, 'ws closed');
   });
 

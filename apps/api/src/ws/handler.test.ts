@@ -9,6 +9,20 @@ import { WS_CLOSE_CODES } from '@warachikuy/shared-types';
 import { buildServer } from '../server';
 import { loadEnv } from '../config/env';
 import { MAX_CONSECUTIVE_INVALID_MESSAGES } from './constants';
+import { MAX_CANDIDATE_TEXT_LENGTH } from '../interviewer/constants';
+import type { GeminiClient } from '../interviewer/gemini-client';
+
+// Fake determinista: cada pregunta del entrevistador es predecible para poder
+// asertar sobre el loop sin pegarle a la API real.
+function fakeGemini(): GeminiClient {
+  let n = 0;
+  return {
+    generate: async () => {
+      n += 1;
+      return `Pregunta numero ${n}`;
+    },
+  };
+}
 
 const testEnv = loadEnv({
   PORT: '3000',
@@ -73,6 +87,14 @@ function waitClose(ws: WebSocket): Promise<{ code: number; reason: string }> {
   });
 }
 
+// Drena los dos mensajes que llegan al conectar: session.state sincrono +
+// la interviewer.message de warmup async. Devuelve ambos parseados.
+async function drainConnect(queue: () => Promise<string>) {
+  const a = JSON.parse(await queue());
+  const b = JSON.parse(await queue());
+  return { a, b, types: [a.type, b.type] };
+}
+
 describe('WS /v1/sessions/:sessionId/ws (integration)', () => {
   let server: FastifyInstance;
   let redis: Redis;
@@ -80,7 +102,10 @@ describe('WS /v1/sessions/:sessionId/ws (integration)', () => {
 
   beforeEach(async () => {
     redis = new RedisMock() as unknown as Redis;
-    server = await buildServer(testEnv, { redis });
+    // ioredis-mock comparte estado entre instancias; limpiar antes de cada
+    // prueba garantiza aislamiento (sin datos residuales de tests anteriores).
+    await redis.flushall();
+    server = await buildServer(testEnv, { redis, gemini: fakeGemini() });
     await server.listen({ port: 0, host: '127.0.0.1' });
     port = (server.server.address() as AddressInfo).port;
   });
@@ -157,19 +182,18 @@ describe('WS /v1/sessions/:sessionId/ws (integration)', () => {
     });
   });
 
-  it('al conectar emite session.state con phase y turnNumber', async () => {
-    const state = makeState({ phase: 'interviewing', turnNumber: 2 });
+  it('al conectar emite session.state y luego la pregunta de warmup', async () => {
+    const state = makeState({ phase: 'warmup', turnNumber: 0 });
     await seedSession(redis, state);
     const ws = new WebSocket(url(state));
-    const nextMessage = makeMessageQueue(ws);
+    const queue = makeMessageQueue(ws);
     await new Promise<void>((resolve) => ws.once('open', () => resolve()));
-    const first = JSON.parse(await nextMessage());
+    const first = JSON.parse(await queue());
     expect(first.type).toBe('session.state');
-    expect(first.payload).toMatchObject({
-      sessionId: state.id,
-      phase: 'interviewing',
-      turnNumber: 2,
-    });
+    expect(first.payload).toMatchObject({ sessionId: state.id, phase: 'warmup', turnNumber: 0 });
+    const second = JSON.parse(await queue());
+    expect(second.type).toBe('interviewer.message');
+    expect(second.payload.text).toContain('Pregunta numero');
     ws.close();
   });
 
@@ -179,7 +203,7 @@ describe('WS /v1/sessions/:sessionId/ws (integration)', () => {
     const ws = new WebSocket(url(state));
     const nextMessage = makeMessageQueue(ws);
     await new Promise<void>((resolve) => ws.once('open', () => resolve()));
-    await nextMessage(); // consume el session.state inicial
+    await drainConnect(nextMessage); // consume session.state + warmup
     ws.send('this is not json');
     const errMsg = JSON.parse(await nextMessage());
     expect(errMsg).toEqual({
@@ -196,7 +220,7 @@ describe('WS /v1/sessions/:sessionId/ws (integration)', () => {
     const ws = new WebSocket(url(state));
     const nextMessage = makeMessageQueue(ws);
     await new Promise<void>((resolve) => ws.once('open', () => resolve()));
-    await nextMessage(); // consume el session.state inicial
+    await drainConnect(nextMessage); // consume session.state + warmup
     ws.send(JSON.stringify({ type: 'unknown.thing', payload: {} }));
     const errMsg = JSON.parse(await nextMessage());
     expect(errMsg.payload.code).toBe('invalid_message');
@@ -210,7 +234,7 @@ describe('WS /v1/sessions/:sessionId/ws (integration)', () => {
     const ws = new WebSocket(url(state));
     const nextMessage = makeMessageQueue(ws);
     await new Promise<void>((resolve) => ws.once('open', () => resolve()));
-    await nextMessage(); // consume el session.state inicial
+    await drainConnect(nextMessage); // consume session.state + warmup
     const closeP = waitClose(ws);
     for (let i = 0; i < MAX_CONSECUTIVE_INVALID_MESSAGES; i++) {
       ws.send('garbled');
@@ -225,7 +249,7 @@ describe('WS /v1/sessions/:sessionId/ws (integration)', () => {
     const ws = new WebSocket(url(state));
     const queue = makeMessageQueue(ws);
     await new Promise<void>((resolve) => ws.once('open', () => resolve()));
-    await queue(); // descarta el session.state inicial
+    await drainConnect(queue); // descarta session.state + warmup
 
     // Mandamos MAX-1 invalidos. Cada uno responde con un envelope error.
     for (let i = 0; i < MAX_CONSECUTIVE_INVALID_MESSAGES - 1; i++) {
@@ -268,7 +292,7 @@ describe('WS /v1/sessions/:sessionId/ws (integration)', () => {
     const ws1 = new WebSocket(url(state));
     const nextMessage1 = makeMessageQueue(ws1);
     await new Promise<void>((resolve) => ws1.once('open', () => resolve()));
-    await nextMessage1(); // consume el session.state inicial
+    await drainConnect(nextMessage1); // consume session.state + warmup
 
     const closedP = waitClose(ws1);
     const ws2 = new WebSocket(url(state));
@@ -284,7 +308,7 @@ describe('WS /v1/sessions/:sessionId/ws (integration)', () => {
     const ws = new WebSocket(url(state));
     const nextMessage = makeMessageQueue(ws);
     await new Promise<void>((resolve) => ws.once('open', () => resolve()));
-    await nextMessage(); // consume el session.state inicial
+    await drainConnect(nextMessage); // consume session.state + warmup
     expect(server.connections.size()).toBe(1);
     const closedP = new Promise<void>((resolve) => ws.once('close', () => resolve()));
     ws.close();
@@ -296,5 +320,184 @@ describe('WS /v1/sessions/:sessionId/ws (integration)', () => {
     await vi.waitFor(() => {
       expect(server.connections.size()).toBe(0);
     });
+  });
+
+  it('responde a un candidate.transcript final con una nueva interviewer.message y avanza el turno', async () => {
+    const state = makeState();
+    await seedSession(redis, state);
+    const ws = new WebSocket(url(state));
+    // Listener propio que acumula los mensajes. Permite esperar de forma
+    // deterministica con vi.waitFor en vez de un setTimeout fijo (flaky).
+    const received: Array<{
+      type: string;
+      payload: { intent?: string; turnNumber?: number; phase?: string };
+    }> = [];
+    ws.on('message', (d) => received.push(JSON.parse(d.toString())));
+    await new Promise<void>((resolve) => ws.once('open', () => resolve()));
+    // Los 2 mensajes de connect: session.state sincrono + warmup async. Cuando
+    // el de warmup llego, el warmup termino su send y el lock 'generating' se
+    // libera en el microtask siguiente, antes de que el server procese el
+    // proximo macrotask (el transcript). Por eso un unico envio es seguro.
+    await vi.waitFor(() => expect(received).toHaveLength(2));
+    ws.send(
+      JSON.stringify({
+        type: 'candidate.transcript',
+        payload: {
+          sessionId: state.id,
+          text: 'Tengo 3 anios de experiencia',
+          isFinal: true,
+          timestamp: Date.now(),
+        },
+      }),
+    );
+    // Esperamos las 2 respuestas del turno: interviewer.message + session.state.
+    await vi.waitFor(() => expect(received.length).toBeGreaterThanOrEqual(4));
+    const responses = received.slice(2);
+    const interviewer = responses.find((m) => m.type === 'interviewer.message');
+    const st = responses.find((m) => m.type === 'session.state');
+    expect(interviewer?.payload.intent).toBe('followup');
+    expect(st?.payload.turnNumber).toBe(1);
+    expect(st?.payload.phase).toBe('interviewing');
+    ws.close();
+  });
+
+  it('ignora candidate.transcript con isFinal=false (parciales del STT)', async () => {
+    const state = makeState();
+    await seedSession(redis, state);
+    const ws = new WebSocket(url(state));
+    const queue = makeMessageQueue(ws);
+    await new Promise<void>((resolve) => ws.once('open', () => resolve()));
+    await drainConnect(queue); // session.state + warmup
+    ws.send(
+      JSON.stringify({
+        type: 'candidate.transcript',
+        payload: { sessionId: state.id, text: 'parcial...', isFinal: false, timestamp: Date.now() },
+      }),
+    );
+    // Un mensaje invalido fuerza una respuesta; si el parcial se hubiera
+    // procesado, el siguiente mensaje seria una interviewer.message en vez de
+    // un error. Confirmamos que es el error (el parcial se ignoro).
+    ws.send('no-json');
+    const next = JSON.parse(await queue());
+    expect(next.type).toBe('error');
+    expect(next.payload.code).toBe('invalid_message');
+    ws.close();
+  });
+
+  it('en una reconexion a mitad de entrevista no reproduce el warmup y reanuda el arco', async () => {
+    const state = makeState({ turnNumber: 3, phase: 'interviewing' });
+    await seedSession(redis, state);
+    // Sembramos historial existente: la sesion ya avanzo (no es fresca).
+    await redis.rpush(
+      `session:messages:${state.id}`,
+      JSON.stringify({ role: 'interviewer', text: 'pregunta previa', timestamp: 1 }),
+      JSON.stringify({ role: 'candidate', text: 'respuesta previa', timestamp: 2 }),
+    );
+    const received: Array<{ type: string; payload: { turnNumber?: number } }> = [];
+    const ws = new WebSocket(url(state));
+    ws.on('message', (d) => received.push(JSON.parse(d.toString())));
+    await new Promise<void>((resolve) => ws.once('open', () => resolve()));
+    // Al reconectar solo llega session.state; NO una interviewer.message de warmup.
+    await vi.waitFor(() => expect(received.length).toBeGreaterThanOrEqual(1));
+    expect(received[0]!.type).toBe('session.state');
+    // Enviamos una respuesta: el turno reanuda desde 3 hacia 4, sin warmup duplicado.
+    ws.send(
+      JSON.stringify({
+        type: 'candidate.transcript',
+        payload: {
+          sessionId: state.id,
+          text: 'mi respuesta de resume',
+          isFinal: true,
+          timestamp: Date.now(),
+        },
+      }),
+    );
+    await vi.waitFor(() => expect(received.length).toBeGreaterThanOrEqual(3));
+    const st = received.slice(1).find((m) => m.type === 'session.state');
+    expect(st?.payload.turnNumber).toBe(4);
+    // Historial: 2 previos + candidate + interviewer = 4 (ningun warmup duplicado).
+    const len = await redis.llen(`session:messages:${state.id}`);
+    expect(len).toBe(4);
+    ws.close();
+  });
+
+  it('trunca el texto del candidato al maximo configurado antes de persistir', async () => {
+    const state = makeState();
+    await seedSession(redis, state);
+    const received: Array<{ type: string }> = [];
+    const ws = new WebSocket(url(state));
+    ws.on('message', (d) => received.push(JSON.parse(d.toString())));
+    await new Promise<void>((resolve) => ws.once('open', () => resolve()));
+    await vi.waitFor(() => expect(received.length).toBeGreaterThanOrEqual(2)); // connect
+    const huge = 'a'.repeat(MAX_CANDIDATE_TEXT_LENGTH + 500);
+    ws.send(
+      JSON.stringify({
+        type: 'candidate.transcript',
+        payload: { sessionId: state.id, text: huge, isFinal: true, timestamp: Date.now() },
+      }),
+    );
+    await vi.waitFor(() => expect(received.length).toBeGreaterThanOrEqual(4)); // turno respondido
+    // El turno del candidato persistido quedo recortado al maximo.
+    const raw = await redis.lrange(`session:messages:${state.id}`, 0, -1);
+    const candidate = raw
+      .map((s) => JSON.parse(s) as { role: string; text: string })
+      .find((e) => e.role === 'candidate');
+    expect(candidate?.text.length).toBe(MAX_CANDIDATE_TEXT_LENGTH);
+    ws.close();
+  });
+
+  it('recorre el arco completo: warmup, 5 turnos y cierre en el turno 6', async () => {
+    const state = makeState();
+    await seedSession(redis, state);
+    const received: Array<{
+      type: string;
+      payload: { intent?: string; turnNumber?: number; phase?: string };
+    }> = [];
+    const ws = new WebSocket(url(state));
+    ws.on('message', (d) => received.push(JSON.parse(d.toString())));
+    await new Promise<void>((resolve) => ws.once('open', () => resolve()));
+    // Connect: session.state + warmup interviewer.message.
+    await vi.waitFor(() => expect(received.length).toBeGreaterThanOrEqual(2));
+
+    // 6 respuestas del candidato llevan el arco del turno 0 al turno 6 (cierre).
+    for (let turn = 1; turn <= 6; turn++) {
+      const before = received.length;
+      ws.send(
+        JSON.stringify({
+          type: 'candidate.transcript',
+          payload: {
+            sessionId: state.id,
+            text: `respuesta del turno ${turn}`,
+            isFinal: true,
+            timestamp: Date.now(),
+          },
+        }),
+      );
+      // Cada turno emite interviewer.message + session.state.
+      await vi.waitFor(() => expect(received.length).toBeGreaterThanOrEqual(before + 2));
+      const st = received.slice(before).find((m) => m.type === 'session.state');
+      expect(st?.payload.turnNumber).toBe(turn);
+    }
+
+    // El ultimo turno (6) es el cierre.
+    const lastInterviewer = [...received].reverse().find((m) => m.type === 'interviewer.message');
+    expect(lastInterviewer?.payload.intent).toBe('closing');
+
+    // Un transcript despues del cierre se ignora (turno ya en el maximo).
+    const afterClosing = received.length;
+    ws.send(
+      JSON.stringify({
+        type: 'candidate.transcript',
+        payload: {
+          sessionId: state.id,
+          text: 'respuesta tardia',
+          isFinal: true,
+          timestamp: Date.now(),
+        },
+      }),
+    );
+    await new Promise((r) => setTimeout(r, 150));
+    expect(received.length).toBe(afterClosing);
+    ws.close();
   });
 });

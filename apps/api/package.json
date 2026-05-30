@@ -12,6 +12,7 @@
     "start": "node dist/index.js"
   },
   "dependencies": {
+    "@google/genai": "^2.7.0",
     "@fastify/cors": "^11.0.0",
     "@fastify/rate-limit": "^10.2.1",
     "@fastify/websocket": "^11.0.2",
