@@ -77,13 +77,28 @@ export async function buildServer(env: Env, deps: BuildServerDeps = {}): Promise
   });
 
   // El plugin de rate-limit usa la misma instancia de Redis para no abrir
-  // una conexión paralela. `global: false` deja que cada ruta opte-in via
-  // su config local. `errorResponseBuilder` hace que el 429 cumpla el
-  // envelope ApiError documentado en la spec 3.6 en vez del default del
-  // plugin (que es { statusCode, error: 'Too Many Requests', message }).
+  // una conexión paralela. `global: true` aplica un limite por default a
+  // TODA ruta (modelo opt-out): asi una ruta nueva queda protegida sin que
+  // el dev tenga que acordarse del opt-in. El default es 1000/h por IP; las
+  // rutas que necesiten otro limite lo sobreescriben con su `config.rateLimit`
+  // local (ej. POST /sessions con 60/h). El upgrade WS hereda este default
+  // como defensa barata contra spam de handshakes.
+  //
+  // `allowList` exime el healthcheck operacional de Docker. Usamos la forma
+  // FUNCION y no `['/health']` porque la forma array compara contra la key
+  // del rate-limit (que es la IP), no contra el path: un array nunca
+  // matchearia la ruta. Cortamos el query string para eximir tambien
+  // /health?foo=bar.
+  //
+  // `errorResponseBuilder` hace que el 429 cumpla el envelope ApiError
+  // documentado en la spec 3.6 en vez del default del plugin (que es
+  // { statusCode, error: 'Too Many Requests', message }).
   await server.register(rateLimit, {
     redis,
-    global: false,
+    global: true,
+    max: 1000,
+    timeWindow: '1 hour',
+    allowList: (req) => req.url.split('?')[0] === '/health',
     errorResponseBuilder: (_req, context) => ({
       error: {
         code: 'rate_limited',

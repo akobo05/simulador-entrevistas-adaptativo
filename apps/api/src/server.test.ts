@@ -102,4 +102,30 @@ describe('buildServer', () => {
       error: { code: 'internal_error', message: 'Error interno' },
     });
   });
+
+  it('una ruta generica hereda el rate-limit global por default (opt-out)', async () => {
+    // Con global: true, cualquier ruta sin override ni allowList recibe el
+    // limite default. La presencia del header x-ratelimit-limit confirma que
+    // el rate-limit se aplico, y su valor confirma el default de 1000.
+    server.get('/_test/plain', async () => ({ ok: true }));
+    const res = await server.inject({ method: 'GET', url: '/_test/plain' });
+    expect(res.statusCode).toBe(200);
+    expect(Number(res.headers['x-ratelimit-limit'])).toBe(1000);
+  });
+
+  it('/health esta exento del rate-limit (allowList por path)', async () => {
+    // allowList exime el healthcheck operacional: no debe llevar headers de
+    // rate-limit. Esto valida que la allowList matchea por path y no por IP.
+    const res = await server.inject({ method: 'GET', url: '/health' });
+    expect(res.statusCode).toBe(200);
+    expect(res.headers['x-ratelimit-limit']).toBeUndefined();
+  });
+
+  it('POST /api/v1/sessions mantiene su override de 60/h sobre el global', async () => {
+    // La ruta tiene su propio config.rateLimit que sobreescribe el default
+    // global. El body vacio devuelve 400 pero el header de rate-limit se
+    // agrega igual porque el hook corre antes del handler.
+    const res = await server.inject({ method: 'POST', url: '/api/v1/sessions', payload: {} });
+    expect(Number(res.headers['x-ratelimit-limit'])).toBe(60);
+  });
 });
