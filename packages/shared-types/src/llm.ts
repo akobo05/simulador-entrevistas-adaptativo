@@ -16,3 +16,13 @@ export const CandidateTranscriptSchema = z.object({
   timestamp: z.number().int(),
 });
 export type CandidateTranscript = z.infer<typeof CandidateTranscriptSchema>;
+
+// Una intervencion en el historial de la conversacion. El backend lo persiste
+// en Redis y lo reusa el plan de mejora (#40). 'candidate' = respuesta del
+// usuario, 'interviewer' = pregunta del LLM.
+export const ConversationEntrySchema = z.object({
+  role: z.enum(['interviewer', 'candidate']),
+  text: z.string(),
+  timestamp: z.number().int(),
+});
+export type ConversationEntry = z.infer<typeof ConversationEntrySchema>;
