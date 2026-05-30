@@ -10,6 +10,7 @@ import { MAX_WS_PAYLOAD_BYTES } from './ws/constants.js';
 import { ConnectionRegistry } from './services/connection-registry.js';
 import { registerSessionsWsRoute } from './routes/sessions.ws.js';
 import { apiError } from './errors.js';
+import { buildGeminiClient, type GeminiClient } from './interviewer/gemini-client.js';
 
 // Aumentamos el tipo de FastifyInstance para que `server.redis`, `server.env`
 // y `server.connections` sean accesibles desde handlers y plugins sin casts.
@@ -18,6 +19,7 @@ declare module 'fastify' {
     redis: Redis;
     env: Env;
     connections: ConnectionRegistry;
+    gemini: GeminiClient;
   }
 }
 
@@ -26,6 +28,8 @@ export interface BuildServerDeps {
   redis?: Redis;
   /** Destino opcional para los logs (usado en tests para capturar output). */
   loggerDestination?: { write(chunk: string): boolean | void };
+  /** Cliente Gemini a usar. Si no se provee, se construye con `buildGeminiClient(env)`. */
+  gemini?: GeminiClient;
 }
 
 export async function buildServer(env: Env, deps: BuildServerDeps = {}): Promise<FastifyInstance> {
@@ -117,6 +121,9 @@ export async function buildServer(env: Env, deps: BuildServerDeps = {}): Promise
 
   const connections = new ConnectionRegistry();
   server.decorate('connections', connections);
+
+  const gemini = deps.gemini ?? buildGeminiClient(env);
+  server.decorate('gemini', gemini);
 
   // Registramos la ruta WS fuera del prefijo /api/v1 para matchear el
   // contrato arquitectonico (spec 3.4): /v1/sessions/:id/ws

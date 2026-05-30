@@ -10,17 +10,20 @@ import {
 import { startHeartbeat } from './heartbeat.js';
 import { MAX_CONSECUTIVE_INVALID_MESSAGES, SESSION_REFRESH_TTL_SECONDS } from './constants.js';
 import type { ConnectionRegistry } from '../services/connection-registry.js';
+import type { GeminiClient } from '../interviewer/gemini-client.js';
+import { runWarmupTurn, runCandidateTurn } from '../interviewer/turn-orchestrator.js';
 
 export interface HandlerContext {
   socket: WebSocket;
   log: FastifyBaseLogger;
   redis: Redis;
   connections: ConnectionRegistry;
+  gemini: GeminiClient;
   state: SessionState;
 }
 
 export function attachHandlers(ctx: HandlerContext): void {
-  const { socket, log, redis, connections, state } = ctx;
+  const { socket, log, redis, connections, gemini, state } = ctx;
   const sessionId = state.id;
 
   connections.register(sessionId, socket);
@@ -39,6 +42,16 @@ export function attachHandlers(ctx: HandlerContext): void {
 
   startHeartbeat(socket, log);
   log.info('ws connected');
+
+  let generating = false;
+  const turnDeps = { socket, log, redis, gemini, state };
+
+  // Turno de warmup detras del lock: genera la primera pregunta, la persiste y
+  // emite la interviewer.message (el session.state ya se envio arriba).
+  generating = true;
+  void runWarmupTurn(turnDeps).finally(() => {
+    generating = false;
+  });
 
   let invalidCount = 0;
 
@@ -75,8 +88,19 @@ export function attachHandlers(ctx: HandlerContext): void {
     }
     invalidCount = 0;
     log.debug({ type: parsed.data.type }, 'ws message received');
-    // F1.2: sin logica de negocio. La generacion de interviewer.message
-    // llega en un issue posterior (LLM Coach).
+    const data = parsed.data;
+    if (data.type === 'candidate.transcript' && data.payload.isFinal) {
+      if (generating) {
+        log.debug('turno en curso, se ignora el transcript');
+        return;
+      }
+      generating = true;
+      void runCandidateTurn(turnDeps, data.payload.text).finally(() => {
+        generating = false;
+      });
+    }
+    // metrics.update, turn.event, voice.command y los parciales (isFinal=false)
+    // se ignoran (fuera del scope de #39).
   });
 
   socket.on('pong', () => {
@@ -89,6 +113,7 @@ export function attachHandlers(ctx: HandlerContext): void {
 
   socket.on('close', (code, reason) => {
     connections.unregister(sessionId, socket);
+    generating = false;
     log.info({ code, reason: reason?.toString() }, 'ws closed');
   });
 
