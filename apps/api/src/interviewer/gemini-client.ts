@@ -67,8 +67,11 @@ export function buildGeminiClient(env: Env): GeminiClient {
         throw new GeminiTransientError(err instanceof Error ? err.message : 'gemini error');
       }
       const text = response.text;
-      // Salida vacia: tipicamente safety filter o respuesta bloqueada. No es
-      // transitorio: reintentar daria lo mismo.
+      // Detectamos bloqueo por texto vacio: tanto los bloqueos del input como
+      // de la salida por safety filters de Gemini producen texto vacio. Es un
+      // proxy intencional (no exhaustivo): no inspeccionamos finishReason ni
+      // promptFeedback, suficiente para F1. No es transitorio, reintentar daria
+      // lo mismo, por eso es GeminiBlockedError y no GeminiTransientError.
       if (!text || text.trim().length === 0) {
         throw new GeminiBlockedError('gemini devolvio salida vacia o bloqueada');
       }
