@@ -1,5 +1,10 @@
 import type Redis from 'ioredis';
-import type { ConversationEntry, SessionState } from '@warachikuy/shared-types';
+import type { FastifyBaseLogger } from 'fastify';
+import {
+  ConversationEntrySchema,
+  type ConversationEntry,
+  type SessionState,
+} from '@warachikuy/shared-types';
 import { SESSION_REFRESH_TTL_SECONDS } from '../ws/constants.js';
 
 function messagesKey(sessionId: string): string {
@@ -19,14 +24,44 @@ function sessionKey(sessionId: string): string {
 // trade-off aceptado para F1 single-instance (ver spec seccion 6).
 async function execOrThrow(pipe: ReturnType<Redis['pipeline']>): Promise<void> {
   const results = await pipe.exec();
-  const failed = results?.find(([err]) => err != null);
+  // exec() devuelve null si la conexion se cae antes de procesar el pipeline.
+  // Lo tratamos como fallo: el turno NO se persistio, hay que avisarle al caller
+  // (no tragarlo, o el estado en memoria avanzaria sin reflejo en Redis).
+  if (results === null) {
+    throw new Error('el pipeline de Redis devolvio null (conexion perdida)');
+  }
+  const failed = results.find(([err]) => err != null);
   if (failed && failed[0]) throw failed[0];
 }
 
-// Lee el historial completo de la conversacion en orden cronologico.
-export async function readHistory(redis: Redis, sessionId: string): Promise<ConversationEntry[]> {
+// Lee el historial completo de la conversacion en orden cronologico. Valida
+// cada entrada con ConversationEntrySchema: una entrada corrupta se omite y se
+// loguea en vez de tumbar toda la lectura (que en el connect colgaria al
+// cliente). En F1 controlamos todas las escrituras, asi que una corrupta
+// implica un bug; preferimos degradar y avisar antes que romper.
+export async function readHistory(
+  redis: Redis,
+  sessionId: string,
+  log?: FastifyBaseLogger,
+): Promise<ConversationEntry[]> {
   const raw = await redis.lrange(messagesKey(sessionId), 0, -1);
-  return raw.map((s) => JSON.parse(s) as ConversationEntry);
+  const entries: ConversationEntry[] = [];
+  for (const s of raw) {
+    let json: unknown;
+    try {
+      json = JSON.parse(s);
+    } catch {
+      log?.error({ sessionId }, 'entrada del historial no es JSON valido, se omite');
+      continue;
+    }
+    const parsed = ConversationEntrySchema.safeParse(json);
+    if (parsed.success) {
+      entries.push(parsed.data);
+    } else {
+      log?.error({ sessionId }, 'entrada del historial no matchea el schema, se omite');
+    }
+  }
+  return entries;
 }
 
 // Persiste el turno inicial del entrevistador (warmup, sin respuesta previa

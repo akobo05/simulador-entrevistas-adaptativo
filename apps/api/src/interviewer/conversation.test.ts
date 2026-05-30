@@ -92,4 +92,34 @@ describe('conversation', () => {
       appendCandidateTurn(redis, state, ca('respuesta'), iv('pregunta'), 'be-apis'),
     ).rejects.toThrow('comando fallo');
   });
+
+  it('appendCandidateTurn lanza si exec devuelve null (conexion perdida)', async () => {
+    // exec() devuelve null si la conexion se cae antes de procesar el pipeline.
+    const nullPipe = {
+      rpush: () => nullPipe,
+      set: () => nullPipe,
+      expire: () => nullPipe,
+      sadd: () => nullPipe,
+      exec: async () => null,
+    };
+    const redis = { pipeline: () => nullPipe } as unknown as Redis;
+    const state = makeState({ turnNumber: 1, phase: 'interviewing' });
+    await expect(
+      appendCandidateTurn(redis, state, ca('respuesta'), iv('pregunta')),
+    ).rejects.toThrow('null');
+  });
+
+  it('readHistory omite entradas corruptas y devuelve solo las validas', async () => {
+    const redis = new RedisMock() as unknown as Redis;
+    const id = 'corrupt-test';
+    await redis.rpush(
+      `session:messages:${id}`,
+      JSON.stringify(iv('valida 1')),
+      'no-es-json',
+      JSON.stringify({ foo: 'bar' }), // JSON pero no matchea el schema
+      JSON.stringify(ca('valida 2')),
+    );
+    const history = await readHistory(redis, id);
+    expect(history).toEqual([iv('valida 1'), ca('valida 2')]);
+  });
 });

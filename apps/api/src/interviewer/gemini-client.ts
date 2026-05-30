@@ -14,9 +14,10 @@ export interface GeminiClient {
 }
 
 // Fallo transitorio: red, timeout, rate limit, 5xx. Amerita reintento.
+// Acepta `options` para preservar la causa original (no perder el stack).
 export class GeminiTransientError extends Error {
-  constructor(message: string) {
-    super(message);
+  constructor(message: string, options?: ErrorOptions) {
+    super(message, options);
     this.name = 'GeminiTransientError';
   }
 }
@@ -63,8 +64,23 @@ export function buildGeminiClient(env: Env): GeminiClient {
         );
       } catch (err) {
         if (err instanceof GeminiTransientError) throw err;
-        // Errores de red / SDK / 5xx se tratan como transitorios.
-        throw new GeminiTransientError(err instanceof Error ? err.message : 'gemini error');
+        // Errores de programacion (bug nuestro o del SDK) NO son fallos del LLM:
+        // los relanzamos crudos para no enmascararlos como "transitorio" y
+        // reintentarlos en vano, perdiendo el stack original.
+        if (
+          err instanceof TypeError ||
+          err instanceof ReferenceError ||
+          err instanceof RangeError ||
+          err instanceof SyntaxError
+        ) {
+          throw err;
+        }
+        // Errores de red / SDK / 5xx / auth se tratan como transitorios.
+        // Preservamos la causa para no perder el stack al debuggear (un API key
+        // vencido, por ejemplo, se reintenta una vez y termina en llm_unavailable).
+        throw new GeminiTransientError(err instanceof Error ? err.message : 'gemini error', {
+          cause: err,
+        });
       }
       const text = response.text;
       // Detectamos bloqueo por texto vacio: tanto los bloqueos del input como

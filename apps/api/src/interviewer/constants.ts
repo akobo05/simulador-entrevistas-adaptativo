@@ -15,6 +15,12 @@ export const MAX_INTERVIEWER_TURNS = 6; // turno de cierre
 // Recorte de seguridad del texto del LLM antes de enviarlo (UX de voz).
 export const MAX_INTERVIEWER_TEXT_LENGTH = 600;
 
+// Tope del texto del candidato (transcript del STT). CandidateTranscriptSchema
+// no acota el largo, asi que truncamos antes de mandarlo al LLM y persistirlo
+// para evitar inflar costo/latencia del LLM y el crecimiento del historial. El
+// limite es generoso: una respuesta hablada de ~2 min ronda los 2500 chars.
+export const MAX_CANDIDATE_TEXT_LENGTH = 4000;
+
 // Deriva la fase del numero de turno del entrevistador.
 export function derivePhase(turn: number): SessionPhase {
   if (turn <= WARMUP_TURN) return 'warmup';

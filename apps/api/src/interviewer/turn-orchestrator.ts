@@ -114,7 +114,7 @@ export async function runCandidateTurn(deps: TurnDeps, candidateText: string): P
 
   let msg: InterviewerMessage;
   try {
-    const history = await readHistory(deps.redis, deps.state.id);
+    const history = await readHistory(deps.redis, deps.state.id, deps.log);
     msg = await generateWithRetry(deps, {
       state: projected,
       history,

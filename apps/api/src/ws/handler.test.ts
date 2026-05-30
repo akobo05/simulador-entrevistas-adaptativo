@@ -9,6 +9,7 @@ import { WS_CLOSE_CODES } from '@warachikuy/shared-types';
 import { buildServer } from '../server';
 import { loadEnv } from '../config/env';
 import { MAX_CONSECUTIVE_INVALID_MESSAGES } from './constants';
+import { MAX_CANDIDATE_TEXT_LENGTH } from '../interviewer/constants';
 import type { GeminiClient } from '../interviewer/gemini-client';
 
 // Fake determinista: cada pregunta del entrevistador es predecible para poder
@@ -417,6 +418,31 @@ describe('WS /v1/sessions/:sessionId/ws (integration)', () => {
     // Historial: 2 previos + candidate + interviewer = 4 (ningun warmup duplicado).
     const len = await redis.llen(`session:messages:${state.id}`);
     expect(len).toBe(4);
+    ws.close();
+  });
+
+  it('trunca el texto del candidato al maximo configurado antes de persistir', async () => {
+    const state = makeState();
+    await seedSession(redis, state);
+    const received: Array<{ type: string }> = [];
+    const ws = new WebSocket(url(state));
+    ws.on('message', (d) => received.push(JSON.parse(d.toString())));
+    await new Promise<void>((resolve) => ws.once('open', () => resolve()));
+    await vi.waitFor(() => expect(received.length).toBeGreaterThanOrEqual(2)); // connect
+    const huge = 'a'.repeat(MAX_CANDIDATE_TEXT_LENGTH + 500);
+    ws.send(
+      JSON.stringify({
+        type: 'candidate.transcript',
+        payload: { sessionId: state.id, text: huge, isFinal: true, timestamp: Date.now() },
+      }),
+    );
+    await vi.waitFor(() => expect(received.length).toBeGreaterThanOrEqual(4)); // turno respondido
+    // El turno del candidato persistido quedo recortado al maximo.
+    const raw = await redis.lrange(`session:messages:${state.id}`, 0, -1);
+    const candidate = raw
+      .map((s) => JSON.parse(s) as { role: string; text: string })
+      .find((e) => e.role === 'candidate');
+    expect(candidate?.text.length).toBe(MAX_CANDIDATE_TEXT_LENGTH);
     ws.close();
   });
 
