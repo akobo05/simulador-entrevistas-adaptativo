@@ -122,12 +122,20 @@ Punto de inyección actual: `apps/api/src/ws/handler.ts` línea ~76, donde hoy r
 
 Orden clave (deriva de §6): se GENERA primero, se PERSISTE solo en éxito, se ENVÍA al final verificando que el socket siga abierto.
 
+El `session.state` se envia de forma SINCRONA al conectar (primer mensaje, invariante del WS). El warmup corre detras del lock y solo agrega la `interviewer.message`.
+
+**Reconexion (resume).** El warmup solo debe correr en una sesion FRESCA. `validateUpgrade` carga el `SessionState` de Redis, asi que una reconexion a mitad de entrevista llega con historial existente. Reproducir el warmup ahi agregaria un segundo turno `interviewer` seguido y corromperia la alternancia del historial. La guardia correcta es el HISTORIAL VACIO, no `turnNumber === 0`: el warmup no avanza el turno, asi que tras enviar la primera pregunta el turno sigue en 0. En una reconexion con historial no vacio no se genera warmup; basta el `session.state` sincrono y el siguiente `candidate.transcript` reanuda el arco desde el turno actual.
+
 ```
-on connect (warmup):
-  → generar primera interviewer.message (warmup, sin seed)
-  → si exito y socket abierto: persistir turno del entrevistador + enviar
-       interviewer.message + session.state (phase=warmup, turnNumber=0)
-  → si falla: manejar segun §8 (no se persiste nada)
+on connect:
+  → enviar session.state sincrono (phase/turnNumber del estado cargado)
+  → leer historial; si esta VACIO (sesion fresca):
+       generar primera interviewer.message (warmup, sin seed)
+       → si exito y socket abierto: persistir turno del entrevistador +
+            enviar interviewer.message (NO reenvia session.state)
+       → si falla: manejar segun §8 (no se persiste nada)
+  → si el historial NO esta vacio (reconexion): no se genera warmup; se reanuda
+       en el proximo candidate.transcript
 
 on candidate.transcript con isFinal=true:
   → si hay generacion en curso para esta sesion: ignorar (lock)
