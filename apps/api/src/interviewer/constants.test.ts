@@ -19,4 +19,12 @@ describe('derivePhase', () => {
   it('MAX_INTERVIEWER_TURNS es 6 (warmup + 5 troncales + closing)', () => {
     expect(MAX_INTERVIEWER_TURNS).toBe(6);
   });
+
+  it('turnos por debajo de 0 caen en warmup', () => {
+    expect(derivePhase(-1)).toBe('warmup');
+  });
+
+  it('turnos por encima del maximo siguen en closing', () => {
+    expect(derivePhase(MAX_INTERVIEWER_TURNS + 1)).toBe('closing');
+  });
 });
