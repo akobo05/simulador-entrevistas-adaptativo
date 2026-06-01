@@ -10,7 +10,7 @@ import type {
 } from '@warachikuy/shared-types';
 import type { Env } from '../config/env.js';
 
-const SESSION_TTL_SECONDS = 3600;
+export const SESSION_TTL_SECONDS = 3600;
 
 export async function createSession(
   redis: Redis,

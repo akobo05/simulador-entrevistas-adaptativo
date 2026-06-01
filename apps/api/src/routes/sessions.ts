@@ -5,15 +5,14 @@ import {
   SessionStateSchema,
   WS_CLOSE_CODES,
 } from '@warachikuy/shared-types';
-import { createSession } from '../services/sessions.service.js';
+import { createSession, SESSION_TTL_SECONDS } from '../services/sessions.service.js';
 import { apiError } from '../errors.js';
 import { tryStartGenerating, readPlan, setPlanFailed } from '../interviewer/plan-store.js';
 import { generatePlan } from '../interviewer/coach.service.js';
 import { GENERATION_TIMEOUT_SECONDS } from '../interviewer/constants.js';
 
-// TTL de la sesion al reescribirla en /end. Mismo valor que createSession
-// (SESSION_TTL_SECONDS) para no acortar ni alargar la vida de la sesion.
-const SESSION_TTL_SECONDS = 3600;
+// SESSION_TTL_SECONDS se importa del service: fuente unica para el TTL al
+// reescribir la sesion en /end y no acortar ni alargar su vida.
 
 export async function registerSessionsRoutes(server: FastifyInstance): Promise<void> {
   server.post(
@@ -99,6 +98,8 @@ export async function registerSessionsRoutes(server: FastifyInstance): Promise<v
       return reply.code(200).send({ status: 'failed' });
     }
     // generating: si supero el timeout, lo damos por fallido (proceso colgado).
+    // La escritura es segura ante polls concurrentes: dos GET simultaneos que
+    // escriben 'failed' para el mismo planId convergen al mismo estado.
     const age = Date.now() - (record.generatingSince ?? 0);
     if (age > GENERATION_TIMEOUT_SECONDS * 1000) {
       await setPlanFailed(server.redis, sessionId, record.planId);
