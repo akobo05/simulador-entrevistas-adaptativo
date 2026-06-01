@@ -105,4 +105,25 @@ describe('generatePlan', () => {
     await generatePlan({ redis, gemini, log: silentLog() }, makeState(), 'plan-1');
     expect((await readPlan(redis, makeState().id))?.status).toBe('failed');
   });
+
+  it('reintenta tras un error transitorio y marca ready si el segundo intento funciona', async () => {
+    const redis = new RedisMock() as unknown as Redis;
+    await persistAggregate(redis, makeState().id, {
+      fluency: 88,
+      eye_contact: null,
+      speech_rate: 62,
+    });
+    const generateJson = vi
+      .fn()
+      .mockRejectedValueOnce(new GeminiTransientError('net'))
+      .mockResolvedValueOnce(COACH_OUTPUT);
+    await generatePlan(
+      { redis, gemini: { generate: async () => '', generateJson }, log: silentLog() },
+      makeState(),
+      '550e8400-e29b-41d4-a716-446655440099',
+    );
+    expect(generateJson).toHaveBeenCalledTimes(2);
+    const rec = await readPlan(redis, makeState().id);
+    expect(rec?.status).toBe('ready');
+  });
 });
