@@ -21,6 +21,7 @@ function fakeGemini(): GeminiClient {
       n += 1;
       return `Pregunta numero ${n}`;
     },
+    generateJson: async () => ({}),
   };
 }
 
