@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildSystemPrompt } from './prompts';
+import { buildSystemPrompt, buildCoachPrompt } from './prompts';
 
 const seed = { id: 'be-apis', topic: 'apis', prompt: 'Como disenarias una API REST?' };
 
@@ -41,5 +41,47 @@ describe('buildSystemPrompt', () => {
     const p = buildSystemPrompt({ industry: 'backend', level: 'mid', phase: 'warmup' });
     expect(p.toLowerCase()).toContain('feedback');
     expect(p).toContain('UNA sola pregunta');
+  });
+});
+
+describe('buildCoachPrompt', () => {
+  it('incluye el rol de coach, industria y nivel', () => {
+    const p = buildCoachPrompt({
+      industry: 'backend',
+      level: 'mid',
+      metrics: { fluency: 80, eye_contact: 60, speech_rate: 70 },
+    });
+    expect(p.toLowerCase()).toContain('coach');
+    expect(p).toContain('backend');
+    expect(p).toContain('mid');
+  });
+
+  it('inyecta los valores medidos para comentarlos sin re-puntuarlos', () => {
+    const p = buildCoachPrompt({
+      industry: 'backend',
+      level: 'mid',
+      metrics: { fluency: 80, eye_contact: 60, speech_rate: 70 },
+    });
+    expect(p).toContain('80');
+    expect(p.toLowerCase()).toContain('no vuelvas a puntuar');
+  });
+
+  it('marca las metricas sin datos', () => {
+    const p = buildCoachPrompt({
+      industry: 'backend',
+      level: 'mid',
+      metrics: { fluency: null, eye_contact: null, speech_rate: null },
+    });
+    expect(p.toLowerCase()).toContain('sin datos');
+  });
+
+  it('incluye la rubrica del puntaje de content', () => {
+    const p = buildCoachPrompt({
+      industry: 'backend',
+      level: 'senior',
+      metrics: { fluency: 80, eye_contact: 60, speech_rate: 70 },
+    });
+    expect(p.toLowerCase()).toContain('rubrica');
+    expect(p).toContain('content');
   });
 });
