@@ -534,4 +534,31 @@ describe('WS /v1/sessions/:sessionId/ws (integration)', () => {
     });
     ws.close();
   });
+
+  it('una conexion sin metricas no pisa el agregado persistido al cerrar', async () => {
+    const state = makeState();
+    await seedSession(redis, state);
+    const goodAggregate = { fluency: 88, eye_contact: 62, speech_rate: 55 };
+    const metricsKey = `session:metrics:${state.id}`;
+    const ws = new WebSocket(url(state));
+    await new Promise<void>((resolve) => ws.once('open', () => resolve()));
+    // Sembramos los datos buenos de una conexion previa DESPUES de que el socket
+    // este abierto, para que cualquier flush async residual de un test anterior
+    // (ioredis-mock comparte estado entre instancias) ya haya quedado atras.
+    await redis.set(metricsKey, JSON.stringify(goodAggregate), 'EX', 3600);
+    // No enviamos ningun metrics.update.
+    await new Promise<void>((resolve) => {
+      ws.once('close', () => resolve());
+      ws.close();
+    });
+    // El flush final del server NO debe correr (hasSamples() es false), asi que
+    // el agregado bueno sigue intacto. Damos un margen para que el close handler
+    // del server corra y confirme que NO escribio nada.
+    await vi.waitFor(() => {
+      expect(server.connections.size()).toBe(0);
+    });
+    const raw = await redis.get(metricsKey);
+    expect(raw).toBeTruthy();
+    expect(JSON.parse(raw as string)).toEqual(goodAggregate);
+  });
 });

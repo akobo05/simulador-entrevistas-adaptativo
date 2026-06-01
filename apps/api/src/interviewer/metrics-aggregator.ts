@@ -27,6 +27,13 @@ export class MetricsAggregator {
     }
   }
 
+  // True si se acumulo al menos una muestra de alguna metrica rastreada. Evita
+  // persistir un agregado vacio (todo null) que podria pisar datos buenos de
+  // una conexion previa tras un reemplazo de sesion.
+  hasSamples(): boolean {
+    return TRACKED.some((k) => this.acc[k].count > 0);
+  }
+
   snapshot(): MetricsAggregate {
     const out = {} as MetricsAggregate;
     for (const k of TRACKED) {

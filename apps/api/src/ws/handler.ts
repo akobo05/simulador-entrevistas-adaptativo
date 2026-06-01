@@ -144,8 +144,9 @@ export function attachHandlers(ctx: HandlerContext): void {
       metrics.add(data.payload);
       const now = Date.now();
       // Throttle: a lo sumo una escritura por METRICS_FLUSH_INTERVAL_MS, en vez
-      // de a la frecuencia de los metrics.update (~4 Hz).
-      if (now - lastMetricsPersist >= METRICS_FLUSH_INTERVAL_MS) {
+      // de a la frecuencia de los metrics.update (~4 Hz). Solo persistimos si
+      // hay muestras, para no pisar datos de una conexion previa.
+      if (metrics.hasSamples() && now - lastMetricsPersist >= METRICS_FLUSH_INTERVAL_MS) {
         lastMetricsPersist = now;
         void persistAggregate(redis, sessionId, metrics.snapshot()).catch((err: unknown) => {
           log.error({ err }, 'fallo al persistir el agregado de metricas');
@@ -168,8 +169,14 @@ export function attachHandlers(ctx: HandlerContext): void {
     connections.unregister(sessionId, socket);
     generating = false;
     // Flush best-effort del agregado de metricas (la generacion del plan NO
-    // depende de esto: lee el agregado throttled).
-    void persistAggregate(redis, sessionId, metrics.snapshot()).catch(() => {});
+    // depende de esto: lee el agregado throttled). Solo si hay muestras, para no
+    // pisar el agregado de una conexion previa con uno vacio tras un reemplazo
+    // de sesion.
+    if (metrics.hasSamples()) {
+      void persistAggregate(redis, sessionId, metrics.snapshot()).catch((err: unknown) => {
+        log.debug({ err }, 'fallo el flush final del agregado de metricas');
+      });
+    }
     log.info({ code, reason: reason?.toString() }, 'ws closed');
   });
 

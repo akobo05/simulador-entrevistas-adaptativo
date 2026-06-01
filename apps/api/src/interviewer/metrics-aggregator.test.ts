@@ -43,6 +43,19 @@ describe('MetricsAggregator', () => {
     agg.add(aura([{ name: 'posture', value: 50 }]));
     expect(agg.snapshot()).toEqual({ fluency: null, eye_contact: null, speech_rate: null });
   });
+
+  it('hasSamples es false sin muestras y true tras agregar una', () => {
+    const agg = new MetricsAggregator();
+    expect(agg.hasSamples()).toBe(false);
+    agg.add(aura([{ name: 'fluency', value: 80 }]));
+    expect(agg.hasSamples()).toBe(true);
+  });
+
+  it('hasSamples sigue false si solo llegan metricas no rastreadas', () => {
+    const agg = new MetricsAggregator();
+    agg.add(aura([{ name: 'posture', value: 50 }]));
+    expect(agg.hasSamples()).toBe(false);
+  });
 });
 
 describe('persistAggregate / readAggregate', () => {
