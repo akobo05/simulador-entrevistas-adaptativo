@@ -130,4 +130,10 @@ describe('buildGeminiClient', () => {
     const client = buildGeminiClient(fakeEnv);
     await expect(client.generateJson('sys', [], {})).rejects.toBeInstanceOf(GeminiTransientError);
   });
+
+  it('generateJson rechaza cuando el SDK devuelve texto que no es JSON', async () => {
+    generateContentMock.mockResolvedValue({ text: 'esto no es json' });
+    const client = buildGeminiClient(fakeEnv);
+    await expect(client.generateJson('sys', [], {})).rejects.toBeInstanceOf(SyntaxError);
+  });
 });
