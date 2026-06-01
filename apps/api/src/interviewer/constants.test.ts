@@ -1,5 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { derivePhase, MAX_INTERVIEWER_TURNS, INTERVIEWING_TURNS } from './constants';
+import {
+  derivePhase,
+  MAX_INTERVIEWER_TURNS,
+  INTERVIEWING_TURNS,
+  PLAN_TTL_SECONDS,
+  GENERATION_TIMEOUT_SECONDS,
+  METRICS_FLUSH_INTERVAL_MS,
+} from './constants';
 
 describe('derivePhase', () => {
   it('turno 0 es warmup', () => {
@@ -26,5 +33,17 @@ describe('derivePhase', () => {
 
   it('turnos por encima del maximo siguen en closing', () => {
     expect(derivePhase(MAX_INTERVIEWER_TURNS + 1)).toBe('closing');
+  });
+});
+
+describe('constantes del plan de mejora', () => {
+  it('PLAN_TTL_SECONDS es mayor que el TTL de la sesion (1h)', () => {
+    expect(PLAN_TTL_SECONDS).toBeGreaterThan(3600);
+  });
+  it('GENERATION_TIMEOUT_SECONDS es holgado sobre el timeout de Gemini (15s)', () => {
+    expect(GENERATION_TIMEOUT_SECONDS).toBeGreaterThan(15);
+  });
+  it('METRICS_FLUSH_INTERVAL_MS evita escrituras a 4 Hz', () => {
+    expect(METRICS_FLUSH_INTERVAL_MS).toBeGreaterThanOrEqual(1000);
   });
 });
