@@ -12,10 +12,10 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@warachikuy/shared-types": "workspace:*",
-    "@warachikuy/voice-pipeline": "workspace:*",
     "@react-three/drei": "^10.7.7",
     "@react-three/fiber": "^9.6.1",
+    "@warachikuy/shared-types": "workspace:*",
+    "@warachikuy/voice-pipeline": "workspace:*",
     "lucide-react": "^0.469.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
@@ -28,6 +28,7 @@
     "@testing-library/react": "^16.1.0",
     "@types/react": "^19.0.7",
     "@types/react-dom": "^19.0.3",
+    "@types/three": "^0.184.1",
     "@vitejs/plugin-react": "^4.7.0",
     "happy-dom": "^16.5.0",
     "typescript": "^5.7.2",

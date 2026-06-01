@@ -1,8 +1,12 @@
-/* eslint-disable react/no-unknown-property */
-import { useRef } from 'react';
+/* eslint-disable react/no-unknown-property -- Este archivo es 100% JSX de
+   react-three-fiber, cuyos props (args, attach, position, intensity, rotation,
+   etc.) la regla react/no-unknown-property no conoce. El plugin oficial
+   @react-three/eslint-plugin no expone una regla que los reconozca (solo
+   no-new/no-clone-in-loop), asi que desactivar la regla a nivel de archivo es
+   el approach aceptado para un componente puramente R3F. */
+import { useMemo, useRef } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { Sphere, MeshDistortMaterial, Ring, Float } from '@react-three/drei';
-// @ts-expect-error: Suppress missing type declarations for 'three' package
 import * as THREE from 'three';
 
 function OrbeCore() {
@@ -63,16 +67,20 @@ function AnilloOrbitante({
 
 function ParticlesDot() {
   const count = 80;
-  const positions = new Float32Array(count * 3);
-
-  for (let i = 0; i < count; i++) {
-    const theta = Math.random() * Math.PI * 2;
-    const phi = Math.acos(2 * Math.random() - 1);
-    const r = 2.2 + Math.random() * 1.2;
-    positions[i * 3] = r * Math.sin(phi) * Math.cos(theta);
-    positions[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
-    positions[i * 3 + 2] = r * Math.cos(phi);
-  }
+  // useMemo para no recalcular las posiciones (ni re-subir el buffer al GPU)
+  // en cada render: sin esto, el campo de particulas se reorganizaria cada vez.
+  const positions = useMemo(() => {
+    const pos = new Float32Array(count * 3);
+    for (let i = 0; i < count; i++) {
+      const theta = Math.random() * Math.PI * 2;
+      const phi = Math.acos(2 * Math.random() - 1);
+      const r = 2.2 + Math.random() * 1.2;
+      pos[i * 3] = r * Math.sin(phi) * Math.cos(theta);
+      pos[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
+      pos[i * 3 + 2] = r * Math.cos(phi);
+    }
+    return pos;
+  }, []);
 
   const ref = useRef<THREE.Points>(null);
   useFrame((state) => {

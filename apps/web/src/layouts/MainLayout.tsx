@@ -1,9 +1,9 @@
-import React from 'react';
+import type { ReactNode } from 'react';
 
-export function MainLayout({ children }: { children: React.ReactNode }) {
+export function MainLayout({ children }: { children: ReactNode }) {
   return (
-    <div style={{ maxWidth: '800px', margin: '0 auto', padding: '20px' }}>
-      <header style={{ borderBottom: '2px solid #ccc', marginBottom: '20px' }}>
+    <div className="chat-layout">
+      <header className="chat-header">
         <h1>Warachikuy</h1>
         <p>Simulador de Entrevistas Laborales Adaptativo</p>
       </header>

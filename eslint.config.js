@@ -2,6 +2,7 @@ import js from '@eslint/js';
 import tseslint from 'typescript-eslint';
 import react from 'eslint-plugin-react';
 import reactHooks from 'eslint-plugin-react-hooks';
+import reactThree from '@react-three/eslint-plugin';
 import globals from 'globals';
 
 export default tseslint.config(
@@ -39,6 +40,7 @@ export default tseslint.config(
     plugins: {
       react,
       'react-hooks': reactHooks,
+      '@react-three': reactThree,
     },
     settings: {
       react: { version: '19' },
@@ -46,6 +48,9 @@ export default tseslint.config(
     rules: {
       ...react.configs.recommended.rules,
       ...reactHooks.configs.recommended.rules,
+      // Reglas del plugin oficial de R3F: detectan asignaciones/clones por
+      // frame en useFrame, una fuente comun de fugas de rendimiento en 3D.
+      ...reactThree.configs.recommended.rules,
       'react/react-in-jsx-scope': 'off',
       'react/prop-types': 'off',
     },

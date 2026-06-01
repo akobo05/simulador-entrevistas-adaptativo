@@ -1,12 +1,12 @@
-import React from 'react';
+import type { ButtonHTMLAttributes, ReactNode } from 'react';
 
-interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  children: React.ReactNode;
+interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+  children: ReactNode;
 }
 
-export function Button({ children, ...props }: ButtonProps) {
+export function Button({ children, className, ...props }: ButtonProps) {
   return (
-    <button style={{ padding: '8px 16px', cursor: 'pointer' }} {...props}>
+    <button className={['btn', className].filter(Boolean).join(' ')} {...props}>
       {children}
     </button>
   );

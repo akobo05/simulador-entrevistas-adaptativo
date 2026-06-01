@@ -1,3 +1,7 @@
+/* Google Fonts. El @import DEBE ir antes de cualquier otra regla (spec CSS):
+   si va despues, el navegador lo ignora y las fuentes no cargan. */
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap');
+
 /* ── Variables ───────────────────────────────────────────── */
 :root {
   --bg:        #130522;
@@ -11,9 +15,6 @@
   --font-display: 'Syne', sans-serif;
   --font-body:    'DM Sans', sans-serif;
 }
-
-/* ── Google Fonts ────────────────────────────────────────── */
-@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap');
 
 /* ── Reset ───────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -226,4 +227,66 @@ body {
 @media (max-width: 480px) {
   .orbe-container { width: 260px; height: 260px; }
   .step-label { display: none; }
+}
+/* ── Sala de chat / componentes ──────────────────────────── */
+/* Estas clases reemplazan los estilos inline de los componentes para usar los
+   design tokens y respetar el tema oscuro (antes usaban #fff/#ccc hardcoded). */
+.chat-layout {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.chat-header {
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 20px;
+}
+
+.message-list {
+  height: 300px;
+  overflow-y: auto;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px;
+}
+
+.message-bubble {
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  margin: 5px 0;
+}
+
+.chat-form {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.chat-input {
+  flex: 1;
+  padding: 8px 12px;
+  background: var(--bg2);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.chat-input::placeholder {
+  color: var(--text-muted);
+}
+
+.btn {
+  padding: 8px 16px;
+  cursor: pointer;
+  background: var(--accent);
+  color: var(--bg);
+  border: none;
+  border-radius: 10px;
+  font-weight: 600;
+}
+
+.btn:hover {
+  background: var(--accent2);
 }

@@ -1,4 +1,3 @@
-import React from 'react';
 import { MainLayout } from '../layouts/MainLayout';
 import { useCustomWebSocket } from '../hooks/useCustomWebSocket';
 import { MessageBubble } from '../components/MessageBubble';
@@ -8,17 +7,17 @@ export function ChatRoom() {
   const { mensajes, sendJsonMessage, readyState } = useCustomWebSocket();
 
   const handleSend = (contenido: string) => {
-    sendJsonMessage({ tipo: 'user', contenido });
+    sendJsonMessage({ id: crypto.randomUUID(), tipo: 'user', contenido });
   };
 
   return (
     <MainLayout>
       <h2>Sala de Entrevista</h2>
-      <p>Estado de conexión: {readyState === 1 ? ' Conectado' : ' Desconectado'}</p>
+      <p>Estado de conexión: {readyState === 1 ? 'Conectado' : 'Desconectado'}</p>
 
-      <div style={{ height: '300px', overflowY: 'auto', background: '#fff', padding: '10px' }}>
-        {mensajes.map((msg, idx) => (
-          <MessageBubble key={idx} mensaje={msg} />
+      <div className="message-list">
+        {mensajes.map((msg) => (
+          <MessageBubble key={msg.id} mensaje={msg} />
         ))}
       </div>
 

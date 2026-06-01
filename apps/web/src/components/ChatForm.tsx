@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState, type FormEvent } from 'react';
 import { Button } from './Button';
 
 interface Props {
@@ -8,21 +8,26 @@ interface Props {
 export function ChatForm({ onSendMessage }: Props) {
   const [texto, setTexto] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
-    if (!texto.trim()) return;
-    onSendMessage(texto);
+    const limpio = texto.trim();
+    if (!limpio) return;
+    // Limpiamos el input de forma optimista (UX comun). Cuando llegue el WS
+    // real (#42), un envio fallido deberia restaurar el texto (rollback); por
+    // ahora el stub no falla.
+    onSendMessage(limpio);
     setTexto('');
   };
 
   return (
-    <form onSubmit={handleSubmit} style={{ display: 'flex', gap: '8px' }}>
+    <form onSubmit={handleSubmit} className="chat-form">
       <input
         type="text"
         value={texto}
         onChange={(e) => setTexto(e.target.value)}
         placeholder="Escribe tu respuesta..."
-        style={{ flex: 1, padding: '8px' }}
+        aria-label="Escribe tu respuesta"
+        className="chat-input"
       />
       <Button type="submit">Enviar</Button>
     </form>

@@ -28,7 +28,7 @@ export function Home() {
   const navigate = useNavigate();
 
   return (
-    <div className="home-root">
+    <main className="home-root">
       <Stepper />
 
       {/* Orbe central */}
@@ -67,6 +67,6 @@ export function Home() {
           <ArrowRight size={18} strokeWidth={2} />
         </button>
       </div>
-    </div>
+    </main>
   );
 }
