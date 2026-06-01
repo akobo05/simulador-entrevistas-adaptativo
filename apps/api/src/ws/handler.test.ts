@@ -501,4 +501,37 @@ describe('WS /v1/sessions/:sessionId/ws (integration)', () => {
     expect(received.length).toBe(afterClosing);
     ws.close();
   });
+
+  it('agrega los metrics.update del candidato y los persiste en Redis', async () => {
+    const state = makeState();
+    await seedSession(redis, state);
+    const received: Array<{ type: string }> = [];
+    const ws = new WebSocket(url(state));
+    ws.on('message', (d) => received.push(JSON.parse(d.toString())));
+    await new Promise<void>((resolve) => ws.once('open', () => resolve()));
+    await vi.waitFor(() => expect(received.length).toBeGreaterThanOrEqual(2)); // connect
+
+    ws.send(
+      JSON.stringify({
+        type: 'metrics.update',
+        payload: {
+          sessionId: state.id,
+          metrics: [
+            { name: 'fluency', value: 80, confidence: 'high', timestamp: Date.now() },
+            { name: 'eye_contact', value: 60, confidence: 'high', timestamp: Date.now() },
+          ],
+          collectedAt: Date.now(),
+        },
+      }),
+    );
+
+    await vi.waitFor(async () => {
+      const raw = await redis.get(`session:metrics:${state.id}`);
+      expect(raw).toBeTruthy();
+      const agg = JSON.parse(raw as string) as { fluency: number; eye_contact: number };
+      expect(agg.fluency).toBe(80);
+      expect(agg.eye_contact).toBe(60);
+    });
+    ws.close();
+  });
 });
