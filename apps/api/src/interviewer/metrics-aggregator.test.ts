@@ -4,13 +4,15 @@ import type Redis from 'ioredis';
 import type { AuraState } from '@warachikuy/shared-types';
 import { MetricsAggregator, persistAggregate, readAggregate } from './metrics-aggregator.js';
 
-function aura(metrics: { name: string; value: number }[]): AuraState {
+function aura(
+  metrics: { name: string; value: number; confidence?: 'low' | 'medium' | 'high' }[],
+): AuraState {
   return {
     sessionId: '550e8400-e29b-41d4-a716-446655440000',
     metrics: metrics.map((m) => ({
       name: m.name as AuraState['metrics'][number]['name'],
       value: m.value,
-      confidence: 'high',
+      confidence: m.confidence ?? 'high',
       timestamp: 1,
     })),
     collectedAt: 1,
@@ -54,6 +56,20 @@ describe('MetricsAggregator', () => {
   it('hasSamples sigue false si solo llegan metricas no rastreadas', () => {
     const agg = new MetricsAggregator();
     agg.add(aura([{ name: 'posture', value: 50 }]));
+    expect(agg.hasSamples()).toBe(false);
+  });
+
+  it('descarta las muestras de baja confianza', () => {
+    const agg = new MetricsAggregator();
+    agg.add(aura([{ name: 'fluency', value: 100, confidence: 'low' }]));
+    agg.add(aura([{ name: 'fluency', value: 80, confidence: 'high' }]));
+    expect(agg.snapshot().fluency).toBe(80); // la muestra 'low' no cuenta
+  });
+
+  it('una metrica con solo muestras de baja confianza queda en null', () => {
+    const agg = new MetricsAggregator();
+    agg.add(aura([{ name: 'eye_contact', value: 50, confidence: 'low' }]));
+    expect(agg.snapshot().eye_contact).toBeNull();
     expect(agg.hasSamples()).toBe(false);
   });
 });

@@ -19,8 +19,10 @@ export class MetricsAggregator {
   add(state: AuraState): void {
     for (const m of state.metrics) {
       const acc = this.acc[m.name as TrackedMetric];
-      // Solo las 3 rastreadas; las de baja confianza ya se filtran aguas arriba.
-      if (acc) {
+      // Solo las 3 rastreadas. Descartamos las muestras de baja confianza: si una
+      // metrica solo tiene muestras 'low' termina sin datos (null) y el plan dira
+      // "sin datos" en vez de reportar un numero poco confiable.
+      if (acc && m.confidence !== 'low') {
         acc.sum += m.value;
         acc.count += 1;
       }
