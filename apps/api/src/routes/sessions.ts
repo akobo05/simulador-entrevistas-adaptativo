@@ -92,7 +92,7 @@ export async function registerSessionsRoutes(server: FastifyInstance): Promise<v
       return reply.code(404).send(apiError('plan_not_found', 'Plan no encontrado'));
     }
     if (record.status === 'ready') {
-      return reply.code(200).send({ plan: record.plan });
+      return reply.code(200).send({ status: 'ready', plan: record.plan });
     }
     if (record.status === 'failed') {
       return reply.code(200).send({ status: 'failed' });

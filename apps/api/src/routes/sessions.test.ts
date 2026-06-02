@@ -179,6 +179,7 @@ describe('POST /api/v1/sessions/:sessionId/end y GET /api/v1/sessions/:sessionId
       });
       expect(planRes.statusCode).toBe(200);
       const planBody = JSON.parse(planRes.body);
+      expect(planBody.status).toBe('ready');
       expect(planBody.plan).toBeDefined();
       expect(planBody.plan.summary).toBe('ok');
     });

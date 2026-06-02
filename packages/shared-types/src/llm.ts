@@ -54,3 +54,12 @@ export const ImprovementPlanSchema = z.object({
   generatedAt: z.number().int(),
 });
 export type ImprovementPlan = z.infer<typeof ImprovementPlanSchema>;
+
+// Respuesta del endpoint GET /plan, como union discriminada por `status` para
+// que el frontend (issue #42) la consuma sin adivinar la forma.
+export const PlanResponseSchema = z.discriminatedUnion('status', [
+  z.object({ status: z.literal('ready'), plan: ImprovementPlanSchema }),
+  z.object({ status: z.literal('generating') }),
+  z.object({ status: z.literal('failed') }),
+]);
+export type PlanResponse = z.infer<typeof PlanResponseSchema>;

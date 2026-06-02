@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { ConversationEntrySchema, ImprovementPlanSchema } from './llm';
+import { ConversationEntrySchema, ImprovementPlanSchema, PlanResponseSchema } from './llm';
 
 describe('ConversationEntrySchema', () => {
   it('acepta una entrada valida del entrevistador', () => {
@@ -47,5 +47,21 @@ describe('ImprovementPlanSchema', () => {
   it('rechaza score fuera de 0-100', () => {
     const bad = { ...valid, competencies: [{ name: 'fluency', score: 150, comment: 'x' }] };
     expect(ImprovementPlanSchema.safeParse(bad).success).toBe(false);
+  });
+
+  describe('PlanResponseSchema', () => {
+    it('acepta la variante ready con plan', () => {
+      const ready = { status: 'ready', plan: valid };
+      expect(PlanResponseSchema.parse(ready)).toEqual(ready);
+    });
+
+    it('acepta las variantes generating y failed', () => {
+      expect(PlanResponseSchema.parse({ status: 'generating' })).toEqual({ status: 'generating' });
+      expect(PlanResponseSchema.parse({ status: 'failed' })).toEqual({ status: 'failed' });
+    });
+
+    it('rechaza ready sin plan', () => {
+      expect(PlanResponseSchema.safeParse({ status: 'ready' }).success).toBe(false);
+    });
   });
 });
