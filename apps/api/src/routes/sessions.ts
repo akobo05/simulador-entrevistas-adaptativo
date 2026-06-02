@@ -68,7 +68,7 @@ export async function registerSessionsRoutes(server: FastifyInstance): Promise<v
 
       if (!won) {
         // Otro /end ya arranco la generacion: idempotente, devolvemos su planId.
-        const existing = await readPlan(server.redis, sessionId);
+        const existing = await readPlan(server.redis, sessionId, req.log);
         return reply.code(202).send({ sessionId, planId: existing?.planId ?? planId });
       }
 
@@ -111,7 +111,7 @@ export async function registerSessionsRoutes(server: FastifyInstance): Promise<v
         return reply.code(auth.status).send(apiError(auth.code, messages[auth.code]));
       }
 
-      const record = await readPlan(server.redis, sessionId);
+      const record = await readPlan(server.redis, sessionId, req.log);
       if (!record) {
         return reply.code(404).send(apiError('plan_not_found', 'Plan no encontrado'));
       }
@@ -126,7 +126,7 @@ export async function registerSessionsRoutes(server: FastifyInstance): Promise<v
       // escriben 'failed' para el mismo planId convergen al mismo estado.
       // TODO(F2): mover este marcado a un reaper de sesiones huerfanas cuando haya
       // un job runner (BullMQ), en vez de mutar estado dentro de un GET.
-      const age = Date.now() - (record.generatingSince ?? 0);
+      const age = Date.now() - record.generatingSince;
       if (age > GENERATION_TIMEOUT_SECONDS * 1000) {
         await setPlanFailed(server.redis, sessionId, record.planId);
         return reply.code(200).send({ status: 'failed' });

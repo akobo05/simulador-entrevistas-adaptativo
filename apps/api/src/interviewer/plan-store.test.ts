@@ -5,8 +5,8 @@ import type { ImprovementPlan } from '@warachikuy/shared-types';
 import { tryStartGenerating, readPlan, setPlanReady, setPlanFailed } from './plan-store';
 
 const plan: ImprovementPlan = {
-  planId: 'p1',
-  sessionId: 's1',
+  planId: '550e8400-e29b-41d4-a716-446655440000',
+  sessionId: '550e8400-e29b-41d4-a716-446655440001',
   summary: 'ok',
   competencies: [],
   strengths: [],
@@ -39,7 +39,9 @@ describe('plan-store', () => {
     await setPlanReady(redis, 's1', plan);
     const rec = await readPlan(redis, 's1');
     expect(rec?.status).toBe('ready');
-    expect(rec?.plan).toEqual(plan);
+    // Narrow la union discriminada para acceder a plan.
+    if (rec?.status !== 'ready') throw new Error('se esperaba un plan ready');
+    expect(rec.plan).toEqual(plan);
   });
 
   it('setPlanFailed marca el registro como failed', async () => {
@@ -49,5 +51,11 @@ describe('plan-store', () => {
     const rec = await readPlan(redis, 's1');
     expect(rec?.status).toBe('failed');
     expect(rec?.planId).toBe('p1');
+  });
+
+  it('readPlan devuelve null ante un registro corrupto', async () => {
+    const redis = new RedisMock() as unknown as Redis;
+    await redis.set('session:plan:s1', '{ no json', 'EX', 7200);
+    expect(await readPlan(redis, 's1')).toBeNull();
   });
 });

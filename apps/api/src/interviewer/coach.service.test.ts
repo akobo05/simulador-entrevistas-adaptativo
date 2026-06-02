@@ -75,12 +75,14 @@ describe('generatePlan', () => {
     );
     const rec = await readPlan(redis, makeState().id);
     expect(rec?.status).toBe('ready');
-    const comp = Object.fromEntries(rec!.plan!.competencies.map((c) => [c.name, c.score]));
+    // Narrow la union discriminada para acceder a plan sin non-null asserts.
+    if (rec?.status !== 'ready') throw new Error('se esperaba un plan ready');
+    const comp = Object.fromEntries(rec.plan.competencies.map((c) => [c.name, c.score]));
     expect(comp.fluency).toBe(88);
     expect(comp.eye_contact).toBeNull();
     expect(comp.speech_rate).toBe(62);
     expect(comp.content).toBe(75);
-    expect(rec!.plan!.summary).toBe('Buen desempeno.');
+    expect(rec.plan.summary).toBe('Buen desempeno.');
   });
 
   it('marca failed si el LLM falla tras el reintento', async () => {
