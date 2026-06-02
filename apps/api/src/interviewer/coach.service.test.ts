@@ -85,6 +85,31 @@ describe('generatePlan', () => {
     expect(rec.plan.summary).toBe('Buen desempeno.');
   });
 
+  it('redondea los puntajes medidos al ensamblar', async () => {
+    const redis = new RedisMock() as unknown as Redis;
+    await persistAggregate(redis, makeState().id, {
+      fluency: 79.66,
+      eye_contact: null,
+      speech_rate: 62.4,
+    });
+    const gemini: GeminiClient = {
+      generate: async () => '',
+      generateJson: async () => COACH_OUTPUT, // contentScore: 75
+    };
+    await generatePlan(
+      { redis, gemini, log: silentLog() },
+      makeState(),
+      '550e8400-e29b-41d4-a716-446655440099',
+    );
+    const rec = await readPlan(redis, makeState().id);
+    if (rec?.status !== 'ready') throw new Error('se esperaba un plan ready');
+    const comp = Object.fromEntries(rec.plan.competencies.map((c) => [c.name, c.score]));
+    expect(comp.fluency).toBe(80); // 79.66 -> 80
+    expect(comp.eye_contact).toBeNull();
+    expect(comp.speech_rate).toBe(62); // 62.4 -> 62
+    expect(comp.content).toBe(75);
+  });
+
   it('marca failed si el LLM falla tras el reintento', async () => {
     const redis = new RedisMock() as unknown as Redis;
     const generateJson = vi.fn().mockRejectedValue(new GeminiTransientError('net'));

@@ -83,6 +83,12 @@ function toContents(history: ConversationEntry[]): GeminiTurn[] {
   return contents;
 }
 
+// Redondea a entero para que el score guardado coincida con el valor que el
+// prompt le mostro al LLM (fmtMetric tambien redondea). null se preserva.
+function roundScore(value: number | null): number | null {
+  return value === null ? null : Math.round(value);
+}
+
 // Ensambla el ImprovementPlan final: inyecta los 3 puntajes medidos por el
 // sistema (fluency, eye_contact, speech_rate) y usa el contentScore del LLM.
 function assemble(
@@ -96,18 +102,26 @@ function assemble(
     sessionId,
     summary: out.summary,
     competencies: [
-      { name: 'fluency', score: metrics.fluency, comment: out.competencyComments.fluency },
+      {
+        name: 'fluency',
+        score: roundScore(metrics.fluency),
+        comment: out.competencyComments.fluency,
+      },
       {
         name: 'eye_contact',
-        score: metrics.eye_contact,
+        score: roundScore(metrics.eye_contact),
         comment: out.competencyComments.eye_contact,
       },
       {
         name: 'speech_rate',
-        score: metrics.speech_rate,
+        score: roundScore(metrics.speech_rate),
         comment: out.competencyComments.speech_rate,
       },
-      { name: 'content', score: out.contentScore, comment: out.competencyComments.content },
+      {
+        name: 'content',
+        score: Math.round(out.contentScore),
+        comment: out.competencyComments.content,
+      },
     ],
     strengths: out.strengths,
     improvements: out.improvements,
