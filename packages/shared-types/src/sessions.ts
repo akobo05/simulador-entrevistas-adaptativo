@@ -36,3 +36,24 @@ export const SessionStateSchema = z.object({
   token: z.string().regex(/^[0-9a-f]{64}$/, 'token debe ser 64 chars hex'),
 });
 export type SessionState = z.infer<typeof SessionStateSchema>;
+
+// Lista de industrias soportadas con su nombre legible. Fuente unica para el
+// endpoint GET /industries y el selector del formulario (#42).
+export const INDUSTRIES = [
+  { id: 'backend', name: 'Backend' },
+  { id: 'frontend', name: 'Frontend' },
+  { id: 'data', name: 'Data Science' },
+  { id: 'fullstack', name: 'Full Stack' },
+] as const satisfies ReadonlyArray<{ id: Industry; name: string }>;
+
+// Resumen publico de una sesion para GET /sessions/:id. NO incluye el token
+// (secreto) ni la fase (estado interno del arco).
+export const SessionSummarySchema = z.object({
+  id: z.string().uuid(),
+  industry: IndustrySchema,
+  level: LevelSchema,
+  status: SessionStatusSchema,
+  turnNumber: z.number().int().nonnegative(),
+  startedAt: z.number().int(),
+});
+export type SessionSummary = z.infer<typeof SessionSummarySchema>;

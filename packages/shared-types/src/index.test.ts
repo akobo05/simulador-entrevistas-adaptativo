@@ -16,6 +16,8 @@ import {
   SessionPhaseSchema,
   SessionStatusSchema,
   SessionStateSchema,
+  SessionSummarySchema,
+  INDUSTRIES,
 } from './index';
 
 const SESSION_ID = '550e8400-e29b-41d4-a716-446655440000';
@@ -271,5 +273,38 @@ describe('SessionStateSchema', () => {
       const result = SessionStatusSchema.safeParse(status);
       expect(result.success).toBe(true);
     }
+  });
+});
+
+describe('SessionSummarySchema', () => {
+  it('valida un resumen de sesion coherente', () => {
+    const result = SessionSummarySchema.safeParse({
+      id: '550e8400-e29b-41d4-a716-446655440000',
+      industry: 'backend',
+      level: 'mid',
+      status: 'active',
+      turnNumber: 6,
+      startedAt: 1700000000000,
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it('no exige token ni phase (campos internos no expuestos)', () => {
+    const result = SessionSummarySchema.safeParse({
+      id: '550e8400-e29b-41d4-a716-446655440000',
+      industry: 'backend',
+      level: 'mid',
+      status: 'ended',
+      turnNumber: 0,
+      startedAt: 1700000000000,
+    });
+    expect(result.success).toBe(true);
+  });
+});
+
+describe('INDUSTRIES', () => {
+  it('tiene las 4 industrias soportadas con nombre legible', () => {
+    expect(INDUSTRIES).toHaveLength(4);
+    expect(INDUSTRIES).toContainEqual({ id: 'backend', name: 'Backend' });
   });
 });

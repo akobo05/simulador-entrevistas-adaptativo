@@ -1,12 +1,28 @@
 import crypto from 'node:crypto';
 import type { FastifyInstance } from 'fastify';
-import { CreateSessionRequestSchema, WS_CLOSE_CODES } from '@warachikuy/shared-types';
+import { CreateSessionRequestSchema, INDUSTRIES, WS_CLOSE_CODES } from '@warachikuy/shared-types';
+import type { ValidateTokenResult } from '../ws/auth.js';
 import { createSession } from '../services/sessions.service.js';
 import { apiError } from '../errors.js';
 import { tryStartGenerating, readPlan, setPlanFailed } from '../interviewer/plan-store.js';
 import { generatePlan } from '../interviewer/coach.service.js';
 import { GENERATION_TIMEOUT_SECONDS, PLAN_TTL_SECONDS } from '../interviewer/constants.js';
 import { validateSessionToken } from '../ws/auth.js';
+
+// Codigo de error que devuelve validateSessionToken cuando falla la auth.
+type AuthErrorCode = Extract<ValidateTokenResult, { ok: false }>['code'];
+
+// Mensaje en espanol para cada codigo de auth, compartido por las rutas que
+// validan el token de sesion (/end, /plan y GET /sessions/:id).
+function authErrorMessage(code: AuthErrorCode): string {
+  const messages: Record<AuthErrorCode, string> = {
+    invalid_input: 'Token invalido',
+    invalid_token: 'Token invalido',
+    session_not_found: 'Sesion no encontrada',
+    internal_error: 'Estado de sesion corrupto',
+  };
+  return messages[code];
+}
 
 export async function registerSessionsRoutes(server: FastifyInstance): Promise<void> {
   server.post(
@@ -52,13 +68,7 @@ export async function registerSessionsRoutes(server: FastifyInstance): Promise<v
       // resuelve 404/500 (reemplaza el redis.get + safeParse manual).
       const auth = await validateSessionToken(server.redis, sessionId, req.query.token, req.log);
       if (!auth.ok) {
-        const messages: Record<typeof auth.code, string> = {
-          invalid_input: 'Token invalido',
-          invalid_token: 'Token invalido',
-          session_not_found: 'Sesion no encontrada',
-          internal_error: 'Estado de sesion corrupto',
-        };
-        return reply.code(auth.status).send(apiError(auth.code, messages[auth.code]));
+        return reply.code(auth.status).send(apiError(auth.code, authErrorMessage(auth.code)));
       }
       const state = auth.state;
 
@@ -102,13 +112,7 @@ export async function registerSessionsRoutes(server: FastifyInstance): Promise<v
       // despues de /end, cuando la sesion ya esta 'ended'.
       const auth = await validateSessionToken(server.redis, sessionId, req.query.token, req.log);
       if (!auth.ok) {
-        const messages: Record<typeof auth.code, string> = {
-          invalid_input: 'Token invalido',
-          invalid_token: 'Token invalido',
-          session_not_found: 'Sesion no encontrada',
-          internal_error: 'Estado de sesion corrupto',
-        };
-        return reply.code(auth.status).send(apiError(auth.code, messages[auth.code]));
+        return reply.code(auth.status).send(apiError(auth.code, authErrorMessage(auth.code)));
       }
 
       const record = await readPlan(server.redis, sessionId, req.log);
@@ -134,4 +138,34 @@ export async function registerSessionsRoutes(server: FastifyInstance): Promise<v
       return reply.code(202).send({ status: 'generating' });
     },
   );
+
+  server.get<{ Params: { sessionId: string }; Querystring: { token?: string } }>(
+    '/sessions/:sessionId',
+    async (req, reply) => {
+      const { sessionId } = req.params;
+      // El sessionId es publico; exigimos el token (timing-safe) igual que /end
+      // y /plan. Devolvemos un resumen que omite el token (secreto) y la fase
+      // (estado interno del arco).
+      const auth = await validateSessionToken(server.redis, sessionId, req.query.token, req.log);
+      if (!auth.ok) {
+        return reply.code(auth.status).send(apiError(auth.code, authErrorMessage(auth.code)));
+      }
+      const s = auth.state;
+      return reply.code(200).send({
+        session: {
+          id: s.id,
+          industry: s.industry,
+          level: s.level,
+          status: s.status,
+          turnNumber: s.turnNumber,
+          startedAt: s.startedAt,
+        },
+      });
+    },
+  );
+
+  server.get('/industries', async (_req, reply) => {
+    // Endpoint publico: alimenta el selector del formulario de inicio (#42).
+    return reply.code(200).send({ industries: INDUSTRIES });
+  });
 }

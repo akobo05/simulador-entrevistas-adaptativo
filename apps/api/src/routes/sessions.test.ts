@@ -274,3 +274,95 @@ describe('POST /api/v1/sessions/:sessionId/end y GET /api/v1/sessions/:sessionId
     expect(JSON.parse(res.body)).toStrictEqual({ status: 'failed' });
   });
 });
+
+describe('GET /api/v1/sessions/:sessionId', () => {
+  let server: FastifyInstance;
+  let redis: Redis;
+  const sessionId = '22222222-2222-4222-8222-222222222222';
+  const token = 'a'.repeat(64);
+
+  beforeEach(async () => {
+    redis = new RedisMock() as unknown as Redis;
+    await redis.flushall();
+    server = await buildServer(testEnv, { redis });
+  });
+
+  afterEach(async () => {
+    await server.close();
+  });
+
+  it('responde 200 con el resumen de la sesion cuando el token es valido', async () => {
+    await seedSession(redis, sessionId);
+    const res = await server.inject({
+      method: 'GET',
+      url: `/api/v1/sessions/${sessionId}?token=${token}`,
+    });
+    expect(res.statusCode).toBe(200);
+    const body = JSON.parse(res.body);
+    expect(body.session.id).toBe(sessionId);
+    expect(body.session.industry).toBe('backend');
+    expect(body.session.level).toBe('mid');
+    expect(body.session.status).toBe('active');
+    expect(body.session.turnNumber).toBe(6);
+    expect(typeof body.session.startedAt).toBe('number');
+    // El token (secreto) y la fase (estado interno) no se filtran.
+    expect(body.session.token).toBeUndefined();
+    expect(body.session.phase).toBeUndefined();
+  });
+
+  it('responde 401 cuando el token tiene formato valido pero es distinto', async () => {
+    await seedSession(redis, sessionId);
+    const wrongToken = 'b'.repeat(64);
+    const res = await server.inject({
+      method: 'GET',
+      url: `/api/v1/sessions/${sessionId}?token=${wrongToken}`,
+    });
+    expect(res.statusCode).toBe(401);
+    expect(JSON.parse(res.body).error.code).toBe('invalid_token');
+  });
+
+  it('responde 400 cuando falta el token', async () => {
+    await seedSession(redis, sessionId);
+    const res = await server.inject({
+      method: 'GET',
+      url: `/api/v1/sessions/${sessionId}`,
+    });
+    expect(res.statusCode).toBe(400);
+    expect(JSON.parse(res.body).error.code).toBe('invalid_input');
+  });
+
+  it('responde 404 sobre una sesion inexistente', async () => {
+    const res = await server.inject({
+      method: 'GET',
+      url: `/api/v1/sessions/33333333-3333-4333-8333-333333333333?token=${token}`,
+    });
+    expect(res.statusCode).toBe(404);
+    expect(JSON.parse(res.body).error.code).toBe('session_not_found');
+  });
+});
+
+describe('GET /api/v1/industries', () => {
+  let server: FastifyInstance;
+  let redis: Redis;
+
+  beforeEach(async () => {
+    redis = new RedisMock() as unknown as Redis;
+    await redis.flushall();
+    server = await buildServer(testEnv, { redis });
+  });
+
+  afterEach(async () => {
+    await server.close();
+  });
+
+  it('responde 200 con las 4 industrias y es publico (sin token)', async () => {
+    const res = await server.inject({
+      method: 'GET',
+      url: '/api/v1/industries',
+    });
+    expect(res.statusCode).toBe(200);
+    const body = JSON.parse(res.body);
+    expect(body.industries).toHaveLength(4);
+    expect(body.industries).toContainEqual({ id: 'backend', name: 'Backend' });
+  });
+});
