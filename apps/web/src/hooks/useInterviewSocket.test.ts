@@ -55,7 +55,12 @@ describe('useInterviewSocket', () => {
     act(() =>
       last().message({
         type: 'interviewer.message',
-        payload: { sessionId: 's1', text: 'Hola', intent: 'question', timestamp: 1 },
+        payload: {
+          sessionId: '550e8400-e29b-41d4-a716-446655440000',
+          text: 'Hola',
+          intent: 'question',
+          timestamp: 1,
+        },
       }),
     );
     expect(result.current.items).toHaveLength(1);
@@ -64,7 +69,11 @@ describe('useInterviewSocket', () => {
     act(() =>
       last().message({
         type: 'session.state',
-        payload: { sessionId: 's1', phase: 'interviewing', turnNumber: 2 },
+        payload: {
+          sessionId: '550e8400-e29b-41d4-a716-446655440000',
+          phase: 'interviewing',
+          turnNumber: 2,
+        },
       }),
     );
     expect(result.current.phase).toBe('interviewing');
@@ -85,7 +94,12 @@ describe('useInterviewSocket', () => {
     act(() =>
       last().message({
         type: 'interviewer.message',
-        payload: { sessionId: 's1', text: 'Gracias, terminamos.', intent: 'closing', timestamp: 9 },
+        payload: {
+          sessionId: '550e8400-e29b-41d4-a716-446655440000',
+          text: 'Gracias, terminamos.',
+          intent: 'closing',
+          timestamp: 9,
+        },
       }),
     );
     expect(result.current.closing).toBe(true);
