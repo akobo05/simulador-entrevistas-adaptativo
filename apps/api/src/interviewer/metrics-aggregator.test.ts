@@ -109,4 +109,24 @@ describe('persistAggregate / readAggregate', () => {
       speech_rate: 55, // se preserva el previo
     });
   });
+
+  it('readAggregate degrada a sin datos ante un blob corrupto', async () => {
+    const redis = new RedisMock() as unknown as Redis;
+    await redis.set('session:metrics:s1', 'no es json', 'EX', 3600);
+    expect(await readAggregate(redis, 's1')).toEqual({
+      fluency: null,
+      eye_contact: null,
+      speech_rate: null,
+    });
+  });
+
+  it('readAggregate degrada a sin datos si el JSON no matchea el schema', async () => {
+    const redis = new RedisMock() as unknown as Redis;
+    await redis.set('session:metrics:s1', JSON.stringify({ fluency: 'alto' }), 'EX', 3600);
+    expect(await readAggregate(redis, 's1')).toEqual({
+      fluency: null,
+      eye_contact: null,
+      speech_rate: null,
+    });
+  });
 });

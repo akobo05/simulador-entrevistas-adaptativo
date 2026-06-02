@@ -126,7 +126,7 @@ export async function generatePlan(
   const sessionId = state.id;
   try {
     const history = await readHistory(deps.redis, sessionId, deps.log);
-    const metrics = await readAggregate(deps.redis, sessionId);
+    const metrics = await readAggregate(deps.redis, sessionId, deps.log);
     const systemPrompt = buildCoachPrompt({
       industry: state.industry,
       level: state.level,

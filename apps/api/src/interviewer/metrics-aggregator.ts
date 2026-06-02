@@ -1,4 +1,6 @@
+import { z } from 'zod';
 import type Redis from 'ioredis';
+import type { FastifyBaseLogger } from 'fastify';
 import type { AuraState } from '@warachikuy/shared-types';
 import { SESSION_REFRESH_TTL_SECONDS } from '../ws/constants.js';
 
@@ -6,6 +8,12 @@ const TRACKED = ['fluency', 'eye_contact', 'speech_rate'] as const;
 type TrackedMetric = (typeof TRACKED)[number];
 
 export type MetricsAggregate = Record<TrackedMetric, number | null>;
+
+export const MetricsAggregateSchema = z.object({
+  fluency: z.number().nullable(),
+  eye_contact: z.number().nullable(),
+  speech_rate: z.number().nullable(),
+});
 
 // Promedio corriente en memoria por metrica del aura. Vive por conexion en el
 // handler del WS; una conexion por sesion (ConnectionRegistry).
@@ -69,8 +77,29 @@ export async function persistAggregate(
   await redis.set(metricsKey(sessionId), JSON.stringify(merged), 'EX', SESSION_REFRESH_TTL_SECONDS);
 }
 
-export async function readAggregate(redis: Redis, sessionId: string): Promise<MetricsAggregate> {
+export async function readAggregate(
+  redis: Redis,
+  sessionId: string,
+  log?: FastifyBaseLogger,
+): Promise<MetricsAggregate> {
   const raw = await redis.get(metricsKey(sessionId));
   if (!raw) return { fluency: null, eye_contact: null, speech_rate: null };
-  return JSON.parse(raw) as MetricsAggregate;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch (err) {
+    // Blob corrupto: degradamos a sin datos en vez de tumbar la generacion del
+    // plan (las metricas son opcionales).
+    log?.warn({ err, sessionId }, 'agregado de metricas no es JSON valido; se usa sin datos');
+    return { fluency: null, eye_contact: null, speech_rate: null };
+  }
+  const result = MetricsAggregateSchema.safeParse(parsed);
+  if (!result.success) {
+    log?.warn(
+      { sessionId, schemaErrors: result.error.format() },
+      'agregado de metricas no matchea el schema; se usa sin datos',
+    );
+    return { fluency: null, eye_contact: null, speech_rate: null };
+  }
+  return result.data;
 }
