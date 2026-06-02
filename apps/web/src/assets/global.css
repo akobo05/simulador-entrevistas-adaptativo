@@ -304,3 +304,10 @@ body {
 }
 .ring-nodata { font-size: 0.7rem; font-weight: 500; color: #9a9aa5; }
 .ring-label { font-size: 0.85rem; color: #c8c8d0; }
+
+/* Pantalla de configuracion de sesion */
+.setup-root { max-width: 480px; margin: 0 auto; padding: 3rem 1.5rem; }
+.setup-form { display: flex; flex-direction: column; gap: 1.25rem; margin-top: 1.5rem; }
+.setup-form label { display: flex; flex-direction: column; gap: 0.4rem; color: #c8c8d0; }
+.setup-form select { padding: 0.6rem; border-radius: 8px; background: #1a1a22; color: #fff; border: 1px solid #2a2a35; }
+.setup-error { color: #ff6b6b; }
