@@ -37,6 +37,7 @@ describe('gemini-client tipos y errores', () => {
   it('un fake que implementa GeminiClient cumple la interfaz', async () => {
     const fake: GeminiClient = {
       generate: async (system, contents) => `${system}|${contents.length}`,
+      generateJson: async () => ({}),
     };
     expect(await fake.generate('sys', [{ role: 'user', text: 'hola' }])).toBe('sys|1');
   });
@@ -98,5 +99,41 @@ describe('buildGeminiClient', () => {
     generateContentMock.mockRejectedValue(bug);
     const client = buildGeminiClient(fakeEnv);
     await expect(client.generate('sys', [])).rejects.toBe(bug);
+  });
+
+  it('generateJson parsea el JSON estructurado que devuelve el SDK', async () => {
+    generateContentMock.mockResolvedValue({ text: '{"ok":true,"n":3}' });
+    const client = buildGeminiClient(fakeEnv);
+    const out = await client.generateJson('sys', [{ role: 'user', text: 'x' }], { type: 'object' });
+    expect(out).toEqual({ ok: true, n: 3 });
+  });
+
+  it('generateJson pasa responseSchema y responseMimeType al SDK', async () => {
+    generateContentMock.mockResolvedValue({ text: '{}' });
+    const client = buildGeminiClient(fakeEnv);
+    const schema = { type: 'object' };
+    await client.generateJson('sys', [], schema);
+    const cfg = (generateContentMock.mock.calls[0]![0] as { config: Record<string, unknown> })
+      .config;
+    expect(cfg.responseMimeType).toBe('application/json');
+    expect(cfg.responseSchema).toBe(schema);
+  });
+
+  it('generateJson lanza GeminiBlockedError ante salida vacia', async () => {
+    generateContentMock.mockResolvedValue({ text: '' });
+    const client = buildGeminiClient(fakeEnv);
+    await expect(client.generateJson('sys', [], {})).rejects.toBeInstanceOf(GeminiBlockedError);
+  });
+
+  it('generateJson envuelve un rechazo del SDK como GeminiTransientError', async () => {
+    generateContentMock.mockRejectedValue(new Error('net'));
+    const client = buildGeminiClient(fakeEnv);
+    await expect(client.generateJson('sys', [], {})).rejects.toBeInstanceOf(GeminiTransientError);
+  });
+
+  it('generateJson rechaza cuando el SDK devuelve texto que no es JSON', async () => {
+    generateContentMock.mockResolvedValue({ text: 'esto no es json' });
+    const client = buildGeminiClient(fakeEnv);
+    await expect(client.generateJson('sys', [], {})).rejects.toBeInstanceOf(SyntaxError);
   });
 });

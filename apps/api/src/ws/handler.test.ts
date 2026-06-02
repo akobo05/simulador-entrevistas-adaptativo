@@ -21,6 +21,7 @@ function fakeGemini(): GeminiClient {
       n += 1;
       return `Pregunta numero ${n}`;
     },
+    generateJson: async () => ({}),
   };
 }
 
@@ -499,5 +500,65 @@ describe('WS /v1/sessions/:sessionId/ws (integration)', () => {
     await new Promise((r) => setTimeout(r, 150));
     expect(received.length).toBe(afterClosing);
     ws.close();
+  });
+
+  it('agrega los metrics.update del candidato y los persiste en Redis', async () => {
+    const state = makeState();
+    await seedSession(redis, state);
+    const received: Array<{ type: string }> = [];
+    const ws = new WebSocket(url(state));
+    ws.on('message', (d) => received.push(JSON.parse(d.toString())));
+    await new Promise<void>((resolve) => ws.once('open', () => resolve()));
+    await vi.waitFor(() => expect(received.length).toBeGreaterThanOrEqual(2)); // connect
+
+    ws.send(
+      JSON.stringify({
+        type: 'metrics.update',
+        payload: {
+          sessionId: state.id,
+          metrics: [
+            { name: 'fluency', value: 80, confidence: 'high', timestamp: Date.now() },
+            { name: 'eye_contact', value: 60, confidence: 'high', timestamp: Date.now() },
+          ],
+          collectedAt: Date.now(),
+        },
+      }),
+    );
+
+    await vi.waitFor(async () => {
+      const raw = await redis.get(`session:metrics:${state.id}`);
+      expect(raw).toBeTruthy();
+      const agg = JSON.parse(raw as string) as { fluency: number; eye_contact: number };
+      expect(agg.fluency).toBe(80);
+      expect(agg.eye_contact).toBe(60);
+    });
+    ws.close();
+  });
+
+  it('una conexion sin metricas no pisa el agregado persistido al cerrar', async () => {
+    const state = makeState();
+    await seedSession(redis, state);
+    const goodAggregate = { fluency: 88, eye_contact: 62, speech_rate: 55 };
+    const metricsKey = `session:metrics:${state.id}`;
+    const ws = new WebSocket(url(state));
+    await new Promise<void>((resolve) => ws.once('open', () => resolve()));
+    // Sembramos los datos buenos de una conexion previa DESPUES de que el socket
+    // este abierto, para que cualquier flush async residual de un test anterior
+    // (ioredis-mock comparte estado entre instancias) ya haya quedado atras.
+    await redis.set(metricsKey, JSON.stringify(goodAggregate), 'EX', 3600);
+    // No enviamos ningun metrics.update.
+    await new Promise<void>((resolve) => {
+      ws.once('close', () => resolve());
+      ws.close();
+    });
+    // El flush final del server NO debe correr (hasSamples() es false), asi que
+    // el agregado bueno sigue intacto. Damos un margen para que el close handler
+    // del server corra y confirme que NO escribio nada.
+    await vi.waitFor(() => {
+      expect(server.connections.size()).toBe(0);
+    });
+    const raw = await redis.get(metricsKey);
+    expect(raw).toBeTruthy();
+    expect(JSON.parse(raw as string)).toEqual(goodAggregate);
   });
 });

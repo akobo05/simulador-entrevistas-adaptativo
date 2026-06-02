@@ -13,7 +13,8 @@ import type { ConnectionRegistry } from '../services/connection-registry.js';
 import type { GeminiClient } from '../interviewer/gemini-client.js';
 import { runWarmupTurn, runCandidateTurn } from '../interviewer/turn-orchestrator.js';
 import { readHistory } from '../interviewer/conversation.js';
-import { MAX_CANDIDATE_TEXT_LENGTH } from '../interviewer/constants.js';
+import { MAX_CANDIDATE_TEXT_LENGTH, METRICS_FLUSH_INTERVAL_MS } from '../interviewer/constants.js';
+import { MetricsAggregator, persistAggregate } from '../interviewer/metrics-aggregator.js';
 
 export interface HandlerContext {
   socket: WebSocket;
@@ -46,6 +47,9 @@ export function attachHandlers(ctx: HandlerContext): void {
   log.info('ws connected');
 
   let generating = false;
+  // Promedio corriente del aura por conexion + ultimo flush a Redis (throttle).
+  const metrics = new MetricsAggregator();
+  let lastMetricsPersist = 0;
   const turnDeps = { socket, log, redis, gemini, state };
 
   // Arrancamos el warmup SOLO en una sesion fresca (historial vacio). En una
@@ -136,8 +140,21 @@ export function attachHandlers(ctx: HandlerContext): void {
         generating = false;
       });
     }
-    // metrics.update, turn.event, voice.command y los parciales (isFinal=false)
-    // se ignoran (fuera del scope de #39).
+    if (data.type === 'metrics.update') {
+      metrics.add(data.payload);
+      const now = Date.now();
+      // Throttle: a lo sumo una escritura por METRICS_FLUSH_INTERVAL_MS, en vez
+      // de a la frecuencia de los metrics.update (~4 Hz). Solo persistimos si
+      // hay muestras, para no pisar datos de una conexion previa.
+      if (metrics.hasSamples() && now - lastMetricsPersist >= METRICS_FLUSH_INTERVAL_MS) {
+        lastMetricsPersist = now;
+        void persistAggregate(redis, sessionId, metrics.snapshot()).catch((err: unknown) => {
+          log.error({ err }, 'fallo al persistir el agregado de metricas');
+        });
+      }
+    }
+    // turn.event, voice.command y los parciales (isFinal=false) se ignoran
+    // (fuera del scope de #39).
   });
 
   socket.on('pong', () => {
@@ -151,6 +168,15 @@ export function attachHandlers(ctx: HandlerContext): void {
   socket.on('close', (code, reason) => {
     connections.unregister(sessionId, socket);
     generating = false;
+    // Flush best-effort del agregado de metricas (la generacion del plan NO
+    // depende de esto: lee el agregado throttled). Solo si hay muestras, para no
+    // pisar el agregado de una conexion previa con uno vacio tras un reemplazo
+    // de sesion.
+    if (metrics.hasSamples()) {
+      void persistAggregate(redis, sessionId, metrics.snapshot()).catch((err: unknown) => {
+        log.debug({ err }, 'fallo el flush final del agregado de metricas');
+      });
+    }
     log.info({ code, reason: reason?.toString() }, 'ws closed');
   });
 

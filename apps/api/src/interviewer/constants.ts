@@ -27,3 +27,15 @@ export function derivePhase(turn: number): SessionPhase {
   if (turn < MAX_INTERVIEWER_TURNS) return 'interviewing';
   return 'closing';
 }
+
+// TTL propio del plan de mejora (2h), desacoplado del TTL de la sesion para que
+// el candidato no lo pierda si tarda en consultarlo.
+export const PLAN_TTL_SECONDS = 7200;
+
+// Si un registro 'generating' es mas viejo que esto, el GET /plan lo fuerza a
+// 'failed' (el proceso pudo morir a mitad). Holgado sobre los 15s de Gemini.
+export const GENERATION_TIMEOUT_SECONDS = 45;
+
+// Throttle de la persistencia del agregado de metricas a Redis (a lo sumo 1/s),
+// para no escribir a la frecuencia de los metrics.update (~4 Hz).
+export const METRICS_FLUSH_INTERVAL_MS = 1000;

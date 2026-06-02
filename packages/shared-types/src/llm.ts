@@ -26,3 +26,40 @@ export const ConversationEntrySchema = z.object({
   timestamp: z.number().int(),
 });
 export type ConversationEntry = z.infer<typeof ConversationEntrySchema>;
+
+export const CompetencyNameSchema = z.enum(['fluency', 'eye_contact', 'speech_rate', 'content']);
+export type CompetencyName = z.infer<typeof CompetencyNameSchema>;
+
+export const PlanCompetencySchema = z.object({
+  name: CompetencyNameSchema,
+  score: z.number().min(0).max(100).nullable(), // null si no se midio
+  comment: z.string(),
+});
+export type PlanCompetency = z.infer<typeof PlanCompetencySchema>;
+
+export const PlanExerciseSchema = z.object({
+  title: z.string(),
+  description: z.string(),
+});
+export type PlanExercise = z.infer<typeof PlanExerciseSchema>;
+
+export const ImprovementPlanSchema = z.object({
+  planId: z.string().uuid(),
+  sessionId: z.string().uuid(),
+  summary: z.string(),
+  competencies: z.array(PlanCompetencySchema),
+  strengths: z.array(z.string()),
+  improvements: z.array(z.string()),
+  exercises: z.array(PlanExerciseSchema),
+  generatedAt: z.number().int(),
+});
+export type ImprovementPlan = z.infer<typeof ImprovementPlanSchema>;
+
+// Respuesta del endpoint GET /plan, como union discriminada por `status` para
+// que el frontend (issue #42) la consuma sin adivinar la forma.
+export const PlanResponseSchema = z.discriminatedUnion('status', [
+  z.object({ status: z.literal('ready'), plan: ImprovementPlanSchema }),
+  z.object({ status: z.literal('generating') }),
+  z.object({ status: z.literal('failed') }),
+]);
+export type PlanResponse = z.infer<typeof PlanResponseSchema>;

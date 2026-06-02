@@ -70,7 +70,10 @@ beforeEach(async () => {
 
 describe('runWarmupTurn', () => {
   it('genera y envia la pregunta de warmup y la persiste', async () => {
-    const gemini: GeminiClient = { generate: async () => 'Hola, presentate brevemente.' };
+    const gemini: GeminiClient = {
+      generate: async () => 'Hola, presentate brevemente.',
+      generateJson: async () => ({}),
+    };
     const d = deps(gemini);
     await runWarmupTurn(d);
     const types = d._socket.sent.map((m) => m.type);
@@ -83,7 +86,10 @@ describe('runWarmupTurn', () => {
 
 describe('runCandidateTurn', () => {
   it('avanza el turno, genera, persiste candidato+entrevistador y envia', async () => {
-    const gemini: GeminiClient = { generate: async () => 'Buena. Como manejas concurrencia?' };
+    const gemini: GeminiClient = {
+      generate: async () => 'Buena. Como manejas concurrencia?',
+      generateJson: async () => ({}),
+    };
     const d = deps(gemini, new FakeSocket(), makeState({ turnNumber: 0, phase: 'warmup' }));
     await runCandidateTurn(d, 'Soy backend con 3 anios');
     expect(d.state.turnNumber).toBe(1);
@@ -96,7 +102,7 @@ describe('runCandidateTurn', () => {
   it('en fallo transitorio reintenta una vez y luego emite error llm_unavailable sin persistir', async () => {
     const generate = vi.fn().mockRejectedValue(new GeminiTransientError('net'));
     const d = deps(
-      { generate },
+      { generate, generateJson: vi.fn() },
       new FakeSocket(),
       makeState({ turnNumber: 1, phase: 'interviewing' }),
     );
@@ -114,7 +120,7 @@ describe('runCandidateTurn', () => {
   it('en contenido bloqueado emite un interviewer.message de fallback sin avanzar el turno', async () => {
     const generate = vi.fn().mockRejectedValue(new GeminiBlockedError('safety'));
     const d = deps(
-      { generate },
+      { generate, generateJson: vi.fn() },
       new FakeSocket(),
       makeState({ turnNumber: 1, phase: 'interviewing' }),
     );
@@ -133,6 +139,7 @@ describe('runCandidateTurn', () => {
         socket.readyState = 3;
         return 'respuesta tardia';
       },
+      generateJson: async () => ({}),
     };
     const d = deps(gemini, socket, makeState({ turnNumber: 1, phase: 'interviewing' }));
     await runCandidateTurn(d, 'respuesta');
@@ -142,7 +149,11 @@ describe('runCandidateTurn', () => {
 
   it('no hace nada si el turno ya alcanzo el maximo', async () => {
     const generate = vi.fn();
-    const d = deps({ generate }, new FakeSocket(), makeState({ turnNumber: 6, phase: 'closing' }));
+    const d = deps(
+      { generate, generateJson: vi.fn() },
+      new FakeSocket(),
+      makeState({ turnNumber: 6, phase: 'closing' }),
+    );
     await runCandidateTurn(d, 'respuesta tardia post-cierre');
     expect(generate).not.toHaveBeenCalled();
     expect(d._socket.sent).toEqual([]);
@@ -151,6 +162,7 @@ describe('runCandidateTurn', () => {
   it('en la transicion al turno de cierre emite intent closing y pasa la fase a closing', async () => {
     const gemini: GeminiClient = {
       generate: async () => 'Gracias por tu tiempo, hemos terminado.',
+      generateJson: async () => ({}),
     };
     const d = deps(gemini, new FakeSocket(), makeState({ turnNumber: 5, phase: 'interviewing' }));
     await runCandidateTurn(d, 'mi ultima respuesta');
@@ -173,7 +185,10 @@ describe('runCandidateTurn', () => {
       pipeline: () => failingPipe,
     } as unknown as Redis;
     const socket = new FakeSocket();
-    const gemini: GeminiClient = { generate: async () => 'pregunta generada ok' };
+    const gemini: GeminiClient = {
+      generate: async () => 'pregunta generada ok',
+      generateJson: async () => ({}),
+    };
     const d = {
       socket: socket as unknown as WebSocket,
       log: silentLog(),

@@ -9,25 +9,31 @@ import { SessionStateSchema, type SessionState } from '@warachikuy/shared-types'
 // Fastify cambie en el futuro.
 const TokenQuerySchema = z.string().regex(/^[0-9a-f]{64}$/);
 
-export type ValidateUpgradeResult =
+// Resultado de validar solo el token de sesion (sin chequear el status). Cubre
+// los casos 400/401/404/500 comunes al WS y a las rutas REST.
+export type ValidateTokenResult =
   | { ok: true; state: SessionState }
   | {
       ok: false;
-      status: 400 | 401 | 404 | 410 | 500;
-      code:
-        | 'invalid_input'
-        | 'invalid_token'
-        | 'session_not_found'
-        | 'session_expired'
-        | 'internal_error';
+      status: 400 | 401 | 404 | 500;
+      code: 'invalid_input' | 'invalid_token' | 'session_not_found' | 'internal_error';
     };
 
-export async function validateUpgrade(
+// validateUpgrade agrega al validador de token el chequeo de status=active,
+// que solo aplica al handshake del WS (no a las rutas REST /end y /plan).
+export type ValidateUpgradeResult =
+  | ValidateTokenResult
+  | { ok: false; status: 410; code: 'session_expired' };
+
+// Valida el token de sesion contra el estado en Redis en tiempo constante.
+// No chequea el status: lo reusan tanto el WS (via validateUpgrade) como las
+// rutas REST /end y /plan, que operan sobre sesiones ya 'ended'.
+export async function validateSessionToken(
   redis: Redis,
   sessionId: string,
   token: string | undefined,
   log: FastifyBaseLogger,
-): Promise<ValidateUpgradeResult> {
+): Promise<ValidateTokenResult> {
   const tokenCheck = TokenQuerySchema.safeParse(token);
   if (!tokenCheck.success) {
     return { ok: false, status: 400, code: 'invalid_input' };
@@ -71,8 +77,21 @@ export async function validateUpgrade(
   if (!crypto.timingSafeEqual(expected, provided)) {
     return { ok: false, status: 401, code: 'invalid_token' };
   }
-  if (state.status !== 'active') {
+  return { ok: true, state };
+}
+
+export async function validateUpgrade(
+  redis: Redis,
+  sessionId: string,
+  token: string | undefined,
+  log: FastifyBaseLogger,
+): Promise<ValidateUpgradeResult> {
+  const tokenResult = await validateSessionToken(redis, sessionId, token, log);
+  if (!tokenResult.ok) {
+    return tokenResult;
+  }
+  if (tokenResult.state.status !== 'active') {
     return { ok: false, status: 410, code: 'session_expired' };
   }
-  return { ok: true, state };
+  return tokenResult;
 }

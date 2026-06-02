@@ -29,6 +29,7 @@ describe('generateInterviewerMessage', () => {
         capturedContents = contents;
         return 'Buena respuesta. Ahora, como manejarias la concurrencia?';
       },
+      generateJson: async () => ({}),
     };
     const history: ConversationEntry[] = [
       { role: 'interviewer', text: 'Presentate', timestamp: 1 },
@@ -49,7 +50,10 @@ describe('generateInterviewerMessage', () => {
   });
 
   it('devuelve una InterviewerMessage valida con intent question en interviewing sin respuesta previa', async () => {
-    const client: GeminiClient = { generate: async () => 'Cual es tu experiencia con APIs?' };
+    const client: GeminiClient = {
+      generate: async () => 'Cual es tu experiencia con APIs?',
+      generateJson: async () => ({}),
+    };
     const msg = await generateInterviewerMessage(client, {
       state: makeState(),
       history: [],
@@ -62,7 +66,10 @@ describe('generateInterviewerMessage', () => {
   });
 
   it('usa intent closing en fase closing', async () => {
-    const client: GeminiClient = { generate: async () => 'Gracias por tu tiempo.' };
+    const client: GeminiClient = {
+      generate: async () => 'Gracias por tu tiempo.',
+      generateJson: async () => ({}),
+    };
     const msg = await generateInterviewerMessage(client, {
       state: makeState({ phase: 'closing', turnNumber: 6 }),
       history: [],
@@ -73,7 +80,7 @@ describe('generateInterviewerMessage', () => {
 
   it('recorta el texto al maximo configurado', async () => {
     const long = 'a'.repeat(2000);
-    const client: GeminiClient = { generate: async () => long };
+    const client: GeminiClient = { generate: async () => long, generateJson: async () => ({}) };
     const msg = await generateInterviewerMessage(client, {
       state: makeState({ phase: 'warmup', turnNumber: 0 }),
       history: [],
@@ -91,6 +98,7 @@ describe('generateInterviewerMessage', () => {
         captured = contents;
         return 'Hola, contame de ti.';
       },
+      generateJson: async () => ({}),
     };
     await generateInterviewerMessage(client, {
       state: makeState({ phase: 'warmup', turnNumber: 0 }),
