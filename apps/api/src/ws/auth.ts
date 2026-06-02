@@ -41,6 +41,9 @@ export async function validateSessionToken(
 
   const raw = await redis.get(`session:${sessionId}`);
   if (!raw) {
+    // Devolvemos 404 antes de validar el token: esto revela si un sessionId existe,
+    // pero es aceptable porque el sessionId es un UUIDv4 de alta entropia (adivinarlo
+    // es inviable) y el token sigue siendo el secreto que protege los datos.
     return { ok: false, status: 404, code: 'session_not_found' };
   }
 

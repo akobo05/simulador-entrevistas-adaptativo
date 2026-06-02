@@ -36,3 +36,31 @@ export const SessionStateSchema = z.object({
   token: z.string().regex(/^[0-9a-f]{64}$/, 'token debe ser 64 chars hex'),
 });
 export type SessionState = z.infer<typeof SessionStateSchema>;
+
+// Nombre legible por industria. El tipo Record<Industry, ...> obliga a que todas
+// las industrias del IndustrySchema esten presentes: si se agrega una al enum y
+// se olvida aca, TypeScript falla en compilacion.
+const INDUSTRY_NAMES: Record<Industry, string> = {
+  backend: 'Backend',
+  frontend: 'Frontend',
+  data: 'Data Science',
+  fullstack: 'Full Stack',
+};
+
+// Lista de industrias soportadas con su nombre legible. Fuente unica para el
+// endpoint GET /industries y el selector del formulario (#42).
+export const INDUSTRIES: ReadonlyArray<{ id: Industry; name: string }> = Object.entries(
+  INDUSTRY_NAMES,
+).map(([id, name]) => ({ id: id as Industry, name }));
+
+// Resumen publico de una sesion para GET /sessions/:id. NO incluye el token
+// (secreto) ni la fase (estado interno del arco).
+export const SessionSummarySchema = z.object({
+  id: z.string().uuid(),
+  industry: IndustrySchema,
+  level: LevelSchema,
+  status: SessionStatusSchema,
+  turnNumber: z.number().int().nonnegative(),
+  startedAt: z.number().int(),
+});
+export type SessionSummary = z.infer<typeof SessionSummarySchema>;
