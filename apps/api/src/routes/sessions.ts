@@ -1,6 +1,11 @@
 import crypto from 'node:crypto';
 import type { FastifyInstance } from 'fastify';
-import { CreateSessionRequestSchema, INDUSTRIES, WS_CLOSE_CODES } from '@warachikuy/shared-types';
+import {
+  CreateSessionRequestSchema,
+  INDUSTRIES,
+  SessionSummarySchema,
+  WS_CLOSE_CODES,
+} from '@warachikuy/shared-types';
 import type { ValidateTokenResult } from '../ws/auth.js';
 import { createSession } from '../services/sessions.service.js';
 import { apiError } from '../errors.js';
@@ -150,17 +155,10 @@ export async function registerSessionsRoutes(server: FastifyInstance): Promise<v
       if (!auth.ok) {
         return reply.code(auth.status).send(apiError(auth.code, authErrorMessage(auth.code)));
       }
-      const s = auth.state;
-      return reply.code(200).send({
-        session: {
-          id: s.id,
-          industry: s.industry,
-          level: s.level,
-          status: s.status,
-          turnNumber: s.turnNumber,
-          startedAt: s.startedAt,
-        },
-      });
+      // SessionSummarySchema es la fuente unica de la shape: Zod descarta las
+      // claves desconocidas (token, phase) y valida en runtime, evitando drift
+      // entre el schema y el literal de respuesta.
+      return reply.code(200).send({ session: SessionSummarySchema.parse(auth.state) });
     },
   );
 

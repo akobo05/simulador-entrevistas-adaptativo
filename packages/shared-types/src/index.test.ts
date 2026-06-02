@@ -307,4 +307,8 @@ describe('INDUSTRIES', () => {
     expect(INDUSTRIES).toHaveLength(4);
     expect(INDUSTRIES).toContainEqual({ id: 'backend', name: 'Backend' });
   });
+
+  it('INDUSTRIES cubre exactamente las industrias del IndustrySchema', () => {
+    expect(INDUSTRIES.map((i) => i.id).sort()).toEqual([...IndustrySchema.options].sort());
+  });
 });

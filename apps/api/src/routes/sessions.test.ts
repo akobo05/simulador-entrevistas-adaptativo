@@ -321,6 +321,17 @@ describe('GET /api/v1/sessions/:sessionId', () => {
     expect(JSON.parse(res.body).error.code).toBe('invalid_token');
   });
 
+  it('GET /sessions/:id con token mal formado responde 400', async () => {
+    // Token corto que falla el regex ^[0-9a-f]{64}$ antes de cualquier compare.
+    await seedSession(redis, sessionId);
+    const res = await server.inject({
+      method: 'GET',
+      url: `/api/v1/sessions/${sessionId}?token=123`,
+    });
+    expect(res.statusCode).toBe(400);
+    expect(JSON.parse(res.body).error.code).toBe('invalid_input');
+  });
+
   it('responde 400 cuando falta el token', async () => {
     await seedSession(redis, sessionId);
     const res = await server.inject({
