@@ -100,6 +100,8 @@ export async function registerSessionsRoutes(server: FastifyInstance): Promise<v
     // generating: si supero el timeout, lo damos por fallido (proceso colgado).
     // La escritura es segura ante polls concurrentes: dos GET simultaneos que
     // escriben 'failed' para el mismo planId convergen al mismo estado.
+    // TODO(F2): mover este marcado a un reaper de sesiones huerfanas cuando haya
+    // un job runner (BullMQ), en vez de mutar estado dentro de un GET.
     const age = Date.now() - (record.generatingSince ?? 0);
     if (age > GENERATION_TIMEOUT_SECONDS * 1000) {
       await setPlanFailed(server.redis, sessionId, record.planId);
