@@ -142,6 +142,8 @@ describe('POST /api/v1/sessions/:sessionId/end y GET /api/v1/sessions/:sessionId
   let server: FastifyInstance;
   let redis: Redis;
   const sessionId = '11111111-1111-4111-8111-111111111111';
+  // Token sembrado por seedSession (SessionStateSchema.token).
+  const token = 'a'.repeat(64);
 
   beforeEach(async () => {
     redis = new RedisMock() as unknown as Redis;
@@ -164,7 +166,7 @@ describe('POST /api/v1/sessions/:sessionId/end y GET /api/v1/sessions/:sessionId
 
     const res = await server.inject({
       method: 'POST',
-      url: `/api/v1/sessions/${sessionId}/end`,
+      url: `/api/v1/sessions/${sessionId}/end?token=${token}`,
     });
     expect(res.statusCode).toBe(202);
     const body = JSON.parse(res.body);
@@ -175,7 +177,7 @@ describe('POST /api/v1/sessions/:sessionId/end y GET /api/v1/sessions/:sessionId
     await vi.waitFor(async () => {
       const planRes = await server.inject({
         method: 'GET',
-        url: `/api/v1/sessions/${sessionId}/plan`,
+        url: `/api/v1/sessions/${sessionId}/plan?token=${token}`,
       });
       expect(planRes.statusCode).toBe(200);
       const planBody = JSON.parse(planRes.body);
@@ -190,11 +192,11 @@ describe('POST /api/v1/sessions/:sessionId/end y GET /api/v1/sessions/:sessionId
 
     const first = await server.inject({
       method: 'POST',
-      url: `/api/v1/sessions/${sessionId}/end`,
+      url: `/api/v1/sessions/${sessionId}/end?token=${token}`,
     });
     const second = await server.inject({
       method: 'POST',
-      url: `/api/v1/sessions/${sessionId}/end`,
+      url: `/api/v1/sessions/${sessionId}/end?token=${token}`,
     });
     expect(first.statusCode).toBe(202);
     expect(second.statusCode).toBe(202);
@@ -202,24 +204,61 @@ describe('POST /api/v1/sessions/:sessionId/end y GET /api/v1/sessions/:sessionId
   });
 
   it('POST /end sobre una sesion inexistente responde 404', async () => {
+    // Token con formato valido para pasar el chequeo de formato y llegar al 404.
     const res = await server.inject({
       method: 'POST',
-      url: `/api/v1/sessions/${sessionId}/end`,
+      url: `/api/v1/sessions/${sessionId}/end?token=${token}`,
     });
     expect(res.statusCode).toBe(404);
     expect(JSON.parse(res.body).error.code).toBe('session_not_found');
   });
 
-  it('GET /plan sin /end previo responde 404', async () => {
+  it('POST /end sin token responde 400 (invalid_input)', async () => {
+    await seedSession(redis, sessionId);
+    const res = await server.inject({
+      method: 'POST',
+      url: `/api/v1/sessions/${sessionId}/end`,
+    });
+    expect(res.statusCode).toBe(400);
+    expect(JSON.parse(res.body).error.code).toBe('invalid_input');
+  });
+
+  it('POST /end con token de formato valido pero distinto responde 401 (invalid_token)', async () => {
+    await seedSession(redis, sessionId);
+    const wrongToken = 'b'.repeat(64);
+    const res = await server.inject({
+      method: 'POST',
+      url: `/api/v1/sessions/${sessionId}/end?token=${wrongToken}`,
+    });
+    expect(res.statusCode).toBe(401);
+    expect(JSON.parse(res.body).error.code).toBe('invalid_token');
+  });
+
+  it('GET /plan sin /end previo responde 404 (plan_not_found, con token valido)', async () => {
+    // El plan no existe, pero la sesion (con su token) si: pasa auth y cae en
+    // el 404 de plan_not_found.
+    await seedSession(redis, sessionId);
     const res = await server.inject({
       method: 'GET',
-      url: `/api/v1/sessions/${sessionId}/plan`,
+      url: `/api/v1/sessions/${sessionId}/plan?token=${token}`,
     });
     expect(res.statusCode).toBe(404);
     expect(JSON.parse(res.body).error.code).toBe('plan_not_found');
   });
 
+  it('GET /plan con token de formato valido pero distinto responde 401', async () => {
+    await seedSession(redis, sessionId);
+    const wrongToken = 'b'.repeat(64);
+    const res = await server.inject({
+      method: 'GET',
+      url: `/api/v1/sessions/${sessionId}/plan?token=${wrongToken}`,
+    });
+    expect(res.statusCode).toBe(401);
+    expect(JSON.parse(res.body).error.code).toBe('invalid_token');
+  });
+
   it('GET /plan con registro generating antiguo responde 200 failed (timeout)', async () => {
+    await seedSession(redis, sessionId);
     await redis.set(
       `session:plan:${sessionId}`,
       JSON.stringify({ status: 'generating', planId: 'p', generatingSince: 1 }),
@@ -229,7 +268,7 @@ describe('POST /api/v1/sessions/:sessionId/end y GET /api/v1/sessions/:sessionId
 
     const res = await server.inject({
       method: 'GET',
-      url: `/api/v1/sessions/${sessionId}/plan`,
+      url: `/api/v1/sessions/${sessionId}/plan?token=${token}`,
     });
     expect(res.statusCode).toBe(200);
     expect(JSON.parse(res.body)).toStrictEqual({ status: 'failed' });
