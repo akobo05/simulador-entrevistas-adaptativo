@@ -1,7 +1,9 @@
 import { z } from 'zod';
 
 export const InterviewerMessageSchema = z.object({
-  sessionId: z.string().uuid(),
+  // El cliente no rechaza un mensaje del servidor solo porque el id de sesion no
+  // sea un UUID canonico; basta con que venga un identificador no vacio.
+  sessionId: z.string().min(1),
   text: z.string().min(1),
   intent: z.enum(['question', 'followup', 'clarification', 'closing']),
   audioUrl: z.string().url().optional(), // poblado solo si se usa TTS de IA

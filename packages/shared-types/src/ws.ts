@@ -21,7 +21,9 @@ export const ServerToClientMessageSchema = z.discriminatedUnion('type', [
   z.object({
     type: z.literal('session.state'),
     payload: z.object({
-      sessionId: z.string().uuid(),
+      // Igual que en interviewer.message: el cliente acepta cualquier id de
+      // sesion no vacio en los mensajes entrantes del servidor.
+      sessionId: z.string().min(1),
       phase: z.enum(['warmup', 'interviewing', 'closing']),
       turnNumber: z.number().int().nonnegative(),
     }),
