@@ -6,7 +6,7 @@ import { useSession } from '../context/SessionContext';
 import { CompetencyRing } from '../components/CompetencyRing';
 import { Button } from '../components/Button';
 
-const POLL_MS = 800;
+const POLL_MS = 1500;
 const LABELS: Record<PlanCompetency['name'], string> = {
   fluency: 'Fluidez',
   eye_contact: 'Contacto visual',

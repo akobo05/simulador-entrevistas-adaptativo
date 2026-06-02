@@ -56,7 +56,9 @@ describe('PlanPage', () => {
       .mockResolvedValue({ status: 'ready', plan });
     renderPage();
     expect(screen.getByText(/generando tu plan/i)).toBeInTheDocument();
-    await waitFor(() => expect(screen.getByText('Buen desempeno general.')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('Buen desempeno general.')).toBeInTheDocument(), {
+      timeout: 3000,
+    });
     expect(screen.getByText('81')).toBeInTheDocument();
     expect(screen.getByText('STAR')).toBeInTheDocument();
   });
