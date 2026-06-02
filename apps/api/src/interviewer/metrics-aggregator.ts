@@ -55,7 +55,18 @@ export async function persistAggregate(
   sessionId: string,
   agg: MetricsAggregate,
 ): Promise<void> {
-  await redis.set(metricsKey(sessionId), JSON.stringify(agg), 'EX', SESSION_REFRESH_TTL_SECONDS);
+  // Merge por-campo: un valor null nunca pisa un valor medido previamente. Asi,
+  // tras un reemplazo de sesion, una conexion nueva que solo midio algunas
+  // metricas no borra las que ya habia medido la conexion anterior. No es
+  // atomico (read-modify-write), aceptable en F1: una conexion por sesion es lo
+  // normal y la reconexion es un camino raro.
+  const prev = await readAggregate(redis, sessionId);
+  const merged: MetricsAggregate = {
+    fluency: agg.fluency ?? prev.fluency,
+    eye_contact: agg.eye_contact ?? prev.eye_contact,
+    speech_rate: agg.speech_rate ?? prev.speech_rate,
+  };
+  await redis.set(metricsKey(sessionId), JSON.stringify(merged), 'EX', SESSION_REFRESH_TTL_SECONDS);
 }
 
 export async function readAggregate(redis: Redis, sessionId: string): Promise<MetricsAggregate> {

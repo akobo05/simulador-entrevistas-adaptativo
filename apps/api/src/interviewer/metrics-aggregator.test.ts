@@ -97,4 +97,16 @@ describe('persistAggregate / readAggregate', () => {
       speech_rate: 55,
     });
   });
+
+  it('persistAggregate no pisa metricas medidas previamente con un null', async () => {
+    const redis = new RedisMock() as unknown as Redis;
+    await persistAggregate(redis, 's1', { fluency: 88, eye_contact: 62, speech_rate: 55 });
+    // Una conexion posterior solo midio fluency; las otras llegan null.
+    await persistAggregate(redis, 's1', { fluency: 90, eye_contact: null, speech_rate: null });
+    expect(await readAggregate(redis, 's1')).toEqual({
+      fluency: 90, // el valor nuevo no-null gana
+      eye_contact: 62, // se preserva el previo
+      speech_rate: 55, // se preserva el previo
+    });
+  });
 });
