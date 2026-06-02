@@ -1,18 +1,23 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { SessionProvider } from './context/SessionContext';
 import { Home, NotFound } from './pages';
+import { SetupPage } from './pages/SetupPage';
+import { InterviewPage } from './pages/InterviewPage';
+import { PlanPage } from './pages/PlanPage';
 import './assets/global.css';
 
 export function App() {
-  // No envolvemos en <main> aca: cada pagina/layout aporta su propio <main>
-  // (Home tiene el suyo, NotFound lo recibe de MainLayout). Asi se evita un
-  // <main> anidado, que es HTML invalido y rompe los landmarks de los lectores
-  // de pantalla.
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="*" element={<NotFound />} />
-      </Routes>
-    </BrowserRouter>
+    <SessionProvider>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/setup" element={<SetupPage />} />
+          <Route path="/interview/:sessionId" element={<InterviewPage />} />
+          <Route path="/plan/:sessionId" element={<PlanPage />} />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </BrowserRouter>
+    </SessionProvider>
   );
 }
