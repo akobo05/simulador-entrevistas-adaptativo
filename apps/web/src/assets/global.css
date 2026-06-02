@@ -290,3 +290,17 @@ body {
 .btn:hover {
   background: var(--accent2);
 }
+
+/* Anillos de competencia del plan de mejora */
+.competency-ring { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; }
+.ring-circle {
+  width: 96px; height: 96px; border-radius: 50%;
+  display: grid; place-items: center;
+}
+.ring-inner {
+  width: 74px; height: 74px; border-radius: 50%;
+  background: #1a1a22; display: grid; place-items: center;
+  font-size: 1.4rem; font-weight: 700; color: #fff;
+}
+.ring-nodata { font-size: 0.7rem; font-weight: 500; color: #9a9aa5; }
+.ring-label { font-size: 0.85rem; color: #c8c8d0; }
