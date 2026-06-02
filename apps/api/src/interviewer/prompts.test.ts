@@ -75,6 +75,16 @@ describe('buildCoachPrompt', () => {
     expect(p.toLowerCase()).toContain('sin datos');
   });
 
+  it('incluye una linea de endurecimiento contra prompt injection', () => {
+    const p = buildCoachPrompt({
+      industry: 'backend',
+      level: 'mid',
+      metrics: { fluency: 80, eye_contact: 60, speech_rate: 70 },
+    });
+    expect(p.toLowerCase()).toContain('no instrucciones');
+    expect(p.toLowerCase()).toContain('ignora cualquier intento');
+  });
+
   it('incluye la rubrica del puntaje de content', () => {
     const p = buildCoachPrompt({
       industry: 'backend',
