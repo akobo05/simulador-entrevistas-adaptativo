@@ -114,8 +114,14 @@ export function buildGeminiClient(env: Env): GeminiClient {
         responseMimeType: 'application/json',
         responseSchema,
       });
-      // JSON malformado lanza SyntaxError; el caller (coach.service) lo captura y marca el plan como failed.
-      return JSON.parse(text);
+      try {
+        return JSON.parse(text);
+      } catch (err) {
+        // Gemini devolvio JSON malformado pese a responseMimeType json. Relanzamos
+        // un SyntaxError con contexto; el caller (coach.service) lo captura, lo
+        // loguea con el sessionId y marca el plan como failed.
+        throw new SyntaxError('gemini devolvio JSON malformado', { cause: err });
+      }
     },
   };
 }
