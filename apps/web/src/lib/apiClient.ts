@@ -43,6 +43,7 @@ async function readError(res: Response): Promise<ApiClientError> {
 export async function getIndustries(): Promise<IndustryOption[]> {
   const res = await fetch(`${BASE}/api/v1/industries`);
   if (!res.ok) throw await readError(res);
+  // TODO(F2): validar con un schema de shared-types en vez de un cast.
   const body = (await res.json()) as { industries: IndustryOption[] };
   return body.industries;
 }
@@ -65,6 +66,7 @@ export async function endSession(
     method: 'POST',
   });
   if (!res.ok) throw await readError(res);
+  // TODO(F2): validar con un schema de shared-types en vez de un cast.
   return (await res.json()) as { sessionId: string; planId: string };
 }
 

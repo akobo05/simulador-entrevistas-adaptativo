@@ -40,13 +40,26 @@ export function InterviewPage() {
   }
 
   const terminalError = socket.lastError !== null && !socket.lastError.recoverable;
+  // Cierre inesperado del WS (caida de red) que NO vino como mensaje de error.
+  // Lo tratamos como terminal salvo que estemos cerrando la sesion a proposito
+  // (ending), donde el cierre 4001 del backend es esperado y navegamos al plan.
+  const disconnected = socket.status === 'closed' && !ending;
+  const ended = terminalError || disconnected;
+  const terminalMessage =
+    terminalError && socket.lastError
+      ? socket.lastError.message
+      : 'Se perdio la conexion con el entrevistador.';
 
   return (
     <div className="interview-root">
       <div className="interview-orb">
         <OrbeAnimado />
       </div>
-      <p className="interview-status">
+      <p
+        className={
+          socket.status === 'open' ? 'interview-status' : 'interview-status interview-status-warn'
+        }
+      >
         Fase: {socket.phase} · Turno: {socket.turnNumber} ·{' '}
         {socket.status === 'open'
           ? 'Conectado'
@@ -61,22 +74,26 @@ export function InterviewPage() {
         ))}
       </div>
 
-      {socket.lastError && (
-        <p className={socket.lastError.recoverable ? 'interview-banner' : 'setup-error'}>
-          {socket.lastError.message}
-        </p>
+      {socket.lastError?.recoverable && (
+        <p className="interview-banner">{socket.lastError.message}</p>
       )}
       {endError && <p className="setup-error">{endError}</p>}
 
-      {terminalError ? (
-        <Button onClick={restart}>Volver al inicio</Button>
+      {ended ? (
+        <>
+          <p className="setup-error">{terminalMessage}</p>
+          <Button onClick={restart}>Volver al inicio</Button>
+        </>
       ) : socket.closing ? (
         <Button onClick={finish} disabled={ending}>
           {ending ? 'Generando...' : 'Ver mi plan de mejora'}
         </Button>
       ) : (
         <>
-          <ChatForm onSendMessage={(text) => socket.sendAnswer(text)} />
+          <ChatForm
+            onSendMessage={(text) => socket.sendAnswer(text)}
+            disabled={socket.status !== 'open'}
+          />
           <Button className="interview-finish" onClick={finish} disabled={ending}>
             Finalizar entrevista
           </Button>

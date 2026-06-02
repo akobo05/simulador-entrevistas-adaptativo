@@ -85,6 +85,7 @@ export function useInterviewSocket(websocketUrl: string, sessionId: string): Int
       }
     });
     socket.addEventListener('close', () => {
+      // TODO(F2): la reconexion automatica ante caidas se integra en esta capa mas adelante.
       if (active) setStatus('closed');
     });
     socket.addEventListener('error', () => {

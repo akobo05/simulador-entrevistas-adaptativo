@@ -120,4 +120,20 @@ describe('InterviewPage', () => {
     expect(screen.queryByLabelText(/escribe tu respuesta/i)).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /volver al inicio/i })).toBeInTheDocument();
   });
+
+  it('ante una desconexion inesperada muestra aviso y oculta el form', () => {
+    seedSession();
+    vi.spyOn(hookMod, 'useInterviewSocket').mockReturnValue(fakeSocket({ status: 'closed' }));
+    renderPage();
+    expect(screen.getByText(/se perdio la conexion/i)).toBeInTheDocument();
+    expect(screen.queryByLabelText(/escribe tu respuesta/i)).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /volver al inicio/i })).toBeInTheDocument();
+  });
+
+  it('deshabilita el form mientras la conexion no esta abierta', () => {
+    seedSession();
+    vi.spyOn(hookMod, 'useInterviewSocket').mockReturnValue(fakeSocket({ status: 'connecting' }));
+    renderPage();
+    expect(screen.getByLabelText(/escribe tu respuesta/i)).toBeDisabled();
+  });
 });
