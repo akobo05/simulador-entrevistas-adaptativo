@@ -105,25 +105,37 @@ interface InterviewSocket {
   status: 'connecting' | 'open' | 'closed';
   lastError: { code: string; message: string; recoverable: boolean } | null;
   closing: boolean;              // true cuando llego un interviewer.message intent:'closing'
-  sendAnswer(text: string): void;          // candidate.transcript { isFinal: true }
+  sendAnswer(text: string, isFinal?: boolean): void;  // candidate.transcript (default isFinal:true)
   sendMetrics(state: AuraState): void;     // SEAM para Walter; no se usa en esta rebanada
 }
 useInterviewSocket(websocketUrl: string, sessionId: string): InterviewSocket
 ```
 - `sessionId` se pasa explicito (no se parsea del path del websocketUrl): la
   InterviewPage ya lo tiene del contexto. Se usa para el payload de candidate.transcript.
-- Abre `new WebSocket(websocketUrl)`. Cada mensaje entrante se valida con
-  `ServerToClientMessageSchema.safeParse`; los invalidos se descartan con un
-  console.warn (no rompen la UI).
+- Ciclo de vida (React 19 StrictMode). El socket se crea dentro de un `useEffect` y se
+  guarda en un `useRef`. El cleanup del efecto llama `socket.close(1000)`. Como StrictMode
+  monta/desmonta/monta los efectos en dev, el cleanup cierra el primer socket antes de
+  abrir el segundo: para evitar conexiones huerfanas y dobles sesiones (el backend cerraria
+  una con SESSION_REPLACED 4000), los handlers (message/close/error) chequean que el evento
+  venga del socket vigente en el ref y descartan los de un socket ya marcado para cierre.
+  Asi el close del socket viejo (StrictMode) no pinta un falso "conexion perdida".
+- Cada mensaje entrante se valida con `ServerToClientMessageSchema.safeParse`; los
+  invalidos se descartan con console.warn (no rompen la UI).
 - Discrimina por `type`: `interviewer.message` -> append a items (role interviewer,
   intent), setea `closing` si intent==='closing'; `session.state` -> phase/turnNumber;
   `error` -> lastError.
-- `sendAnswer`: append optimista del item candidate + envia
-  `{ type:'candidate.transcript', payload:{ sessionId, text, isFinal:true, timestamp } }`.
-  (El sessionId sale de parsear el path del websocketUrl, o se pasa como segundo arg;
-  ver nota de implementacion.)
-- `sendMetrics`: envia `{ type:'metrics.update', payload: auraState }`. Documentado
-  para Walter. La rebanada no lo invoca.
+- `sendAnswer(text, isFinal = true)`: envia
+  `{ type:'candidate.transcript', payload:{ sessionId, text, isFinal, timestamp } }`. Con
+  isFinal=true (input tecleado) hace append optimista del item candidate. El parametro
+  isFinal queda para el SEAM de voz: el STT de Walter manda parciales (isFinal:false) para
+  mostrar lo que se va diciendo; el render de parciales (actualizar el ultimo globo del
+  candidato en vez de append) es parte de la integracion de voz, no de esta rebanada. El
+  backend ignora los candidate.transcript con isFinal:false (no avanzan el turno).
+- `sendMetrics`: envia `{ type:'metrics.update', payload: auraState }`. Documentado para
+  Walter. La rebanada no lo invoca.
+- Heartbeat: el backend pinga el socket cada ~30s y el browser responde pong
+  automaticamente (transparente). El hook NO manda pings; la sesion vive mientras el WS
+  este abierto.
 - Cierre del WS (incluido el SESSION_EXPIRED 4001 tras /end): status='closed'.
 
 ### pages/SetupPage.tsx
@@ -138,15 +150,28 @@ useInterviewSocket(websocketUrl: string, sessionId: string): InterviewSocket
 - Render: el orbe (OrbeAnimado) como presencia del entrevistador, la lista de items
   (MessageBubble adaptado a ChatItem), indicador de fase/turno, `ChatForm` que llama
   `sendAnswer`.
-- Cierre: cuando `closing` se vuelve true (o el usuario aprieta "Finalizar entrevista"),
-  llama `endSession(sessionId, token)` y `navigate('/plan/'+sessionId)`. El boton se
-  deshabilita mientras corre el POST /end.
-- `lastError` recoverable (ej. llm_unavailable) -> banner inline; permite reintentar
-  el ultimo envio. No recoverable / cierre inesperado -> mensaje de conexion perdida.
+- Cierre: cuando `closing` se vuelve true se RENDERIZA el mensaje de cierre del
+  entrevistador (la despedida), se deshabilita el `ChatForm`, y aparece un boton manual
+  "Ver mi plan de mejora". NO se auto-navega: el candidato debe poder leer la despedida.
+  (Tambien hay un boton "Finalizar entrevista" disponible antes del closing.) Al apretar el
+  boton: `endSession(sessionId, token)` -> `navigate('/plan/'+sessionId)`. El boton se
+  deshabilita mientras corre el POST /end; si /end falla (timeout / red) se rehabilita y
+  muestra un banner de error para reintentar (no se navega sin un /end ok).
+- `lastError` recoverable (ej. llm_unavailable) -> banner inline; permite reintentar el
+  ultimo envio. No recoverable / cierre inesperado -> mensaje de conexion perdida.
+- Recarga a mitad de entrevista (limitacion consciente de F1): los `items` viven en el
+  hook y no se persisten. El backend NO reenvia el historial al reconectar (manda solo
+  session.state y, en sesion fresca, el warmup). Por eso una recarga deja el chat en blanco
+  aunque el WS reconecte; el arco se reanuda al enviar la siguiente respuesta. Se recomienda
+  no recargar durante la entrevista; la recarga es segura en /plan. Persistir los items en
+  sessionStorage para soportar recarga es una mejora diferida (fuera de esta rebanada).
 
 ### pages/PlanPage.tsx
 - Lee `session` del contexto (necesita el token); si no hay -> Navigate a /setup.
-- Polling `getPlan(sessionId, token)` cada 1.5 s. Estados:
+- Polling `getPlan(sessionId, token)` cada 1.5 s con flag de cancelacion: el
+  intervalo/timeout se limpia al desmontar y el polling se detiene apenas el status sea
+  terminal (ready / failed / not_found). Nunca queda corriendo tras navegar fuera ni setea
+  estado en un componente desmontado. Estados:
   - generating -> spinner "Generando tu plan de mejora...".
   - ready -> render del plan.
   - failed -> mensaje "No se pudo generar el plan" + opcion de volver al inicio.
@@ -161,8 +186,10 @@ useInterviewSocket(websocketUrl: string, sessionId: string): InterviewSocket
 ```typescript
 CompetencyRing({ label, score }: { label: string; score: number | null })
 ```
-- Anillo circular con conic-gradient proporcional al score (0-100). `score===null` ->
-  anillo vacio con la etiqueta "sin datos". Accesible (aria-label con el valor).
+- Anillo circular con conic-gradient proporcional al score (0-100). La condicion de "sin
+  datos" es `score === null` (NUNCA `!score`): un score 0 es valido y distinto de "sin
+  datos". `score===null` -> anillo vacio con la etiqueta "sin datos". Accesible (aria-label
+  con el valor).
 
 ### App.tsx / ruteo
 - Envuelve las rutas en `<SessionProvider>`.
@@ -191,6 +218,9 @@ Contratos consumidos de @warachikuy/shared-types: `CreateSessionRequest/Response
 - Plan: generating (spinner), failed/not_found (mensaje), nunca queda colgado (el
   backend fuerza failed por timeout).
 - Guards de navegacion: InterviewPage/PlanPage sin sesion en contexto -> redirect a /setup.
+- Sanitizacion: el texto del LLM (interviewer.message, summary, comentarios, ejercicios) y
+  del candidato se renderiza SIEMPRE como children de React (que escapa por defecto).
+  Prohibido `dangerouslySetInnerHTML` sobre cualquier output del LLM o del candidato.
 
 ## El seam para la voz/aura (Walter)
 
@@ -204,9 +234,11 @@ de salir "sin datos".
 ## Testing
 
 vitest + happy-dom (ya en uso en apps/web). Pragmatico para F1:
-- `apiClient`: fetch mockeado; cada metodo mapea respuestas y errores (incl. 404 del plan).
-- `useInterviewSocket`: WebSocket global mockeado; verifica discriminacion por type,
-  forma correcta de candidate.transcript en sendAnswer, captura de error/phase.
+- `apiClient`: `global.fetch` mockeado con vi.fn (simple, sin dependencias nuevas; MSW
+  queda como posible mejora de F2). Cada metodo mapea respuestas y errores (incl. 404 del plan).
+- `useInterviewSocket`: WebSocket global mockeado; verifica discriminacion por type, forma
+  correcta de candidate.transcript en sendAnswer, captura de error/phase, y que el cleanup
+  cierra el socket (sin conexiones tras desmontar; un remonte de StrictMode no duplica).
 - `SetupPage`: renderiza industrias, submit llama createSession y navega.
 - `PlanPage`: transicion generating->ready, render de las 4 competencias y del "sin datos".
 - `CompetencyRing`: render con score y con null.
