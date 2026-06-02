@@ -9,7 +9,7 @@ import { useInterviewSocket } from '../hooks/useInterviewSocket';
 import { endSession } from '../lib/apiClient';
 
 export function InterviewPage() {
-  const { session } = useSession();
+  const { session, clearSession } = useSession();
   const navigate = useNavigate();
   const [ending, setEnding] = useState(false);
   const [endError, setEndError] = useState<string | null>(null);
@@ -34,6 +34,13 @@ export function InterviewPage() {
     }
   }
 
+  function restart(): void {
+    clearSession();
+    navigate('/');
+  }
+
+  const terminalError = socket.lastError !== null && !socket.lastError.recoverable;
+
   return (
     <div className="interview-root">
       <div className="interview-orb">
@@ -54,12 +61,16 @@ export function InterviewPage() {
         ))}
       </div>
 
-      {socket.lastError?.recoverable && (
-        <p className="interview-banner">{socket.lastError.message}</p>
+      {socket.lastError && (
+        <p className={socket.lastError.recoverable ? 'interview-banner' : 'setup-error'}>
+          {socket.lastError.message}
+        </p>
       )}
       {endError && <p className="setup-error">{endError}</p>}
 
-      {socket.closing ? (
+      {terminalError ? (
+        <Button onClick={restart}>Volver al inicio</Button>
+      ) : socket.closing ? (
         <Button onClick={finish} disabled={ending}>
           {ending ? 'Generando...' : 'Ver mi plan de mejora'}
         </Button>

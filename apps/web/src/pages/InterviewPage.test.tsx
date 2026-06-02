@@ -107,4 +107,17 @@ describe('InterviewPage', () => {
     await waitFor(() => expect(screen.getByText(/no se pudo finalizar/i)).toBeInTheDocument());
     expect(navigateMock).not.toHaveBeenCalled();
   });
+
+  it('ante un error no recuperable muestra el mensaje y oculta el form', () => {
+    seedSession();
+    vi.spyOn(hookMod, 'useInterviewSocket').mockReturnValue(
+      fakeSocket({
+        lastError: { code: 'session_expired', message: 'La sesion expiro.', recoverable: false },
+      }),
+    );
+    renderPage();
+    expect(screen.getByText('La sesion expiro.')).toBeInTheDocument();
+    expect(screen.queryByLabelText(/escribe tu respuesta/i)).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /volver al inicio/i })).toBeInTheDocument();
+  });
 });
