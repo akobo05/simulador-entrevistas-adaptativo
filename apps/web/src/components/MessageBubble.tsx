@@ -1,14 +1,16 @@
-import type { Mensaje } from '../hooks/useCustomWebSocket';
+import type { ChatItem } from '../hooks/useInterviewSocket';
 
 interface Props {
-  mensaje: Mensaje;
+  item: ChatItem;
 }
 
-export function MessageBubble({ mensaje }: Props) {
+// El texto se renderiza como children de React (escapado por defecto). Prohibido
+// dangerouslySetInnerHTML sobre el output del LLM o del candidato.
+export function MessageBubble({ item }: Props) {
   return (
-    <div className="message-bubble">
-      <strong>{mensaje.tipo === 'ai' ? 'Entrevistador' : 'Tú'}: </strong>
-      <span>{mensaje.contenido}</span>
+    <div className={`message-bubble ${item.role}`}>
+      <strong>{item.role === 'interviewer' ? 'Entrevistador' : 'Tú'}: </strong>
+      <span>{item.text}</span>
     </div>
   );
 }
