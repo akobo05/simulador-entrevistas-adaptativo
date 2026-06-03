@@ -4,7 +4,7 @@
    ══════════════════════════════════════════════════════════ */
 
 /* Google Fonts — DEBE ir antes de cualquier otra regla */
-@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&family=JetBrains+Mono:wght@400;500;700&display=swap');
 
 /* ── Variables ───────────────────────────────────────────── */
 :root {
@@ -16,6 +16,8 @@
   /* Acentos */
   --accent:           #2563EB;
   --accent2:          #0EA5E9;
+  /* --accent-hover: blue-700 de Tailwind; blanco sobre el tiene ratio ~6.0:1, pasa AA */
+  --accent-hover:     #1D4ED8;
   --accent-glow:      rgba(37, 99, 235, 0.15);
 
   /* Texto */
@@ -26,13 +28,12 @@
   --text-on-accent:   #FFFFFF;
 
   /* Bordes */
-  --border:           rgba(37, 99, 235, 0.15);
   --border-solid:     #CBD5E1;
 
-  /* Semanticos */
-  --color-danger:     #DC2626;
-  --color-success:    #16A34A;
-  --color-warning:    #D97706;
+  /* Semanticos — oscurecidos un tono Tailwind para cumplir AA (>=4.5:1) sobre --bg */
+  --color-danger:     #B91C1C;
+  --color-success:    #15803D;
+  --color-warning:    #B45309;
 
   /* Tipografia */
   --font-display:     'Syne', sans-serif;
@@ -356,7 +357,8 @@ a:hover {
   padding: var(--space-4) var(--space-6);
   border: none;
   border-radius: var(--radius-full);
-  background: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 100%);
+  /* extremo derecho cambiado de --accent2 a --accent-hover para mantener contraste AA con texto blanco */
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-hover) 100%);
   color: var(--text-on-accent);
   font-family: var(--font-display);
   font-size: 16px;
@@ -450,7 +452,8 @@ a:hover {
 }
 
 .btn:hover {
-  background: var(--accent2);
+  /* --accent2 sobre blanco era 2.77:1 (falla AA); --accent-hover da ~6.0:1 */
+  background: var(--accent-hover);
 }
 
 /* ── Responsive ──────────────────────────────────────────── */
