@@ -23,14 +23,14 @@ function OrbeCore() {
     <Float speed={1.5} rotationIntensity={0.3} floatIntensity={0.5}>
       <Sphere ref={meshRef} args={[1.2, 64, 64]}>
         <MeshDistortMaterial
-          color="#ff6b35"
+          color="#2563EB" /* azul royal — acento principal */
           attach="material"
           distort={0.35}
           speed={2}
-          roughness={0.1}
-          metalness={0.8}
-          emissive="#ff3300"
-          emissiveIntensity={0.2}
+          roughness={0.05}
+          metalness={0.6}
+          emissive="#0EA5E9" /* cian para el brillo interno */
+          emissiveIntensity={0.25}
         />
       </Sphere>
     </Float>
@@ -59,7 +59,7 @@ function AnilloOrbitante({
   return (
     <mesh ref={ref} rotation={[inclinacion, 0, 0]}>
       <Ring args={[radio - 0.015, radio + 0.015, 128]}>
-        <meshBasicMaterial color={color} transparent opacity={0.4} side={THREE.DoubleSide} />
+        <meshBasicMaterial color={color} transparent opacity={0.35} side={THREE.DoubleSide} />
       </Ring>
     </mesh>
   );
@@ -67,8 +67,6 @@ function AnilloOrbitante({
 
 function ParticlesDot() {
   const count = 80;
-  // useMemo para no recalcular las posiciones (ni re-subir el buffer al GPU)
-  // en cada render: sin esto, el campo de particulas se reorganizaria cada vez.
   const positions = useMemo(() => {
     const pos = new Float32Array(count * 3);
     for (let i = 0; i < count; i++) {
@@ -94,30 +92,57 @@ function ParticlesDot() {
       <bufferGeometry>
         <bufferAttribute attach="attributes-position" args={[positions, 3]} />
       </bufferGeometry>
-      <pointsMaterial size={0.025} color="#ffaa44" transparent opacity={0.7} />
+      {/* partículas en cian oscuro: visibles sobre fondo claro */}
+      <pointsMaterial size={0.028} color="#0EA5E9" transparent opacity={0.6} />
     </points>
   );
 }
 
 export function OrbeAnimado() {
   return (
-    <div style={{ width: '100%', height: '100%' }}>
+    <div style={{ width: '100%', height: '100%', position: 'relative' }}>
       <Canvas
         camera={{ position: [0, 0, 5], fov: 45 }}
         style={{ background: 'transparent' }}
         gl={{ alpha: true, antialias: true }}
       >
-        <ambientLight intensity={0.3} />
-        <pointLight position={[5, 5, 5]} intensity={2} color="#ff6b35" />
-        <pointLight position={[-5, -5, -5]} intensity={1} color="#ffcc00" />
-        <pointLight position={[0, 5, -5]} intensity={1.5} color="#ff8844" />
+        {/* luz ambiente más alta para que el orbe no quede oscuro sobre fondo claro */}
+        <ambientLight intensity={0.8} />
+
+        {/* luz principal: azul royal */}
+        <pointLight position={[5, 5, 5]} intensity={2.5} color="#2563EB" />
+        {/* luz de relleno: cian */}
+        <pointLight position={[-5, -5, -5]} intensity={1.2} color="#0EA5E9" />
+        {/* luz de borde: índigo para profundidad */}
+        <pointLight position={[0, 5, -5]} intensity={1.0} color="#6366F1" />
 
         <OrbeCore />
-        <AnilloOrbitante radio={2.0} velocidad={0.4} color="#ff6b35" inclinacion={Math.PI / 6} />
-        <AnilloOrbitante radio={2.5} velocidad={-0.25} color="#ffaa44" inclinacion={Math.PI / 3} />
-        <AnilloOrbitante radio={1.7} velocidad={0.6} color="#ff4422" inclinacion={Math.PI / 2} />
+
+        {/* anillos: azul, cian, índigo */}
+        <AnilloOrbitante radio={2.0} velocidad={0.4} color="#2563EB" inclinacion={Math.PI / 6} />
+        <AnilloOrbitante radio={2.5} velocidad={-0.25} color="#0EA5E9" inclinacion={Math.PI / 3} />
+        <AnilloOrbitante radio={1.7} velocidad={0.6} color="#6366F1" inclinacion={Math.PI / 2} />
+
         <ParticlesDot />
       </Canvas>
+      <div
+        style={{
+          position: 'absolute',
+          top: '50%',
+          left: '50%',
+          transform: 'translate(-50%, -50%)',
+          pointerEvents: 'none', // Para que puedas seguir arrastrando el canvas si tuviera controles
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+        }}
+      >
+        <img
+          src="/logo.svg"
+          alt="Logo"
+          style={{ width: '120px', height: 'auto' }} // Ajusta el tamaño a tu gusto
+        />
+      </div>
     </div>
   );
 }
