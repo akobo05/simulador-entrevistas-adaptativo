@@ -62,7 +62,7 @@ export function Home() {
         </div>
 
         {/* CTA */}
-        <button className="cta-button" onClick={() => navigate('/chat')}>
+        <button className="cta-button" onClick={() => navigate('/setup')}>
           Comenzar
           <ArrowRight size={18} strokeWidth={2} />
         </button>

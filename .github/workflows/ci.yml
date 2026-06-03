@@ -63,7 +63,10 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Build web
-        run: pnpm --filter @warachikuy/web build
+        # El sufijo "..." construye tambien las dependencias workspace de web
+        # (shared-types) antes que web. Sin esto, Vite no resuelve
+        # @warachikuy/shared-types porque su dist aun no existe.
+        run: pnpm --filter "@warachikuy/web..." build
 
       - name: Run Lighthouse CI
         uses: treosh/lighthouse-ci-action@v12

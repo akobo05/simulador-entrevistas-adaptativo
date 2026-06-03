@@ -1,0 +1,104 @@
+import { useState } from 'react';
+import { Navigate, useNavigate } from 'react-router-dom';
+import { OrbeAnimado } from '../components/OrbeAnimado';
+import { MessageBubble } from '../components/MessageBubble';
+import { ChatForm } from '../components/ChatForm';
+import { Button } from '../components/Button';
+import { useSession } from '../context/SessionContext';
+import { useInterviewSocket } from '../hooks/useInterviewSocket';
+import { endSession } from '../lib/apiClient';
+
+export function InterviewPage() {
+  const { session, clearSession } = useSession();
+  const navigate = useNavigate();
+  const [ending, setEnding] = useState(false);
+  const [endError, setEndError] = useState<string | null>(null);
+
+  // Hooks antes de cualquier return condicional. Si no hay sesion el hook recibe
+  // strings vacios (no conecta) y el componente redirige.
+  const socket = useInterviewSocket(session?.websocketUrl ?? '', session?.sessionId ?? '');
+
+  if (!session) return <Navigate to="/setup" replace />;
+
+  const activeSession = session;
+
+  async function finish(): Promise<void> {
+    setEnding(true);
+    setEndError(null);
+    try {
+      await endSession(activeSession.sessionId, activeSession.token);
+      navigate(`/plan/${activeSession.sessionId}`);
+    } catch {
+      setEndError('No se pudo finalizar la entrevista. Intenta de nuevo.');
+      setEnding(false);
+    }
+  }
+
+  function restart(): void {
+    clearSession();
+    navigate('/');
+  }
+
+  const terminalError = socket.lastError !== null && !socket.lastError.recoverable;
+  // Cierre inesperado del WS (caida de red) que NO vino como mensaje de error.
+  // Lo tratamos como terminal salvo que estemos cerrando la sesion a proposito
+  // (ending), donde el cierre 4001 del backend es esperado y navegamos al plan.
+  const disconnected = socket.status === 'closed' && !ending;
+  const ended = terminalError || disconnected;
+  const terminalMessage =
+    terminalError && socket.lastError
+      ? socket.lastError.message
+      : 'Se perdio la conexion con el entrevistador.';
+
+  return (
+    <div className="interview-root">
+      <div className="interview-orb">
+        <OrbeAnimado />
+      </div>
+      <p
+        className={
+          socket.status === 'open' ? 'interview-status' : 'interview-status interview-status-warn'
+        }
+      >
+        Fase: {socket.phase} · Turno: {socket.turnNumber} ·{' '}
+        {socket.status === 'open'
+          ? 'Conectado'
+          : socket.status === 'connecting'
+            ? 'Conectando...'
+            : 'Desconectado'}
+      </p>
+
+      <div className="message-list">
+        {socket.items.map((item) => (
+          <MessageBubble key={item.id} item={item} />
+        ))}
+      </div>
+
+      {socket.lastError?.recoverable && (
+        <p className="interview-banner">{socket.lastError.message}</p>
+      )}
+      {endError && <p className="setup-error">{endError}</p>}
+
+      {ended ? (
+        <>
+          <p className="setup-error">{terminalMessage}</p>
+          <Button onClick={restart}>Volver al inicio</Button>
+        </>
+      ) : socket.closing ? (
+        <Button onClick={finish} disabled={ending}>
+          {ending ? 'Generando...' : 'Ver mi plan de mejora'}
+        </Button>
+      ) : (
+        <>
+          <ChatForm
+            onSendMessage={(text) => socket.sendAnswer(text)}
+            disabled={socket.status !== 'open'}
+          />
+          <Button className="interview-finish" onClick={finish} disabled={ending}>
+            Finalizar entrevista
+          </Button>
+        </>
+      )}
+    </div>
+  );
+}

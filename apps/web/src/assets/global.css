@@ -290,3 +290,42 @@ body {
 .btn:hover {
   background: var(--accent2);
 }
+
+/* Anillos de competencia del plan de mejora */
+.competency-ring { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; }
+.ring-circle {
+  width: 96px; height: 96px; border-radius: 50%;
+  display: grid; place-items: center;
+}
+.ring-inner {
+  width: 74px; height: 74px; border-radius: 50%;
+  background: #1a1a22; display: grid; place-items: center;
+  font-size: 1.4rem; font-weight: 700; color: #fff;
+}
+.ring-nodata { font-size: 0.7rem; font-weight: 500; color: #9a9aa5; }
+.ring-label { font-size: 0.85rem; color: #c8c8d0; }
+
+/* Pantalla de configuracion de sesion */
+.setup-root { max-width: 480px; margin: 0 auto; padding: 3rem 1.5rem; }
+.setup-form { display: flex; flex-direction: column; gap: 1.25rem; margin-top: 1.5rem; }
+.setup-form label { display: flex; flex-direction: column; gap: 0.4rem; color: #c8c8d0; }
+.setup-form select { padding: 0.6rem; border-radius: 8px; background: #1a1a22; color: #fff; border: 1px solid #2a2a35; }
+.setup-error { color: #ff6b6b; }
+
+/* Sala de entrevista */
+.interview-root { max-width: 640px; margin: 0 auto; padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem; }
+.interview-orb { height: 220px; }
+.interview-status { font-size: 0.85rem; color: #9a9aa5; text-align: center; }
+.interview-status-warn { color: #ffb86b; }
+.interview-banner { color: #ffb86b; background: #2a2118; padding: 0.5rem 0.75rem; border-radius: 8px; }
+.message-bubble.candidate { text-align: right; }
+.interview-finish { align-self: center; }
+
+/* Pantalla del plan de mejora */
+.plan-root { max-width: 720px; margin: 0 auto; padding: 2rem 1.5rem; display: flex; flex-direction: column; gap: 1.25rem; }
+.plan-loading { text-align: center; color: #c8c8d0; padding: 3rem 0; }
+.plan-summary { color: #d8d8e0; line-height: 1.5; }
+.plan-rings { display: flex; flex-wrap: wrap; gap: 1.5rem; justify-content: center; }
+.plan-note { font-size: 0.8rem; color: #9a9aa5; font-style: italic; }
+.plan-section h2 { font-size: 1.05rem; color: #ff6b35; margin-bottom: 0.4rem; }
+.plan-section ul { padding-left: 1.2rem; color: #d8d8e0; line-height: 1.6; }
