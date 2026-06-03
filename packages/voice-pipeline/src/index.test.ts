@@ -277,19 +277,52 @@ describe('createSpeechMetricsTracker', () => {
     expect(fluency?.value).toBe(100);
   });
 
-  it('speech_rate sube al 100 con ritmo ideal (130-160 wpm)', () => {
+  it('speech_rate normaliza a la cadencia asumida pero nunca afirma confianza alta', () => {
     const tracker = createSpeechMetricsTracker();
-    // 75 palabras con inicio hace ~29 s → ~155 wpm (ideal 130-160)
-    const words = Array(75).fill('hola').join(' ');
+    // Con timestamps estimados (cadencia asumida 150 wpm) un transcript tipico
+    // normaliza al rango ideal, pero como la velocidad real no se mide la
+    // confianza queda acotada a 'medium' (hara falta STT con timestamps por
+    // palabra en F2). Este test documenta esa honestidad, no valida wpm real.
+    const words = Array(20).fill('hola').join(' ');
     tracker.onTranscript({
       sessionId: SESSION_ID,
       text: words,
       isFinal: true,
-      timestamp: Date.now() - 29_000,
+      timestamp: Date.now(),
     });
-    const metrics = tracker.getMetrics();
-    const speechRate = metrics.find((m) => m.name === 'speech_rate');
+    const speechRate = tracker.getMetrics().find((m) => m.name === 'speech_rate');
     expect(speechRate?.value).toBe(100);
+    expect(speechRate?.confidence).not.toBe('high');
+  });
+
+  it('fluency cambia de forma gradual al envejecer un transcript largo (issue #30)', () => {
+    vi.useFakeTimers();
+    try {
+      const base = 1_700_000_000_000; // base fija de tiempo simulado
+      const tracker = createSpeechMetricsTracker();
+      // 10 muletillas seguidas de 10 palabras limpias. Al distribuir timestamps,
+      // las muletillas (mas viejas) salen de la ventana de 30 s antes que las
+      // limpias, asi que fluency sube escalonadamente en lugar de saltar.
+      const text = [...Array(10).fill('este'), ...Array(10).fill('hola')].join(' ');
+      tracker.onTranscript({ sessionId: SESSION_ID, text, isFinal: true, timestamp: base });
+
+      const samples: number[] = [];
+      for (let offset = 22_000; offset <= 31_000; offset += 400) {
+        vi.setSystemTime(base + offset);
+        const f = tracker.getMetrics().find((m) => m.name === 'fluency');
+        samples.push(f?.value ?? 0);
+      }
+
+      // Si todas las palabras entraran/salieran en el mismo tick (bug #30),
+      // fluency saltaria de golpe y habria poquisimos valores distintos.
+      expect(new Set(samples).size).toBeGreaterThanOrEqual(3);
+      // Ningun paso de 400 ms mueve fluency por todo el rango de una sola vez.
+      for (let i = 1; i < samples.length; i++) {
+        expect(Math.abs(samples[i]! - samples[i - 1]!)).toBeLessThan(100);
+      }
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('cada métrica tiene value entre 0 y 100', () => {
