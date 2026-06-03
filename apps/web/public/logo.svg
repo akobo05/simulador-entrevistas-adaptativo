@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100%" height="100%">
+  <defs>
+    <linearGradient id="warachikuyGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2563EB" />
+      <stop offset="100%" stop-color="#0EA5E9" />
+    </linearGradient>
+    
+    <filter id="shadow" x="-10%" y="-10%" width="130%" height="130%">
+      <feDropShadow dx="0" dy="2" stdDeviation="1.5" flood-color="#002159" flood-opacity="0.3"/>
+    </filter>
+  </defs>
+
+  <g filter="url(#shadow)">
+    <path d="M25 25 h35 v5 h5 v5 h5 v20 h-5 v5 h-5 v5 h-15 l-5 5 l-5 -5 h-15 v-5 h-5 v-25 h5 v-5 h5 z" fill="#111827" opacity="0.9" />
+    
+    <path d="M35 40 h35 v5 h5 v5 h5 v20 h-5 v5 h-5 v5 h-10 l-7 7 l-3 -7 h-15 v-5 h-5 v-25 h5 v-5 h5 z" fill="url(#warachikuyGrad)" />
+    
+    <rect x="47" y="52" width="4" height="4" fill="#FFFFFF" />
+    <rect x="55" y="52" width="4" height="4" fill="#FFFFFF" />
+    <rect x="63" y="52" width="4" height="4" fill="#FFFFFF" />
+
+    <rect x="38" y="43" width="20" height="2" fill="#FFFFFF" opacity="0.4" />
+    <rect x="38" y="45" width="2" height="10" fill="#FFFFFF" opacity="0.4" />
+  </g>
+</svg>
