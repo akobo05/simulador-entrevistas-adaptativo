@@ -1,0 +1,27 @@
+/* ═══════════════════════════════════════════
+   ProgressRing
+   ═══════════════════════════════════════════ */
+
+.progress-ring {
+  display:         inline-flex;
+  align-items:     center;
+  justify-content: center;
+  flex-shrink:     0;
+}
+
+.progress-ring__track {
+  /* color definido inline; aquí solo garantizamos que no herede fill */
+}
+
+.progress-ring__indicator {
+  /* transición definida inline para que reaccione al cambio de strokeDashoffset */
+}
+
+.progress-ring__value {
+  /* tipografía definida inline para reutilizar la prop `size` */
+  letter-spacing: -0.01em;
+}
+
+.progress-ring__label {
+  letter-spacing: 0.01em;
+}
