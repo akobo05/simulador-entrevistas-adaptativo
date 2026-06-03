@@ -25,8 +25,10 @@ acredita el #48 en la PR.
 - El aura: se adapta el `AvatarAura` de Max al contrato real `AuraState`
   (fluency/eye_contact/speech_rate). Esto reemplaza la `AuraScene` del spec multimodal.
 - Las 3 paginas cableadas se re-estilizan con el look de Max pero conservan su logica real.
-- Las paginas de features futuras (`Ranking`, `MyProgress`, `ObserverRoom`) entran como
-  scaffolding mock, claramente marcadas como no funcionales (F2), accesibles desde el sidebar.
+- Las paginas de features futuras (`Ranking`, `MyProgress`, `ObserverRoom`) se DIFIEREN a F2 (no
+  se portan ahora): reducen superficie de regresion y peso de bundle sin valor real para la demo
+  F1. Sus entradas en el sidebar quedan como stubs "proximamente". El trabajo de Max se preserva
+  en su rama / el issue de F2.
 - Se descartan: los duplicados mock (`ChatRoom`/`ProfileSetup`/`ImprovementPlan` de Max), el
   `App.tsx` de Max, su `useMetrics` simulado y la `useSimulatedMetrics` interna del AvatarAura.
 - Sin cambios de contrato. Solo `apps/web` (+ posibles tipos de dominio para F2).
@@ -39,6 +41,11 @@ acredita el #48 en la PR.
   `--accent` #2563EB / `--accent2` #0EA5E9, `--text/--text-muted`, semanticos, fuentes Syne +
   DM Sans + JetBrains Mono, escala de espaciado 4px, radios, sombras, transiciones, z-index).
   Conservar lo que el flujo real ya use; el merge de CSS es aditivo.
+- Auditoria de contraste ANTES de consolidar `global.css`: verificar cada token usado para texto
+  e iconos contra WCAG 2.2 AA (4.5:1 texto, 3:1 componentes). En particular el cian `--accent2`
+  (#0EA5E9) sobre fondos claros (`--bg` #F4F6FB) tiende a reprobar como color de texto; usarlo
+  solo para acentos/bordes/fondos, no para texto chico, y ajustar luminosidad si hace falta. Es
+  un gate de CI (Lighthouse accesibilidad >=95, RNF08).
 - Componentes reutilizables (portar tal cual, con su CSS): `Button` (variant/size/loading/icon/
   fullWidth), `Card` (hoverable), `Badge` (color), `ProgressRing` (value/size/color/label),
   `SparklineChart` (data/color), `Sidebar`. Barrel `components/index.ts`.
@@ -73,6 +80,23 @@ acredita el #48 en la PR.
   hasta cablear voz/camara (paso multimodal siguiente), recibe el ultimo `AuraState` del hook
   o todo `null` -> "sin datos".
 
+#### 2b. Selector AuraState -> props (capa de traduccion)
+
+El contrato manda `AuraState.metrics: AuraMetric[]` donde las metricas SIN senal se OMITEN del
+array (no llegan con value null). El `AvatarAura` espera props fijas con `null`. Se interpone una
+funcion pura, p.ej. `apps/web/src/lib/auraVisual.ts`:
+
+```ts
+function auraStateToAvatarProps(state: AuraState | null): {
+  fluency: number | null; speechRate: number | null; eyeContact: number | null;
+};
+```
+
+- Busca cada `name` en `state.metrics`; si no esta -> `null`. `state` null -> las tres en `null`.
+- Mapea `name: 'speech_rate'` -> prop `speechRate`, `'eye_contact'` -> `eyeContact`, `'fluency'`
+  -> `fluency`. El `InterviewPage` usa este selector para alimentar al `AvatarAura`.
+- Es pura y testeable: cubre "metrica presente", "metrica omitida -> null" y "state null".
+
 ### 3. Re-estilo de las 3 paginas cableadas (diseno de Max + logica real)
 
 Cada una conserva su wiring real de #46; solo cambia el JSX/CSS al look de Max.
@@ -83,47 +107,55 @@ Cada una conserva su wiring real de #46; solo cambia el JSX/CSS al look de Max.
 - `InterviewPage.tsx` (base visual: `ChatRoom`): layout full-screen, `AvatarAura` a la izquierda,
   panel derecho con la transcripcion (de `socket.items` via `MessageBubble`) y el input. Header
   con timer (`useSessionTimer`) + boton "Finalizar". El `ChatForm` tecleado es el input (donde
-  Max tenia el waveform mock queda un placeholder para el mic del paso multimodal). Conserva
-  TODO el wiring real: `useInterviewSocket`, estados `closing`/terminal/desconexion, `sendAnswer`,
-  navegacion al plan. El `AvatarAura` recibe el `AuraState` (en F1 sin voz: "sin datos").
+  Max tenia el waveform mock queda un placeholder para el mic del paso multimodal). El re-estilo
+  CONSERVA la API actual de `ChatForm` (prop `disabled` + el submit que dispara `sendAnswer`);
+  solo cambia su CSS/ubicacion, para no romper la emision de respuestas al WS. Conserva TODO el
+  wiring real: `useInterviewSocket`, estados `closing`/terminal/desconexion, `sendAnswer`,
+  navegacion al plan. El `AvatarAura` recibe sus props via el selector `auraStateToAvatarProps`
+  (Sec. 2b); se carga con `React.lazy` + `Suspense` para que la init de Three.js no bloquee el
+  hilo principal durante el handshake del WebSocket.
 - `PlanPage.tsx` (base visual: `ImprovementPlan`): competencias como tarjetas con `ProgressRing`
   manejadas por el plan real (3 metricas medidas "sin datos" + `content` con score), mas
   `strengths`/`improvements`/`exercises` reales. Las secciones de Max sin dato real (quick
   metrics tipo palabras/min, timeline) se omiten o se muestran solo si hay dato. Conserva el
   polling real (`getPlan`, estados generating/ready/failed/not_found).
 
-### 4. Paginas de features futuras (scaffolding mock)
+### 4. Paginas de features futuras (DIFERIDAS a F2)
 
-Portar `Ranking`, `MyProgress`, `ObserverRoom` (con su CSS) tal cual (mock). Son features F2
-(gamificacion, peer-mock) que aun no tienen backend. Requisito: un aviso visible "Datos de
-ejemplo (proximamente)" para no confundir en la demo. Se rutean detras del sidebar.
+`Ranking`, `MyProgress`, `ObserverRoom` NO se portan en esta rebanada. Son features F2
+(gamificacion, peer-mock) sin backend; portarlas ahora suma ~3500 lineas de mock, peso de bundle
+y superficie de regresion sin valor para la demo F1. Sus entradas en el `Sidebar` quedan como
+stubs "proximamente" (link deshabilitado o que lleva a un placeholder simple). El trabajo de Max
+para estas paginas se preserva en su rama `feat/frontend-ui` y se retoma en el issue de F2.
 
 ### 5. Routing, layout y navegacion
 
 - `App.tsx`: mantener `SessionProvider` envolviendo el `BrowserRouter` (del flujo real). Rutas:
   - Reales cableadas: `/` (Home), `/setup` (SetupPage), `/interview/:sessionId` (InterviewPage,
-    full-screen), `/plan/:sessionId` (PlanPage).
-  - Scaffolding F2: `/progress` (MyProgress), `/ranking` (Ranking), `/observer` (ObserverRoom,
-    full-screen). Lazy + Suspense con `LoadingScreen`, y `ScrollToTop`.
+    full-screen), `/plan/:sessionId` (PlanPage). Lazy + Suspense con `LoadingScreen`, y `ScrollToTop`.
   - `*` -> NotFound.
-  - Se descartan las rutas de Max `/onboarding`, `/room`, `/improvement` (apuntaban a los mock).
-- `MainLayout` + `Sidebar`: el sidebar envuelve las paginas no full-screen. Reapuntar los items
-  del sidebar a las rutas reales: "Inicio"->`/`, "Nueva sesion"->`/setup`, "Mi progreso"->
-  `/progress`, "Ranking"->`/ranking`. Excluir del layout las full-screen (`/interview/:id`,
-  `/observer`).
+  - Se descartan las rutas de Max `/onboarding`, `/room`, `/improvement`, `/progress`, `/ranking`,
+    `/observer` (apuntaban a los mock / paginas F2 diferidas).
+- `MainLayout` + `Sidebar`: el sidebar envuelve las paginas no full-screen. Items: "Inicio"->`/`,
+  "Nueva sesion"->`/setup` activos; "Mi progreso" y "Ranking" como stubs "proximamente"
+  (deshabilitados, F2). Excluir del layout las full-screen (`/interview/:id`).
 
 ### 6. Hooks, utils y tipos
 
 - Adoptar `useSessionTimer` (lo usa el InterviewPage para el timer).
 - NO adoptar `useMetrics` (es simulado); el aura se maneja con el `AuraState` real.
-- `utils/constants.ts`: portar lo util de Max (COMPETENCIES, EXPERIENCE_LEVELS, etc.) sin pisar
-  lo que el flujo real ya usa. Reconciliar `WS_URL`: el real viene del `websocketUrl` que da el
-  backend por sesion; el `WS_URL` global de Max queda solo como fallback de dev si hace falta.
+- `utils/constants.ts`: portar SOLO lo que usan las pantallas F1 (p.ej. EXPERIENCE_LEVELS para el
+  SetupPage, COMPETENCIES/labels para el PlanPage) sin pisar lo que el flujo real ya usa. Las
+  constantes de features F2 (ranking, challenges) se difieren con esas paginas (no traer codigo
+  muerto). NO se adopta el `WS_URL` global de Max: el real viene del `websocketUrl` que da el
+  backend por sesion.
 - `utils/formatTime.ts`: adoptar `formatMMSS` y `formatDuration` (aditivos), conservar el
   `formatTime` existente.
-- `types/index.ts`: adoptar los tipos de dominio de Max para F2 (RankingEntry, SessionResult,
-  GroupChallenge, etc.). No deben colisionar con `@warachikuy/shared-types` (son tipos de UI/F2,
-  no contratos de red).
+- `types/index.ts`: adoptar solo los tipos de dominio que usen las pantallas F1. Los tipos de F2
+  (RankingEntry, GroupChallenge, etc.) se difieren con sus paginas. No deben colisionar con
+  `@warachikuy/shared-types` (serian tipos de UI, no contratos de red).
+- Limpieza: no dejar codigo muerto del trasplante (el `useMetrics` simulado, imports sin uso); el
+  build debe tree-shakear limpio.
 
 ## Flujo de datos (sin cambios respecto a #46)
 
@@ -131,7 +163,7 @@ ejemplo (proximamente)" para no confundir en la demo. Se rutean detras del sideb
 - Interview: `useInterviewSocket` (WS real) -> `items`/estados -> UI estilo ChatRoom; `sendAnswer`
   (tecleado en F1). El `AvatarAura` consume el `AuraState` (en F1, "sin datos").
 - Plan: polling `getPlan` -> render estilo ImprovementPlan con el plan real.
-- Las paginas F2 (Ranking/MyProgress/ObserverRoom) son mock aisladas; no tocan el backend.
+- Aura: `InterviewPage` toma el `AuraState` -> `auraStateToAvatarProps` (Sec. 2b) -> `AvatarAura`.
 
 ## Manejo de errores / estados
 
@@ -143,21 +175,26 @@ ejemplo (proximamente)" para no confundir en la demo. Se rutean detras del sideb
 
 - Mantener verdes los tests existentes de #46 (apiClient, SessionContext, useInterviewSocket,
   CompetencyRing, las 3 paginas, App). Si el re-estilo cambia el DOM que un test consulta, se
-  actualiza el test sin debilitar la asercion de comportamiento.
-- `AvatarAura`: unit del mapeo metrica->visual (incluye `null` -> "sin datos"); smoke de render
-  con canvas mock.
+  actualiza el test sin debilitar la asercion de comportamiento. Para resistir el re-estilo, los
+  componentes nuevos exponen roles ARIA / `data-testid` estables, y los tests de las paginas se
+  enganchan a esos (rol/test-id) en vez de a clases o texto fragil.
+- `auraStateToAvatarProps` (Sec. 2b): unit puro — metrica presente, metrica omitida -> `null`,
+  `state` null -> las tres `null`.
+- `AvatarAura`: unit del mapeo props->visual (incluye `null` -> "sin datos" en chips/anillos);
+  smoke de render con canvas mock.
 - Componentes nuevos (Button variants, ProgressRing, Badge, Card, Sidebar, SparklineChart):
   unit/smoke basicos.
 - `useSessionTimer`: unit (tick, format, cleanup).
-- Las paginas F2 mock: smoke de render (no crashea, muestra el aviso "datos de ejemplo").
-- CI verde (lint, typecheck, test, build, Lighthouse >=95 accesibilidad — cuidar contraste de
-  la paleta nueva y labels ARIA).
+- CI verde (lint, typecheck, test, build, Lighthouse >=95 accesibilidad — verificar el contraste
+  de la paleta nueva, Sec. 1, y los labels ARIA).
 
 ## Fuera de scope
 
 - Cablear voz/camara y el aura reactiva en vivo: es el paso multimodal siguiente (otra rebanada),
   que ya construira sobre este AvatarAura adaptado.
-- Backend real para las paginas F2 (ranking, progreso, observer).
+- Las paginas F2 (Ranking, MyProgress, ObserverRoom): diferidas con su mock y sus tipos/constantes;
+  se retoman en el issue de F2 reusando el trabajo de Max.
+- Backend real para las features F2 (ranking, progreso, observer).
 - Accesibilidad/CV/intereses del ProfileSetup de Max (F2).
 
 ## Riesgos
@@ -166,5 +203,5 @@ ejemplo (proximamente)" para no confundir en la demo. Se rutean detras del sideb
   de esa pagina antes de pasar a la siguiente.
 - Contraste de la paleta clara nueva vs Lighthouse accesibilidad >=95: verificar.
 - Atribucion: el trabajo es de Max. Donde se pueda, cherry-pick de sus commits (design system,
-  componentes, paginas F2) para preservar autoria; el re-estilo de las 3 paginas reales son
-  commits nuevos. La PR acredita el #48 explicitamente.
+  componentes) para preservar autoria; el re-estilo de las 3 paginas reales son commits nuevos.
+  La PR acredita el #48 explicitamente.
