@@ -240,7 +240,7 @@
   font-family: var(--font-display);
   font-size: 20px;
   font-weight: 800;
-  color: var(--border-solid);
+  color: var(--accent);
   flex-shrink: 0;
   line-height: 1;
   padding-top: 2px;
