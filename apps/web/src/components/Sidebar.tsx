@@ -59,6 +59,7 @@ export function Sidebar() {
             aria-disabled="true"
             title={collapsed ? label : undefined}
             role="button"
+            tabIndex={0}
           >
             <Icon size={18} className="sidebar__item-icon" />
             {!collapsed && (
