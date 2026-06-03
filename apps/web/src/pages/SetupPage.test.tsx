@@ -39,11 +39,18 @@ describe('SetupPage', () => {
       token: 'a'.repeat(64),
     });
     renderPage();
+    // Las industrias cargan y se muestran en el select
+    await waitFor(() => expect(screen.getByTestId('setup-industry')).toBeInTheDocument());
     await waitFor(() => expect(screen.getByText('Backend')).toBeInTheDocument());
-    fireEvent.click(screen.getByRole('button', { name: /comenzar entrevista/i }));
+    // Enviar el formulario
+    fireEvent.click(screen.getByTestId('setup-submit'));
     await waitFor(() =>
       expect(navigateMock).toHaveBeenCalledWith('/interview/550e8400-e29b-41d4-a716-446655440000'),
     );
+    expect(apiClient.createSession).toHaveBeenCalledWith({
+      industry: 'backend',
+      level: 'mid',
+    });
   });
 
   it('muestra error si createSession falla', async () => {
@@ -52,7 +59,7 @@ describe('SetupPage', () => {
     );
     renderPage();
     await waitFor(() => expect(screen.getByText('Backend')).toBeInTheDocument());
-    fireEvent.click(screen.getByRole('button', { name: /comenzar entrevista/i }));
+    fireEvent.click(screen.getByTestId('setup-submit'));
     await waitFor(() => expect(screen.getByText(/no se pudo crear/i)).toBeInTheDocument());
   });
 });
