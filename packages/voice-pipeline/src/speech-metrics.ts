@@ -1,8 +1,13 @@
 import type { AuraMetric, CandidateTranscript } from '@warachikuy/shared-types';
 
 const WINDOW_MS = 30_000;
-// Cadencia media asumida para distribuir timestamps dentro de un transcript
-const AVG_MS_PER_WORD = Math.round(60_000 / 150); // ~400 ms/palabra a 150 wpm
+// Cadencia asumida solo para repartir los timestamps de las palabras dentro de
+// un transcript. No es el objetivo ideal del scoring (ese vive en
+// normalizeSpeechRate, rango 130-160): es una cadencia de referencia para
+// distribuir en el tiempo. Sin STT con timestamps por palabra es la mejor
+// aproximacion disponible.
+const ASSUMED_WPM = 150;
+const AVG_MS_PER_WORD = Math.round(60_000 / ASSUMED_WPM); // ~400 ms/palabra
 
 // Frases de varias palabras van primero para reemplazarse antes de tokenizar
 const MULTI_WORD_FILLERS: [RegExp, string][] = [
