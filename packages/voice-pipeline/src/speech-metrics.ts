@@ -46,6 +46,11 @@ export interface SpeechMetricsTracker {
 
 export function createSpeechMetricsTracker(): SpeechMetricsTracker {
   const wordHistory: WordEntry[] = [];
+  // Ultima marca de tiempo insertada. Mantiene el historial en orden
+  // cronologico estricto: la poda de la ventana asume que wordHistory[0] es el
+  // mas viejo, asi que ningun transcript nuevo puede insertar timestamps
+  // anteriores a este (pasa si el candidato habla mas rapido que ASSUMED_WPM).
+  let lastTimestamp = -Infinity;
 
   function preprocess(text: string): string {
     let result = text.toLowerCase();
@@ -65,17 +70,24 @@ export function createSpeechMetricsTracker(): SpeechMetricsTracker {
     const words = tokenize(preprocess(transcript.text));
     if (words.length === 0) return;
 
-    // Repartir timestamps asumiendo cadencia constante para evitar que todas
-    // las palabras de un transcript largo entren/salgan de la ventana en el mismo tick
-    const estimatedDuration = words.length * AVG_MS_PER_WORD;
-    const estimatedStart = transcript.timestamp - estimatedDuration;
+    // Repartir los timestamps de las palabras en [start, end] asumiendo cadencia
+    // constante, para que un transcript largo no entre/salga de la ventana en el
+    // mismo tick (parpadeo de fluency, issue #30). La ultima palabra cae
+    // exactamente en el timestamp real del evento isFinal.
+    const end = transcript.timestamp;
+    let start = end - words.length * AVG_MS_PER_WORD;
+    // No insertar antes de la ultima palabra ya registrada: si el candidato
+    // hablo mas rapido que ASSUMED_WPM, start caeria en el pasado y desordenaria
+    // el historial, corrompiendo la poda de la ventana.
+    if (start <= lastTimestamp) start = Math.min(lastTimestamp + 1, end);
+    const span = end - start;
 
     for (const [i, word] of words.entries()) {
-      wordHistory.push({
-        isFiller: SINGLE_WORD_FILLERS.has(word),
-        timestamp: estimatedStart + Math.round((i * estimatedDuration) / words.length),
-      });
+      const timestamp =
+        words.length === 1 ? end : start + Math.round((i * span) / (words.length - 1));
+      wordHistory.push({ isFiller: SINGLE_WORD_FILLERS.has(word), timestamp });
     }
+    lastTimestamp = end;
   }
 
   function getMetrics(): AuraMetric[] {
