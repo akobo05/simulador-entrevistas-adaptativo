@@ -30,7 +30,7 @@ export function InterviewPage() {
   const timer = useSessionTimer(false);
   useEffect(() => {
     if (socket.status === 'open') timer.start();
-  }, [socket.status, timer]);
+  }, [socket.status, timer.start]);
 
   if (!session) return <Navigate to="/setup" replace />;
 

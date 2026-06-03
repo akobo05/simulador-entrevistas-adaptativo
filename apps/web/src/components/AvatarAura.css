@@ -27,7 +27,7 @@
   font-size:      10px;
   font-weight:    600;
   letter-spacing: 0.18em;
-  color:          rgba(240,244,255,0.38);
+  color:          rgba(240,244,255,0.65);
   text-transform: uppercase;
   pointer-events: none;
   white-space:    nowrap;
@@ -66,13 +66,11 @@
 .aa-metric--tl { top: 16%;    left:  8%;  animation-delay:0.05s; }
 .aa-metric--tr { top: 16%;    right: 8%;  animation-delay:0.10s; }
 .aa-metric--bl { bottom: 16%; left:  8%;  animation-delay:0.15s; }
-.aa-metric--br { bottom: 16%; right: 8%;  animation-delay:0.20s; }
 
 /* Bordes por color */
 .aa-metric--blue   { border-color: rgba(37,99,235,0.50); }
 .aa-metric--cyan   { border-color: rgba(14,165,233,0.50); }
 .aa-metric--violet { border-color: rgba(167,139,250,0.50); }
-.aa-metric--amber  { border-color: rgba(245,158,11,0.50); }
 
 /* ── Tipografía ──────────────────────────────────────────── */
 .aa-metric__label {
@@ -80,7 +78,7 @@
   font-size:      9px;
   font-weight:    500;
   letter-spacing: 0.11em;
-  color:          rgba(240,244,255,0.40);
+  color:          rgba(240,244,255,0.65);
   text-transform: uppercase;
 }
 
@@ -119,7 +117,6 @@
 .aa-metric__bar-fill--blue   { background: #2563EB; }
 .aa-metric__bar-fill--cyan   { background: #0EA5E9; }
 .aa-metric__bar-fill--violet { background: #A78BFA; }
-.aa-metric__bar-fill--amber  { background: #F59E0B; }
 
 /* ── Deltas ──────────────────────────────────────────────── */
 .aa-delta {

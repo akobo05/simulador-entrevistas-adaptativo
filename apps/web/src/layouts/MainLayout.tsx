@@ -19,7 +19,8 @@ export function MainLayout({ children }: { children: ReactNode }) {
   return (
     <div className="main-layout">
       <Sidebar />
-      <main className="main-layout__content">{children}</main>
+      {/* div, no main: cada pagina trae su propio <main> (un solo landmark) */}
+      <div className="main-layout__content">{children}</div>
     </div>
   );
 }
