@@ -1,0 +1,28 @@
+/* ═══════════════════════════════════════════
+   Card
+   ═══════════════════════════════════════════ */
+
+.card {
+  background:    var(--bg2);
+  border:        1px solid var(--border-solid);
+  border-radius: var(--radius-lg);
+  box-shadow:    var(--shadow-sm);
+  transition:
+    box-shadow var(--transition-normal),
+    transform  var(--transition-normal);
+}
+
+/* ── Hoverable ────────────────────────────── */
+.card--hoverable {
+  cursor: pointer;
+}
+
+.card--hoverable:hover {
+  box-shadow: var(--shadow-md);
+  transform:  translateY(-2px);
+}
+
+.card--hoverable:active {
+  transform:  translateY(0);
+  box-shadow: var(--shadow-sm);
+}
