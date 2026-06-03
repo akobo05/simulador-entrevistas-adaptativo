@@ -172,6 +172,36 @@ describe('createSpeechMetricsTracker', () => {
     expect(speechRate?.confidence).not.toBe('high');
   });
 
+  it('fluency cambia de forma gradual al envejecer un transcript largo (issue #30)', () => {
+    vi.useFakeTimers();
+    try {
+      const base = 1_700_000_000_000; // base fija de tiempo simulado
+      const tracker = createSpeechMetricsTracker();
+      // 10 muletillas seguidas de 10 palabras limpias. Al distribuir timestamps,
+      // las muletillas (mas viejas) salen de la ventana de 30 s antes que las
+      // limpias, asi que fluency sube escalonadamente en lugar de saltar.
+      const text = [...Array(10).fill('este'), ...Array(10).fill('hola')].join(' ');
+      tracker.onTranscript({ sessionId: SESSION_ID, text, isFinal: true, timestamp: base });
+
+      const samples: number[] = [];
+      for (let offset = 22_000; offset <= 31_000; offset += 400) {
+        vi.setSystemTime(base + offset);
+        const f = tracker.getMetrics().find((m) => m.name === 'fluency');
+        samples.push(f?.value ?? 0);
+      }
+
+      // Si todas las palabras entraran/salieran en el mismo tick (bug #30),
+      // fluency saltaria de golpe y habria poquisimos valores distintos.
+      expect(new Set(samples).size).toBeGreaterThanOrEqual(3);
+      // Ningun paso de 400 ms mueve fluency por todo el rango de una sola vez.
+      for (let i = 1; i < samples.length; i++) {
+        expect(Math.abs(samples[i]! - samples[i - 1]!)).toBeLessThan(100);
+      }
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('cada métrica tiene value entre 0 y 100', () => {
     const tracker = createSpeechMetricsTracker();
     tracker.onTranscript({
