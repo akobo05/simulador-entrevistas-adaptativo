@@ -1,0 +1,183 @@
+/* ═══════════════════════════════════════════
+   Button — btn2
+   Usa CSS variables de global.css
+   ═══════════════════════════════════════════ */
+
+/* ── Base ─────────────────────────────────── */
+.btn2 {
+  --btn-bg:         transparent;
+  --btn-color:      var(--text);
+  --btn-border:     transparent;
+  --btn-bg-hover:   transparent;
+  --btn-spin-color: var(--accent);
+
+  display:         inline-flex;
+  align-items:     center;
+  justify-content: center;
+  gap:             var(--space-2);
+  border:          1px solid var(--btn-border);
+  border-radius:   var(--radius-full);
+  background:      var(--btn-bg);
+  color:           var(--btn-color);
+  font-family:     var(--font-display);
+  font-weight:     700;
+  letter-spacing:  0.02em;
+  cursor:          pointer;
+  transition:
+    background     var(--transition-fast),
+    box-shadow     var(--transition-fast),
+    transform      var(--transition-fast),
+    border-color   var(--transition-fast),
+    opacity        var(--transition-fast);
+  white-space:     nowrap;
+  text-decoration: none;
+  position:        relative;
+  overflow:        hidden;
+  flex-shrink:     0;
+}
+
+.btn2:focus-visible {
+  outline:        2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.btn2:disabled {
+  opacity:        0.5;
+  cursor:         not-allowed;
+  pointer-events: none;
+}
+
+.btn2--full {
+  width: 100%;
+}
+
+/* ── Variants ─────────────────────────────── */
+
+/* primary */
+.btn2--primary {
+  --btn-bg:         var(--accent);
+  --btn-color:      #FFFFFF;
+  --btn-border:     var(--accent);
+  --btn-bg-hover:   #1D4ED8;
+  --btn-spin-color: #FFFFFF;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.30);
+}
+.btn2--primary:hover:not(:disabled) {
+  background:  var(--btn-bg-hover);
+  border-color: var(--btn-bg-hover);
+  box-shadow:  0 6px 20px rgba(37, 99, 235, 0.40);
+  transform:   translateY(-1px);
+}
+.btn2--primary:active:not(:disabled) {
+  transform:  translateY(0);
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25);
+}
+
+/* secondary */
+.btn2--secondary {
+  --btn-bg:         #DBEAFE;
+  --btn-color:      #1D4ED8;
+  --btn-border:     #BFDBFE;
+  --btn-bg-hover:   #BFDBFE;
+  --btn-spin-color: var(--accent);
+}
+.btn2--secondary:hover:not(:disabled) {
+  background:   var(--btn-bg-hover);
+  border-color: #93C5FD;
+  transform:    translateY(-1px);
+}
+.btn2--secondary:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+/* ghost */
+.btn2--ghost {
+  --btn-bg:         transparent;
+  --btn-color:      var(--accent);
+  --btn-border:     var(--border-solid);
+  --btn-bg-hover:   var(--bg3);
+  --btn-spin-color: var(--accent);
+}
+.btn2--ghost:hover:not(:disabled) {
+  background:   var(--btn-bg-hover);
+  border-color: var(--accent);
+  transform:    translateY(-1px);
+}
+.btn2--ghost:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+/* danger */
+.btn2--danger {
+  --btn-bg:         #FEE2E2;
+  --btn-color:      #DC2626;
+  --btn-border:     #FECACA;
+  --btn-bg-hover:   #FECACA;
+  --btn-spin-color: #DC2626;
+}
+.btn2--danger:hover:not(:disabled) {
+  background:   var(--btn-bg-hover);
+  border-color: #FCA5A5;
+  transform:    translateY(-1px);
+}
+.btn2--danger:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+/* ── Sizes ────────────────────────────────── */
+.btn2--sm {
+  padding:   var(--space-1) var(--space-3);
+  font-size: 12px;
+  min-height: 30px;
+}
+
+.btn2--md {
+  padding:    var(--space-2) var(--space-4);
+  font-size:  14px;
+  min-height: 38px;
+}
+
+.btn2--lg {
+  padding:    var(--space-3) var(--space-6);
+  font-size:  16px;
+  min-height: 48px;
+}
+
+/* ── Icon ─────────────────────────────────── */
+.btn2__icon {
+  display:     flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.btn2--sm .btn2__icon { width: 14px; height: 14px; }
+.btn2--md .btn2__icon { width: 16px; height: 16px; }
+.btn2--lg .btn2__icon { width: 18px; height: 18px; }
+
+/* ── Loading state ────────────────────────── */
+.btn2--loading {
+  cursor: wait;
+}
+
+.btn2__spinner {
+  display:       inline-block;
+  width:         1em;
+  height:        1em;
+  border:        2px solid rgba(255, 255, 255, 0.30);
+  border-top:    2px solid var(--btn-spin-color);
+  border-radius: 50%;
+  animation:     btn2-spin 0.65s linear infinite;
+  flex-shrink:   0;
+}
+
+/* Para variantes que no son primary, el borde base es semitransparente del color */
+.btn2--secondary .btn2__spinner,
+.btn2--ghost    .btn2__spinner,
+.btn2--danger   .btn2__spinner {
+  border-color:     rgba(0, 0, 0, 0.12);
+  border-top-color: var(--btn-spin-color);
+}
+
+@keyframes btn2-spin {
+  to { transform: rotate(360deg); }
+}
