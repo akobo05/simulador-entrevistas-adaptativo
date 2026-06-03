@@ -30,6 +30,9 @@ export function InterviewPage() {
   const timer = useSessionTimer(false);
   useEffect(() => {
     if (socket.status === 'open') timer.start();
+    // Se depende de timer.start (estable, useCallback) y no del objeto timer,
+    // que cambia cada tick y reejecutaria el efecto sin necesidad.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [socket.status, timer.start]);
 
   if (!session) return <Navigate to="/setup" replace />;
