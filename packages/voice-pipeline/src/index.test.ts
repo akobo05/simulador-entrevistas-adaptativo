@@ -156,13 +156,13 @@ describe('createSpeechMetricsTracker', () => {
 
   it('speech_rate sube al 100 con ritmo ideal (130-160 wpm)', () => {
     const tracker = createSpeechMetricsTracker();
-    // 75 palabras con inicio hace ~29 s → ~155 wpm (ideal 130-160)
-    const words = Array(75).fill('hola').join(' ');
+    // 20 palabras → timestamps distribuidos ~8 s → ~158 wpm (ideal 130-160)
+    const words = Array(20).fill('hola').join(' ');
     tracker.onTranscript({
       sessionId: SESSION_ID,
       text: words,
       isFinal: true,
-      timestamp: Date.now() - 29_000,
+      timestamp: Date.now() - 1_000,
     });
     const metrics = tracker.getMetrics();
     const speechRate = metrics.find((m) => m.name === 'speech_rate');

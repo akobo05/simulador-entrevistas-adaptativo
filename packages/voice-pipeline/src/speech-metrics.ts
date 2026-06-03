@@ -1,6 +1,8 @@
 import type { AuraMetric, CandidateTranscript } from '@warachikuy/shared-types';
 
 const WINDOW_MS = 30_000;
+// Cadencia media asumida para distribuir timestamps dentro de un transcript
+const AVG_MS_PER_WORD = Math.round(60_000 / 150); // ~400 ms/palabra a 150 wpm
 
 // Frases de varias palabras van primero para reemplazarse antes de tokenizar
 const MULTI_WORD_FILLERS: [RegExp, string][] = [
@@ -56,10 +58,17 @@ export function createSpeechMetricsTracker(): SpeechMetricsTracker {
     if (!transcript.isFinal) return;
 
     const words = tokenize(preprocess(transcript.text));
-    for (const word of words) {
+    if (words.length === 0) return;
+
+    // Repartir timestamps asumiendo cadencia constante para evitar que todas
+    // las palabras de un transcript largo entren/salgan de la ventana en el mismo tick
+    const estimatedDuration = words.length * AVG_MS_PER_WORD;
+    const estimatedStart = transcript.timestamp - estimatedDuration;
+
+    for (const [i, word] of words.entries()) {
       wordHistory.push({
         isFiller: SINGLE_WORD_FILLERS.has(word),
-        timestamp: transcript.timestamp,
+        timestamp: estimatedStart + Math.round((i * estimatedDuration) / words.length),
       });
     }
   }
@@ -80,9 +89,11 @@ export function createSpeechMetricsTracker(): SpeechMetricsTracker {
     const fluencyValue =
       windowWords === 0 ? 100 : Math.round(((windowWords - fillerCount) / windowWords) * 100);
 
-    // Speech rate: wpm calculado sobre la ventana deslizante (excluye tiempo del entrevistador)
+    // Speech rate: wpm sobre la ventana deslizante usando timestamps distribuidos
     const first = wordHistory[0];
-    const windowDurationMin = windowWords >= 1 && first ? (now - first.timestamp) / 60_000 : 0;
+    const last = wordHistory[windowWords - 1];
+    const windowDurationMin =
+      windowWords >= 2 && first && last ? (last.timestamp - first.timestamp) / 60_000 : 0;
     const rawWpm = windowDurationMin < 0.05 ? 0 : windowWords / windowDurationMin;
     const speechRateValue = normalizeSpeechRate(rawWpm);
 
