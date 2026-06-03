@@ -106,7 +106,10 @@ export function createSpeechMetricsTracker(): SpeechMetricsTracker {
     const fluencyValue =
       windowWords === 0 ? 100 : Math.round(((windowWords - fillerCount) / windowWords) * 100);
 
-    // Speech rate: wpm sobre la ventana deslizante usando timestamps distribuidos
+    // Speech rate: wpm sobre la ventana deslizante. Ojo: los timestamps son
+    // estimados (cadencia asumida), no medidos por palabra. Dentro de un unico
+    // transcript la velocidad real no se puede recuperar; solo el desfase entre
+    // transcripts aporta tiempo real. Por eso la confianza se acota a 'medium'.
     const first = wordHistory[0];
     const last = wordHistory[windowWords - 1];
     const windowDurationMin =
@@ -124,7 +127,8 @@ export function createSpeechMetricsTracker(): SpeechMetricsTracker {
       {
         name: 'speech_rate',
         value: speechRateValue,
-        confidence: windowDurationMin >= 0.5 ? 'high' : windowDurationMin >= 0.1 ? 'medium' : 'low',
+        // Nunca 'high': la cadencia sale de timestamps estimados, no medidos.
+        confidence: windowDurationMin >= 0.1 ? 'medium' : 'low',
         timestamp: now,
       },
     ];

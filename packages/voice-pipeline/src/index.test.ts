@@ -154,19 +154,22 @@ describe('createSpeechMetricsTracker', () => {
     expect(fluency?.value).toBe(100);
   });
 
-  it('speech_rate sube al 100 con ritmo ideal (130-160 wpm)', () => {
+  it('speech_rate normaliza a la cadencia asumida pero nunca afirma confianza alta', () => {
     const tracker = createSpeechMetricsTracker();
-    // 20 palabras → timestamps distribuidos ~8 s → ~158 wpm (ideal 130-160)
+    // Con timestamps estimados (cadencia asumida 150 wpm) un transcript tipico
+    // normaliza al rango ideal, pero como la velocidad real no se mide la
+    // confianza queda acotada a 'medium' (hara falta STT con timestamps por
+    // palabra en F2). Este test documenta esa honestidad, no valida wpm real.
     const words = Array(20).fill('hola').join(' ');
     tracker.onTranscript({
       sessionId: SESSION_ID,
       text: words,
       isFinal: true,
-      timestamp: Date.now() - 1_000,
+      timestamp: Date.now(),
     });
-    const metrics = tracker.getMetrics();
-    const speechRate = metrics.find((m) => m.name === 'speech_rate');
+    const speechRate = tracker.getMetrics().find((m) => m.name === 'speech_rate');
     expect(speechRate?.value).toBe(100);
+    expect(speechRate?.confidence).not.toBe('high');
   });
 
   it('cada métrica tiene value entre 0 y 100', () => {
