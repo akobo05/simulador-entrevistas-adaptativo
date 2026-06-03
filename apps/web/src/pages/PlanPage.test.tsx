@@ -55,18 +55,49 @@ describe('PlanPage', () => {
       .mockResolvedValueOnce({ status: 'generating' })
       .mockResolvedValue({ status: 'ready', plan });
     renderPage();
+
+    // Estado generating: spinner visible
     expect(screen.getByText(/generando tu plan/i)).toBeInTheDocument();
-    await waitFor(() => expect(screen.getByText('Buen desempeno general.')).toBeInTheDocument(), {
+    expect(screen.getByTestId('plan-generating')).toBeInTheDocument();
+
+    // Estado ready: el plan se renderiza con los datos reales
+    await waitFor(() => expect(screen.getByTestId('plan-ready')).toBeInTheDocument(), {
       timeout: 3000,
     });
+
+    // Resumen real del plan
+    expect(screen.getByTestId('plan-summary')).toHaveTextContent('Buen desempeno general.');
+
+    // Score 81 del anillo de fluency (CompetencyRing muestra el numero)
     expect(screen.getByText('81')).toBeInTheDocument();
+
+    // Titulo del ejercicio real
     expect(screen.getByText('STAR')).toBeInTheDocument();
+
+    // Score null -> "sin datos" (nunca 0)
+    expect(screen.getAllByText(/sin datos/i).length).toBeGreaterThanOrEqual(1);
+
+    // Fortalezas e improvements renderizados
+    expect(screen.getByTestId('plan-strengths')).toHaveTextContent('claridad');
+    expect(screen.getByTestId('plan-improvements')).toHaveTextContent('profundizar');
+
+    // Nota de metricas pendientes por score null
+    expect(screen.getByTestId('plan-null-note')).toBeInTheDocument();
   });
 
   it('muestra el mensaje de fallo', async () => {
     seedSession();
     vi.spyOn(apiClient, 'getPlan').mockResolvedValue({ status: 'failed' });
     renderPage();
-    await waitFor(() => expect(screen.getByText(/no se pudo generar/i)).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByTestId('plan-error')).toBeInTheDocument());
+    expect(screen.getByText(/no se pudo generar/i)).toBeInTheDocument();
+  });
+
+  it('muestra el mensaje de fallo cuando el plan no se encuentra', async () => {
+    seedSession();
+    vi.spyOn(apiClient, 'getPlan').mockResolvedValue({ status: 'not_found' });
+    renderPage();
+    await waitFor(() => expect(screen.getByTestId('plan-error')).toBeInTheDocument());
+    expect(screen.getByText(/no se pudo generar/i)).toBeInTheDocument();
   });
 });
