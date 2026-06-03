@@ -1,3 +1,5 @@
+import { useId } from 'react';
+
 interface SparklineChartProps {
   data: number[];
   color?: string;
@@ -11,6 +13,10 @@ export function SparklineChart({
   width = 80,
   height = 32,
 }: SparklineChartProps) {
+  // Id unico por instancia: si dos sparklines del mismo color coexisten (ej.
+  // una por competencia en el plan), un id derivado solo del color colisionaria
+  // en el espacio global de ids del DOM y se pisaria el gradiente.
+  const gradId = useId();
   if (!data || data.length < 2) return null;
 
   const min = Math.min(...data);
@@ -35,8 +41,6 @@ export function SparklineChart({
   const lastX = pad + W;
   const bottom = pad + H;
   const areaPoints = `${firstX},${bottom} ${polyline} ${lastX},${bottom}`;
-
-  const gradId = `spark-grad-${color.replace('#', '')}`;
 
   return (
     <svg
