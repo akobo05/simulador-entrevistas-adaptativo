@@ -128,7 +128,7 @@ export function InterviewPage() {
           {/* Transcripcion */}
           <div className="ip-transcript">
             <div className="ip-transcript__header">
-              <span className="ip-transcript__title">Transcripcion</span>
+              <span className="ip-transcript__title">Transcripción</span>
               <span className="ip-transcript__count">{socket.items.length} mensajes</span>
             </div>
             <div className="ip-transcript__body" data-testid="ip-transcript-body">

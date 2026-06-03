@@ -51,15 +51,14 @@ export function Sidebar() {
           );
         })}
 
-        {/* Items diferidos F2 — aria-disabled, sin navegacion */}
+        {/* Items diferidos F2 — labels no interactivos (no son botones ni links):
+            no van en el tab order, solo anuncian la feature futura. */}
         {DEFERRED_ITEMS.map(({ icon: Icon, label }) => (
           <span
             key={label}
             className="sidebar__item sidebar__item--disabled"
             aria-disabled="true"
             title={collapsed ? label : undefined}
-            role="button"
-            tabIndex={0}
           >
             <Icon size={18} className="sidebar__item-icon" />
             {!collapsed && (
