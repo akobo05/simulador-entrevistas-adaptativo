@@ -280,7 +280,8 @@ a:hover {
   font-family: var(--font-display);
   font-size: 11px;
   letter-spacing: 0.18em;
-  color: var(--accent2);
+  /* --accent (no --accent2) para que el texto chico pase WCAG AA */
+  color: var(--accent);
   margin-bottom: var(--space-4);
 }
 
