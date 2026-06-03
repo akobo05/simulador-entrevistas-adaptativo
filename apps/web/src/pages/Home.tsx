@@ -2,6 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Layers, Radio, TrendingUp, Users, ArrowRight } from 'lucide-react';
 import { OrbeAnimado } from '../components/OrbeAnimado';
+import { Button } from '../components';
 
 const features = [
   { icon: Layers, label: 'Capacitación' },
@@ -62,10 +63,15 @@ export function Home() {
         </div>
 
         {/* CTA */}
-        <button className="cta-button" onClick={() => navigate('/setup')}>
+        <Button
+          variant="primary"
+          size="lg"
+          icon={<ArrowRight size={18} strokeWidth={2} />}
+          onClick={() => navigate('/setup')}
+          aria-label="Comenzar entrevista"
+        >
           Comenzar
-          <ArrowRight size={18} strokeWidth={2} />
-        </button>
+        </Button>
       </div>
     </main>
   );
