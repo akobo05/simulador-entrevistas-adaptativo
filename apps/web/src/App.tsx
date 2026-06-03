@@ -1,22 +1,99 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { lazy, Suspense, useEffect } from 'react';
+import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { SessionProvider } from './context/SessionContext';
-import { Home, NotFound } from './pages';
-import { SetupPage } from './pages/SetupPage';
-import { InterviewPage } from './pages/InterviewPage';
-import { PlanPage } from './pages/PlanPage';
+import { MainLayout } from './layouts/MainLayout';
+import { Home } from './pages/Home';
 import './assets/global.css';
+
+/* ── Lazy (paginas no criticas) ─────────────────────────── */
+const SetupPage = lazy(() => import('./pages/SetupPage').then((m) => ({ default: m.SetupPage })));
+const InterviewPage = lazy(() =>
+  import('./pages/InterviewPage').then((m) => ({ default: m.InterviewPage })),
+);
+const PlanPage = lazy(() => import('./pages/PlanPage').then((m) => ({ default: m.PlanPage })));
+const NotFound = lazy(() => import('./pages/NotFound').then((m) => ({ default: m.NotFound })));
+
+/* Fallback de Suspense mientras carga el chunk */
+function LoadingScreen() {
+  return (
+    <div
+      style={{
+        minHeight: '100dvh',
+        background: '#F4F6FB',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '20px',
+        fontFamily: "'DM Sans', sans-serif",
+      }}
+    >
+      <span
+        style={{
+          fontFamily: "'Syne', sans-serif",
+          fontWeight: 800,
+          fontSize: '22px',
+          color: '#2563EB',
+          letterSpacing: '0.02em',
+        }}
+      >
+        Warachikuy
+      </span>
+      <div
+        style={{
+          width: '36px',
+          height: '36px',
+          borderRadius: '50%',
+          border: '3px solid #E2E8F0',
+          borderTopColor: '#2563EB',
+          animation: 'ls-spin 0.7s linear infinite',
+        }}
+      />
+      <span
+        style={{
+          fontSize: '13px',
+          color: '#64748B',
+          fontFamily: "'DM Sans', sans-serif",
+        }}
+      >
+        Cargando...
+      </span>
+      <style>{`
+        @keyframes ls-spin {
+          to { transform: rotate(360deg); }
+        }
+      `}</style>
+    </div>
+  );
+}
+
+/* Resetea el scroll al inicio en cada cambio de ruta */
+function ScrollToTop() {
+  const { pathname } = useLocation();
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'instant' });
+  }, [pathname]);
+
+  return null;
+}
 
 export function App() {
   return (
     <SessionProvider>
       <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/setup" element={<SetupPage />} />
-          <Route path="/interview/:sessionId" element={<InterviewPage />} />
-          <Route path="/plan/:sessionId" element={<PlanPage />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+        <ScrollToTop />
+        <Suspense fallback={<LoadingScreen />}>
+          <MainLayout>
+            <Routes>
+              <Route path="/" element={<Home />} />
+              <Route path="/setup" element={<SetupPage />} />
+              <Route path="/interview/:sessionId" element={<InterviewPage />} />
+              <Route path="/plan/:sessionId" element={<PlanPage />} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </MainLayout>
+        </Suspense>
       </BrowserRouter>
     </SessionProvider>
   );

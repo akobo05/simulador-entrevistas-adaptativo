@@ -1,0 +1,128 @@
+/* ══════════════════════════════════════════════════════════
+   AvatarAura — R3F + chips CSS
+   ══════════════════════════════════════════════════════════ */
+
+.aa-root {
+  position:   relative;
+  width:      60%;
+  height:     60%;
+  min-width:  50px;
+  min-height: 50px;
+  overflow:   visible;
+}
+
+.aa-root canvas {
+  width:   100% !important;
+  height:  100% !important;
+  display: block;
+}
+
+/* ── Status ──────────────────────────────────────────────── */
+.aa-status {
+  position:       absolute;
+  bottom:         -26px;
+  left:           50%;
+  transform:      translateX(-50%);
+  font-family:    'Syne', sans-serif;
+  font-size:      10px;
+  font-weight:    600;
+  letter-spacing: 0.18em;
+  color:          rgba(240,244,255,0.65);
+  text-transform: uppercase;
+  pointer-events: none;
+  white-space:    nowrap;
+}
+
+/* ══════════════════════════════════════════════════════════
+   CHIPS
+   ══════════════════════════════════════════════════════════ */
+.aa-metric {
+  position:        absolute;
+  display:         flex;
+  flex-direction:  column;
+  align-items:     flex-start;
+  gap:             4px;
+  background:      rgba(8,12,24,0.82);
+  border-radius:   10px;
+  padding:         7px 13px 8px;
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow:      0 2px 20px rgba(0,0,0,0.50);
+  pointer-events:  none;
+  user-select:     none;
+  white-space:     nowrap;
+  z-index:         10;
+  border:          1px solid transparent;
+  animation:       aa-in 0.45s ease both;
+  min-width:       80px;
+}
+
+@keyframes aa-in {
+  from { opacity:0; transform: scale(0.82); }
+  to   { opacity:1; transform: scale(1); }
+}
+
+/* Posiciones — bien centradas hacia el orbe */
+.aa-metric--tl { top: 16%;    left:  8%;  animation-delay:0.05s; }
+.aa-metric--tr { top: 16%;    right: 8%;  animation-delay:0.10s; }
+.aa-metric--bl { bottom: 16%; left:  8%;  animation-delay:0.15s; }
+
+/* Bordes por color */
+.aa-metric--blue   { border-color: rgba(37,99,235,0.50); }
+.aa-metric--cyan   { border-color: rgba(14,165,233,0.50); }
+.aa-metric--violet { border-color: rgba(167,139,250,0.50); }
+
+/* ── Tipografía ──────────────────────────────────────────── */
+.aa-metric__label {
+  font-family:    'DM Sans', sans-serif;
+  font-size:      9px;
+  font-weight:    500;
+  letter-spacing: 0.11em;
+  color:          rgba(240,244,255,0.65);
+  text-transform: uppercase;
+}
+
+.aa-metric__value {
+  font-family:    'Syne', sans-serif;
+  font-size:      18px;
+  font-weight:    700;
+  color:          #F0F4FF;
+  letter-spacing: 0.01em;
+  line-height:    1;
+  display:        flex;
+  align-items:    center;
+  gap:            3px;
+  /* Animación de conteo suave */
+  transition:     color 0.4s ease;
+}
+
+.aa-metric__value--accent { color: #A78BFA; }
+
+/* ── Barra de progreso mini ──────────────────────────────── */
+.aa-metric__bar {
+  width:         100%;
+  height:        3px;
+  background:    rgba(255,255,255,0.08);
+  border-radius: 2px;
+  overflow:      hidden;
+  margin-top:    2px;
+}
+
+.aa-metric__bar-fill {
+  height:           100%;
+  border-radius:    2px;
+  transition:       width 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.aa-metric__bar-fill--blue   { background: #2563EB; }
+.aa-metric__bar-fill--cyan   { background: #0EA5E9; }
+.aa-metric__bar-fill--violet { background: #A78BFA; }
+
+/* ── Deltas ──────────────────────────────────────────────── */
+.aa-delta {
+  font-size:   10px;
+  font-weight: 700;
+  line-height: 1;
+}
+.aa-delta--up   { color: #4ADE80; }
+.aa-delta--down { color: #F87171; }

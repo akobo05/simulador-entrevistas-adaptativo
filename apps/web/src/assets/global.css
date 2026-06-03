@@ -1,40 +1,194 @@
-/* Google Fonts. El @import DEBE ir antes de cualquier otra regla (spec CSS):
-   si va despues, el navegador lo ignora y las fuentes no cargan. */
-@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap');
+/* ══════════════════════════════════════════════════════════
+   WARACHIKUY — Design Tokens & Global Styles
+   Tema: CLARO · Syne + DM Sans · CSS plano
+   ══════════════════════════════════════════════════════════ */
+
+/* Google Fonts — DEBE ir antes de cualquier otra regla */
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&family=JetBrains+Mono:wght@400;500;700&display=swap');
 
 /* ── Variables ───────────────────────────────────────────── */
 :root {
-  --bg:        #130522;
-  --bg2:       #111118;
-  --accent:    #ff6b35;
-  --accent2:   #ffaa44;
-  --text:      #f0ede8;
-  --text-muted:#8a8790;
-  --border:    rgba(255,107,53,0.2);
-  --radius:    14px;
-  --font-display: 'Syne', sans-serif;
-  --font-body:    'DM Sans', sans-serif;
+  /* Fondos */
+  --bg:               #F4F6FB;
+  --bg2:              #FFFFFF;
+  --bg3:              #E8EDF6;
+
+  /* Acentos */
+  --accent:           #2563EB;
+  --accent2:          #0EA5E9;
+  /* --accent-hover: blue-700 de Tailwind; blanco sobre el tiene ratio ~6.0:1, pasa AA */
+  --accent-hover:     #1D4ED8;
+  --accent-glow:      rgba(37, 99, 235, 0.15);
+
+  /* Texto */
+  --text:             #0F172A;
+  /* --text-muted original de Max era #64748B (ratio 4.40:1 en --bg, falla AA).
+     Se oscurece a #5E6E82 (ratio 4.82:1) para cumplir WCAG 2.2 AA. */
+  --text-muted:       #5E6E82;
+  --text-on-accent:   #FFFFFF;
+
+  /* Bordes */
+  --border-solid:     #CBD5E1;
+
+  /* Semanticos — oscurecidos un tono Tailwind para cumplir AA (>=4.5:1) sobre --bg */
+  --color-danger:     #B91C1C;
+  --color-success:    #15803D;
+  --color-warning:    #B45309;
+
+  /* Tipografia */
+  --font-display:     'Syne', sans-serif;
+  --font-body:        'DM Sans', sans-serif;
+  --font-mono:        'JetBrains Mono', monospace;
+
+  /* Espaciado — escala 4px */
+  --space-1:  4px;
+  --space-2:  8px;
+  --space-3:  12px;
+  --space-4:  16px;
+  --space-5:  24px;
+  --space-6:  32px;
+  --space-7:  48px;
+  --space-8:  64px;
+
+  /* Radios */
+  --radius-sm:    8px;
+  --radius-md:    12px;
+  --radius-lg:    16px;
+  --radius:       14px;   /* alias legacy — mantener compatibilidad */
+  --radius-full:  9999px;
+
+  /* Sombras */
+  --shadow-sm:    0 1px 3px rgba(15, 23, 42, 0.08);
+  --shadow-md:    0 4px 16px rgba(15, 23, 42, 0.10);
+  --shadow-glow:  0 0 24px rgba(37, 99, 235, 0.20);
+
+  /* Transiciones */
+  --transition-fast:    150ms ease;
+  --transition-normal:  250ms ease;
+
+  /* Z-index */
+  --z-overlay:  800;
+  --z-tooltip:  900;
+  --z-modal:    1000;
+
+  /* NOTA DE CONTRASTE WCAG 2.2 AA:
+     --accent2 (#0EA5E9) sobre --bg (#F4F6FB) tiene ratio ~2.56:1 (falla AA).
+     NO usar --accent2 como color de texto sobre fondos claros.
+     Reservar solo para acentos decorativos, bordes, fondos o iconos grandes. */
 }
 
 /* ── Reset ───────────────────────────────────────────────── */
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+}
 
 body {
   background: var(--bg);
   color: var(--text);
   font-family: var(--font-body);
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   overflow-x: hidden;
+  line-height: 1.6;
 }
 
-/* ── Home root ───────────────────────────────────────────── */
+img, video, svg {
+  display: block;
+  max-width: 100%;
+}
+
+button {
+  font-family: inherit;
+  cursor: pointer;
+}
+
+a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+/* ── Tipografia utilitaria ───────────────────────────────── */
+.text-display {
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 5vw, 3rem);
+  font-weight: 800;
+  line-height: 1.1;
+  color: var(--text);
+}
+
+.text-heading {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 700;
+  line-height: 1.3;
+  color: var(--text);
+}
+
+.text-body {
+  font-family: var(--font-body);
+  font-size: 1rem;
+  font-weight: 400;
+  line-height: 1.6;
+  color: var(--text);
+}
+
+.text-caption {
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+  font-weight: 400;
+  line-height: 1.4;
+  color: var(--text-muted);
+}
+
+.text-muted {
+  color: var(--text-muted);
+}
+
+/* ── Layout utilitario ───────────────────────────────────── */
+.flex-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.flex-between {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.flex-col {
+  display: flex;
+  flex-direction: column;
+}
+
+.grid-auto {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: var(--space-4);
+}
+
+/* ══════════════════════════════════════════════════════════
+   HOME PAGE
+   ══════════════════════════════════════════════════════════ */
+
 .home-root {
   min-height: 100dvh;
   display: flex;
   flex-direction: column;
   align-items: center;
   position: relative;
-  background: radial-gradient(ellipse 70% 60% at 50% 30%, #1a0f05 0%, var(--bg) 70%);
+  background: radial-gradient(ellipse 70% 55% at 50% 20%, #DBEAFE 0%, var(--bg) 70%);
 }
 
 /* ── Stepper ─────────────────────────────────────────────── */
@@ -53,7 +207,7 @@ body {
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  border: 2px solid var(--border);
+  border: 2px solid var(--border-solid);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -62,24 +216,24 @@ body {
   font-weight: 700;
   color: var(--text-muted);
   background: var(--bg2);
-  transition: all 0.3s ease;
+  transition: all var(--transition-normal);
 }
 
 .step-circle.active {
   border-color: var(--accent);
-  color: var(--text);
-  background: rgba(255,107,53,0.15);
-  box-shadow: 0 0 14px rgba(255,107,53,0.3);
+  color: var(--text-on-accent);
+  background: var(--accent);
+  box-shadow: var(--shadow-glow);
 }
 
 .step-line {
   width: 48px;
   height: 2px;
-  background: var(--border);
+  background: var(--border-solid);
 }
 
 .step-line.active {
-  background: linear-gradient(90deg, var(--accent), var(--border));
+  background: linear-gradient(90deg, var(--accent), var(--accent2));
 }
 
 .step-label {
@@ -101,24 +255,23 @@ body {
   position: relative;
 }
 
-/* glow detrás del orbe */
 .orbe-container::before {
   content: '';
   position: absolute;
   inset: 15%;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(255,107,53,0.18) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(37, 99, 235, 0.12) 0%, transparent 70%);
   pointer-events: none;
-  filter: blur(20px);
+  filter: blur(24px);
 }
 
-/* ── Contenido ───────────────────────────────────────────── */
+/* ── Contenido home ──────────────────────────────────────── */
 .home-content {
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
-  padding: 0 24px 48px;
+  padding: 0 var(--space-5) var(--space-7);
   max-width: 600px;
   gap: 0;
 }
@@ -127,8 +280,9 @@ body {
   font-family: var(--font-display);
   font-size: 11px;
   letter-spacing: 0.18em;
-  color: var(--text-muted);
-  margin-bottom: 16px;
+  /* --accent (no --accent2) para que el texto chico pase WCAG AA */
+  color: var(--accent);
+  margin-bottom: var(--space-4);
 }
 
 .home-title {
@@ -137,7 +291,7 @@ body {
   font-weight: 800;
   line-height: 1.1;
   color: var(--text);
-  margin-bottom: 16px;
+  margin-bottom: var(--space-4);
 }
 
 .home-brand {
@@ -146,18 +300,18 @@ body {
 
 .home-description {
   font-size: 15px;
-  font-weight: 300;
+  font-weight: 400;
   color: var(--text-muted);
   line-height: 1.7;
   max-width: 420px;
-  margin-bottom: 32px;
+  margin-bottom: var(--space-6);
 }
 
 /* ── Features ────────────────────────────────────────────── */
 .features-row {
   display: flex;
   gap: 28px;
-  margin-bottom: 40px;
+  margin-bottom: var(--space-6);
   flex-wrap: wrap;
   justify-content: center;
 }
@@ -166,26 +320,27 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .feature-icon-wrap {
   width: 48px;
   height: 48px;
-  border-radius: 12px;
-  border: 1px solid var(--border);
-  background: rgba(255,107,53,0.06);
+  border-radius: var(--radius-md);
+  border: 1px solid #BFDBFE;
+  background: #EFF6FF;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--accent2);
-  transition: all 0.25s ease;
+  color: var(--accent);
+  transition: all var(--transition-normal);
 }
 
 .feature-icon-wrap:hover {
-  background: rgba(255,107,53,0.14);
+  background: #DBEAFE;
   border-color: var(--accent);
   transform: translateY(-2px);
+  box-shadow: var(--shadow-glow);
 }
 
 .feature-label {
@@ -200,77 +355,85 @@ body {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 16px 40px;
+  padding: var(--space-4) var(--space-6);
   border: none;
-  border-radius: 50px;
-  background: linear-gradient(135deg, var(--accent) 0%, var(--accent2) 100%);
-  color: #fff;
+  border-radius: var(--radius-full);
+  /* extremo derecho cambiado de --accent2 a --accent-hover para mantener contraste AA con texto blanco */
+  background: linear-gradient(135deg, var(--accent) 0%, var(--accent-hover) 100%);
+  color: var(--text-on-accent);
   font-family: var(--font-display);
   font-size: 16px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
-  transition: all 0.25s ease;
-  box-shadow: 0 8px 32px rgba(255,107,53,0.35);
+  transition: all var(--transition-normal);
+  box-shadow: 0 8px 24px rgba(37, 99, 235, 0.3);
   letter-spacing: 0.02em;
 }
 
 .cta-button:hover {
   transform: translateY(-2px);
-  box-shadow: 0 12px 40px rgba(255,107,53,0.5);
+  box-shadow: 0 12px 36px rgba(37, 99, 235, 0.45);
 }
 
 .cta-button:active {
   transform: translateY(0);
 }
 
-/* ── Responsive ──────────────────────────────────────────── */
-@media (max-width: 480px) {
-  .orbe-container { width: 260px; height: 260px; }
-  .step-label { display: none; }
-}
-/* ── Sala de chat / componentes ──────────────────────────── */
-/* Estas clases reemplazan los estilos inline de los componentes para usar los
-   design tokens y respetar el tema oscuro (antes usaban #fff/#ccc hardcoded). */
+/* ══════════════════════════════════════════════════════════
+   CHAT / SALA — componentes legacy
+   ══════════════════════════════════════════════════════════ */
+
 .chat-layout {
   max-width: 800px;
   margin: 0 auto;
-  padding: 20px;
+  padding: var(--space-5);
 }
 
 .chat-header {
-  border-bottom: 1px solid var(--border);
-  margin-bottom: 20px;
+  border-bottom: 1px solid var(--border-solid);
+  margin-bottom: var(--space-5);
 }
 
 .message-list {
   height: 300px;
   overflow-y: auto;
   background: var(--bg2);
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-solid);
   border-radius: var(--radius);
-  padding: 10px;
+  padding: var(--space-3);
 }
 
 .message-bubble {
-  padding: 10px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  margin: 5px 0;
+  padding: var(--space-3);
+  border: 1px solid var(--border-solid);
+  border-radius: var(--radius-md);
+  margin: var(--space-1) 0;
+  color: var(--text);
+  background: var(--bg);
 }
 
 .chat-form {
   display: flex;
-  gap: 8px;
-  margin-top: 12px;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
 }
 
 .chat-input {
   flex: 1;
-  padding: 8px 12px;
+  padding: var(--space-2) var(--space-3);
   background: var(--bg2);
   color: var(--text);
-  border: 1px solid var(--border);
-  border-radius: 10px;
+  border: 1px solid var(--border-solid);
+  border-radius: var(--radius-md);
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  transition: border-color var(--transition-fast);
+}
+
+.chat-input:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-glow);
 }
 
 .chat-input::placeholder {
@@ -278,18 +441,32 @@ body {
 }
 
 .btn {
-  padding: 8px 16px;
+  padding: var(--space-2) var(--space-4);
   cursor: pointer;
   background: var(--accent);
-  color: var(--bg);
+  color: var(--text-on-accent);
   border: none;
-  border-radius: 10px;
-  font-weight: 600;
+  border-radius: var(--radius-md);
+  font-family: var(--font-body);
+  font-weight: 700;
+  transition: background var(--transition-fast);
 }
 
 .btn:hover {
-  background: var(--accent2);
+  /* --accent2 sobre blanco era 2.77:1 (falla AA); --accent-hover da ~6.0:1 */
+  background: var(--accent-hover);
 }
+
+/* ── Responsive ──────────────────────────────────────────── */
+@media (max-width: 480px) {
+  .orbe-container { width: 260px; height: 260px; }
+  .step-label { display: none; }
+  .features-row { gap: var(--space-4); }
+}
+
+/* ══════════════════════════════════════════════════════════
+   COMPONENTES DEL FLUJO REAL (metricas, sesion, entrevista)
+   ══════════════════════════════════════════════════════════ */
 
 /* Anillos de competencia del plan de mejora */
 .competency-ring { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; }
@@ -299,33 +476,33 @@ body {
 }
 .ring-inner {
   width: 74px; height: 74px; border-radius: 50%;
-  background: #1a1a22; display: grid; place-items: center;
-  font-size: 1.4rem; font-weight: 700; color: #fff;
+  background: var(--bg3); display: grid; place-items: center;
+  font-size: 1.4rem; font-weight: 700; color: var(--text);
 }
-.ring-nodata { font-size: 0.7rem; font-weight: 500; color: #9a9aa5; }
-.ring-label { font-size: 0.85rem; color: #c8c8d0; }
+.ring-nodata { font-size: 0.7rem; font-weight: 500; color: var(--text-muted); }
+.ring-label { font-size: 0.85rem; color: var(--text-muted); }
 
 /* Pantalla de configuracion de sesion */
 .setup-root { max-width: 480px; margin: 0 auto; padding: 3rem 1.5rem; }
 .setup-form { display: flex; flex-direction: column; gap: 1.25rem; margin-top: 1.5rem; }
-.setup-form label { display: flex; flex-direction: column; gap: 0.4rem; color: #c8c8d0; }
-.setup-form select { padding: 0.6rem; border-radius: 8px; background: #1a1a22; color: #fff; border: 1px solid #2a2a35; }
-.setup-error { color: #ff6b6b; }
+.setup-form label { display: flex; flex-direction: column; gap: 0.4rem; color: var(--text-muted); }
+.setup-form select { padding: 0.6rem; border-radius: var(--radius-sm); background: var(--bg2); color: var(--text); border: 1px solid var(--border-solid); }
+.setup-error { color: var(--color-danger); }
 
 /* Sala de entrevista */
 .interview-root { max-width: 640px; margin: 0 auto; padding: 1.5rem; display: flex; flex-direction: column; gap: 1rem; }
 .interview-orb { height: 220px; }
-.interview-status { font-size: 0.85rem; color: #9a9aa5; text-align: center; }
-.interview-status-warn { color: #ffb86b; }
-.interview-banner { color: #ffb86b; background: #2a2118; padding: 0.5rem 0.75rem; border-radius: 8px; }
+.interview-status { font-size: 0.85rem; color: var(--text-muted); text-align: center; }
+.interview-status-warn { color: var(--color-warning); }
+.interview-banner { color: var(--color-warning); background: var(--bg3); padding: 0.5rem 0.75rem; border-radius: var(--radius-sm); }
 .message-bubble.candidate { text-align: right; }
 .interview-finish { align-self: center; }
 
 /* Pantalla del plan de mejora */
 .plan-root { max-width: 720px; margin: 0 auto; padding: 2rem 1.5rem; display: flex; flex-direction: column; gap: 1.25rem; }
-.plan-loading { text-align: center; color: #c8c8d0; padding: 3rem 0; }
-.plan-summary { color: #d8d8e0; line-height: 1.5; }
+.plan-loading { text-align: center; color: var(--text-muted); padding: 3rem 0; }
+.plan-summary { color: var(--text); line-height: 1.5; }
 .plan-rings { display: flex; flex-wrap: wrap; gap: 1.5rem; justify-content: center; }
-.plan-note { font-size: 0.8rem; color: #9a9aa5; font-style: italic; }
-.plan-section h2 { font-size: 1.05rem; color: #ff6b35; margin-bottom: 0.4rem; }
-.plan-section ul { padding-left: 1.2rem; color: #d8d8e0; line-height: 1.6; }
+.plan-note { font-size: 0.8rem; color: var(--text-muted); font-style: italic; }
+.plan-section h2 { font-size: 1.05rem; color: var(--accent); margin-bottom: 0.4rem; }
+.plan-section ul { padding-left: 1.2rem; color: var(--text); line-height: 1.6; }

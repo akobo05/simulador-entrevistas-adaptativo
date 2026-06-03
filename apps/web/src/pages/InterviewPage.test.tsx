@@ -8,6 +8,9 @@ import * as apiClient from '../lib/apiClient';
 import * as hookMod from '../hooks/useInterviewSocket';
 import type { InterviewSocket } from '../hooks/useInterviewSocket';
 
+// Evita que Three.js se cargue en el entorno de test (happy-dom no tiene WebGL)
+vi.mock('../components/AvatarAura', () => ({ AvatarAura: () => null }));
+
 const navigateMock = vi.fn();
 vi.mock('react-router-dom', async (orig) => ({
   ...(await orig<typeof RouterModule>()),
