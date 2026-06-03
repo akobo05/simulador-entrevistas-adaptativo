@@ -1,0 +1,215 @@
+/* ══════════════════════════════════════════════════════════
+   SIDEBAR — Warachikuy
+   Todos los colores vienen de global.css (variables :root)
+   ══════════════════════════════════════════════════════════ */
+
+/* ── Layout raíz: sidebar + contenido ───────────────────── */
+.main-layout {
+  display: flex;
+  min-height: 100dvh;
+  background: var(--bg);
+}
+
+.main-layout__content {
+  flex: 1;
+  min-width: 0;          /* evita overflow en flex */
+  overflow-y: auto;
+}
+
+/* ── Sidebar base ────────────────────────────────────────── */
+.sidebar {
+  width: 220px;
+  min-height: 100dvh;
+  background: #FFFFFF;
+  box-shadow: 1px 0 0 #E2E8F0;   /* borde derecho según spec */
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  transition: width var(--transition-normal);
+  overflow: hidden;
+  position: sticky;
+  top: 0;
+  height: 100dvh;
+}
+
+.sidebar--collapsed {
+  width: 60px;
+}
+
+/* ── Logo ────────────────────────────────────────────────── */
+.sidebar__logo {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-5) var(--space-4);
+  min-height: 64px;
+  border-bottom: 1px solid #E2E8F0;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.sidebar__logo-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  background: var(--accent);
+  color: var(--text-on-accent);
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.sidebar__logo-text {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--accent);
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+/* ── Nav ─────────────────────────────────────────────────── */
+.sidebar__nav {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-3) var(--space-2);
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* ── Ítem base ───────────────────────────────────────────── */
+.sidebar__item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 10px var(--space-3);
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+  border-left: 3px solid transparent;
+  transition:
+    background var(--transition-fast),
+    color var(--transition-fast),
+    border-color var(--transition-fast);
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.sidebar__item:hover {
+  background: #F8FAFC;
+  color: var(--text);
+  text-decoration: none;
+}
+
+/* ── Ítem activo ─────────────────────────────────────────── */
+.sidebar__item--active {
+  background: #EFF6FF;
+  color: #2563EB;
+  border-left-color: #2563EB;
+  font-weight: 600;
+}
+
+.sidebar__item--active:hover {
+  background: #DBEAFE;
+}
+
+/* Ícono */
+.sidebar__item-icon {
+  flex-shrink: 0;
+}
+
+/* Etiqueta de texto */
+.sidebar__item-label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Footer ──────────────────────────────────────────────── */
+.sidebar__footer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-2) var(--space-4);
+  border-top: 1px solid #E2E8F0;
+  flex-shrink: 0;
+}
+
+/* ── Avatar row ──────────────────────────────────────────── */
+.sidebar__avatar-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-2);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.sidebar__avatar-row--collapsed {
+  justify-content: center;
+  padding: var(--space-2) 0;
+}
+
+.sidebar__avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #DBEAFE;
+  color: #1D4ED8;
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  letter-spacing: 0.02em;
+}
+
+.sidebar__avatar-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-family: var(--font-body);
+}
+
+/* ── Botón de colapso ────────────────────────────────────── */
+.sidebar__collapse-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: var(--space-2);
+  border: 1px solid #E2E8F0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition:
+    background var(--transition-fast),
+    color var(--transition-fast);
+  font-family: inherit;
+}
+
+.sidebar__collapse-btn:hover {
+  background: #F8FAFC;
+  color: var(--text);
+}
+
+/* ── Responsive: ocultar sidebar en móvil < 640px ─────────── */
+@media (max-width: 639px) {
+  .sidebar {
+    display: none;
+  }
+}
