@@ -87,7 +87,7 @@
 /* Estado de conexion */
 .ip-status {
   font-size: 11px;
-  color: rgba(240, 244, 255, 0.45);
+  color: rgba(240, 244, 255, 0.6);
   letter-spacing: 0.04em;
   white-space: nowrap;
   overflow: hidden;
@@ -198,13 +198,13 @@
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.12em;
-  color: rgba(240, 244, 255, 0.45);
+  color: rgba(240, 244, 255, 0.6);
   text-transform: uppercase;
 }
 
 .ip-transcript__count {
   font-size: 11px;
-  color: rgba(240, 244, 255, 0.25);
+  color: rgba(240, 244, 255, 0.6);
 }
 
 .ip-transcript__body {

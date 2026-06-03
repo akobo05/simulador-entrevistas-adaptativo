@@ -1,4 +1,4 @@
-import { lazy, Suspense, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import { MessageBubble } from '../components/MessageBubble';
 import { ChatForm } from '../components/ChatForm';
@@ -25,8 +25,12 @@ export function InterviewPage() {
   // strings vacios (no conecta) y el componente redirige.
   const socket = useInterviewSocket(session?.websocketUrl ?? '', session?.sessionId ?? '');
 
-  // El timer arranca cuando el WS esta abierto
+  // El timer arranca cuando el WS abre. timer.start es estable (useCallback),
+  // asi que solo socket.status entra en las dependencias.
   const timer = useSessionTimer(false);
+  useEffect(() => {
+    if (socket.status === 'open') timer.start();
+  }, [socket.status, timer]);
 
   if (!session) return <Navigate to="/setup" replace />;
 
