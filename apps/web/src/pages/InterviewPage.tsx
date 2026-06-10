@@ -47,9 +47,19 @@ export function InterviewPage() {
     session?.sessionId ?? '',
   );
 
+  const terminalError = socket.lastError !== null && !socket.lastError.recoverable;
+  // Cierre inesperado del WS (caida de red) que NO vino como mensaje de error.
+  // Lo tratamos como terminal salvo que estemos cerrando la sesion a proposito
+  // (ending), donde el cierre 4001 del backend es esperado y navegamos al plan.
+  const disconnected = socket.status === 'closed' && !ending;
+  const ended = terminalError || disconnected;
+
   const pipeline = useAuraPipeline(
     session?.sessionId ?? '',
-    grants?.camera ?? false,
+    // En estado terminal la camara se apaga (el LED no puede quedar prendido
+    // detras de la pantalla de error); el guard de sendMetrics ya descartaba
+    // los snapshots, esto libera ademas el hardware.
+    (grants?.camera ?? false) && !ended,
     socket.sendMetrics,
   );
 
@@ -89,12 +99,6 @@ export function InterviewPage() {
     return () => tts?.cancel();
   }, []);
 
-  const terminalError = socket.lastError !== null && !socket.lastError.recoverable;
-  // Cierre inesperado del WS (caida de red) que NO vino como mensaje de error.
-  // Lo tratamos como terminal salvo que estemos cerrando la sesion a proposito
-  // (ending), donde el cierre 4001 del backend es esperado y navegamos al plan.
-  const disconnected = socket.status === 'closed' && !ending;
-  const ended = terminalError || disconnected;
   const terminalMessage =
     terminalError && socket.lastError
       ? socket.lastError.message

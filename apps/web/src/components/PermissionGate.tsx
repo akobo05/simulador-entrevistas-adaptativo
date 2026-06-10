@@ -40,7 +40,7 @@ export function PermissionGate({ onReady }: PermissionGateProps) {
     <section className="pg-root" data-testid="permission-gate">
       <h2 className="pg-title">Antes de empezar</h2>
       <p className="pg-text">
-        Para la entrevista por voz activá el micrófono y la cámara. El video se procesa en tu
+        Para la entrevista por voz activa el micrófono y la cámara. El video se procesa en tu
         navegador y <strong>nunca sale de tu equipo</strong>: solo viajan métricas numéricas.
       </p>
       <div className="pg-actions">
