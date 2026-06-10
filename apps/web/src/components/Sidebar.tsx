@@ -1,18 +1,15 @@
 import { useState } from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
-import { House, Plus, TrendingUp, Trophy, ChevronsLeft, ChevronsRight } from 'lucide-react';
+import { NavLink } from 'react-router-dom';
+import { House, Plus, TrendingUp, Trophy, Eye, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import './Sidebar.css';
 
-// Rutas reales activas en esta version
-const REAL_NAV_ITEMS = [
+// Items de navegacion del sidebar
+const NAV_ITEMS = [
   { to: '/', icon: House, label: 'Inicio' },
   { to: '/setup', icon: Plus, label: 'Nueva sesion' },
-];
-
-// Items F2 diferidos — no navegan, muestran "proximamente"
-const DEFERRED_ITEMS = [
-  { icon: TrendingUp, label: 'Mi progreso' },
-  { icon: Trophy, label: 'Ranking' },
+  { to: '/progress', icon: TrendingUp, label: 'Mi progreso' },
+  { to: '/ranking', icon: Trophy, label: 'Ranking' },
+  { to: '/observer', icon: Eye, label: 'Sala de observador' },
 ];
 
 // Placeholder neutro: no usa datos de persona real
@@ -20,7 +17,6 @@ const PLACEHOLDER_USER = { initials: 'W' };
 
 export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
-  const location = useLocation();
 
   return (
     <aside className={`sidebar${collapsed ? ' sidebar--collapsed' : ''}`}>
@@ -32,42 +28,20 @@ export function Sidebar() {
 
       {/* Nav */}
       <nav className="sidebar__nav" aria-label="Navegacion principal">
-        {/* Items con ruta real */}
-        {REAL_NAV_ITEMS.map(({ to, icon: Icon, label }) => {
-          const isActive =
-            to === '/' ? location.pathname === '/' : location.pathname.startsWith(to);
-
-          return (
-            <NavLink
-              key={to}
-              to={to}
-              className={`sidebar__item${isActive ? ' sidebar__item--active' : ''}`}
-              aria-current={isActive ? 'page' : undefined}
-              title={collapsed ? label : undefined}
-            >
-              <Icon size={18} className="sidebar__item-icon" />
-              {!collapsed && <span className="sidebar__item-label">{label}</span>}
-            </NavLink>
-          );
-        })}
-
-        {/* Items diferidos F2 — labels no interactivos (no son botones ni links):
-            no van en el tab order, solo anuncian la feature futura. */}
-        {DEFERRED_ITEMS.map(({ icon: Icon, label }) => (
-          <span
-            key={label}
-            className="sidebar__item sidebar__item--disabled"
-            aria-disabled="true"
+        {/* NavLink resuelve solo el estado activo (por segmentos, no por
+            prefijo crudo) y pone aria-current="page" nativamente; `end` evita
+            que "/" quede activo en todas las rutas. */}
+        {NAV_ITEMS.map(({ to, icon: Icon, label }) => (
+          <NavLink
+            key={to}
+            to={to}
+            end={to === '/'}
+            className={({ isActive }) => `sidebar__item${isActive ? ' sidebar__item--active' : ''}`}
             title={collapsed ? label : undefined}
           >
             <Icon size={18} className="sidebar__item-icon" />
-            {!collapsed && (
-              <>
-                <span className="sidebar__item-label">{label}</span>
-                <span className="sidebar__item-soon">proximamente</span>
-              </>
-            )}
-          </span>
+            {!collapsed && <span className="sidebar__item-label">{label}</span>}
+          </NavLink>
         ))}
       </nav>
 

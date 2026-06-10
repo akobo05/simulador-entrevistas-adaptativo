@@ -506,3 +506,28 @@ a:hover {
 .plan-note { font-size: 0.8rem; color: var(--text-muted); font-style: italic; }
 .plan-section h2 { font-size: 1.05rem; color: var(--accent); margin-bottom: 0.4rem; }
 .plan-section ul { padding-left: 1.2rem; color: var(--text); line-height: 1.6; }
+
+/* ── Accesibilidad: usuarios que piden menos movimiento ────
+   Anula animaciones y transiciones de TODA la app (incluidas
+   las pantallas mock) cuando el sistema operativo lo solicita.
+   Verificado: ningun componente depende de onAnimationEnd ni
+   onTransitionEnd para limpiar estado en React. El movimiento
+   dirigido por JS (orbe del Home, scroll suave) queda para el
+   issue #53. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    animation-delay: 0s !important;
+    transition-duration: 0.01ms !important;
+    transition-delay: 0s !important;
+  }
+
+  /* El scroll-behavior smooth (html y contenedores) tambien es movimiento */
+  html,
+  * {
+    scroll-behavior: auto !important;
+  }
+}

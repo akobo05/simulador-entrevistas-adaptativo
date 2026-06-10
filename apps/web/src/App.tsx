@@ -12,6 +12,13 @@ const InterviewPage = lazy(() =>
 );
 const PlanPage = lazy(() => import('./pages/PlanPage').then((m) => ({ default: m.PlanPage })));
 const NotFound = lazy(() => import('./pages/NotFound').then((m) => ({ default: m.NotFound })));
+const Ranking = lazy(() => import('./pages/Ranking').then((m) => ({ default: m.Ranking })));
+const MyProgress = lazy(() =>
+  import('./pages/MyProgress').then((m) => ({ default: m.MyProgress })),
+);
+const ObserverRoom = lazy(() =>
+  import('./pages/ObserverRoom').then((m) => ({ default: m.ObserverRoom })),
+);
 
 /* Fallback de Suspense mientras carga el chunk */
 function LoadingScreen() {
@@ -90,6 +97,9 @@ export function App() {
               <Route path="/setup" element={<SetupPage />} />
               <Route path="/interview/:sessionId" element={<InterviewPage />} />
               <Route path="/plan/:sessionId" element={<PlanPage />} />
+              <Route path="/ranking" element={<Ranking />} />
+              <Route path="/progress" element={<MyProgress />} />
+              <Route path="/observer" element={<ObserverRoom />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </MainLayout>

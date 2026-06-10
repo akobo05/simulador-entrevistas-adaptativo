@@ -2,8 +2,9 @@ import type { ReactNode } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Sidebar } from '../components/Sidebar';
 
-// Rutas donde el sidebar NO aparece (pantalla completa)
-const FULLSCREEN_ROUTES = ['/interview'];
+// Rutas donde el sidebar NO aparece (pantalla completa). La deteccion por
+// startsWith deja lista la subruta dinamica de F3 (/observer/:id).
+const FULLSCREEN_ROUTES = ['/interview', '/observer'];
 
 function isFullscreen(pathname: string): boolean {
   return FULLSCREEN_ROUTES.some((r) => pathname === r || pathname.startsWith(r + '/'));
