@@ -1,0 +1,55 @@
+/* Gate de permisos previo a la sala — tema oscuro de la sala (#080C14) */
+.pg-root {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+  padding: var(--space-6);
+  background: #080c14;
+  text-align: center;
+}
+
+.pg-title {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 700;
+  color: #f1f5f9;
+  margin: 0;
+}
+
+.pg-text {
+  max-width: 420px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: #94a3b8;
+  margin: 0;
+}
+
+.pg-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
+}
+
+.pg-skip {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  font-size: 13px;
+  text-decoration: underline;
+  cursor: pointer;
+  padding: var(--space-2);
+}
+
+.pg-skip:hover {
+  color: #cbd5e1;
+}
+
+.pg-skip:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
