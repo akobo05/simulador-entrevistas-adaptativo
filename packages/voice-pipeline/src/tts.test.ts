@@ -84,6 +84,35 @@ describe('createTtsController', () => {
     expect(tts.speaking).toBe(false);
   });
 
+  it('un speak mientras habla: el cierre tardio del anterior no apaga al nuevo', () => {
+    const tts = createTtsController();
+    tts.speak('Primera');
+    const first = synth.speak.mock.calls[0]![0] as FakeUtterance;
+    first.onstart?.();
+    expect(tts.speaking).toBe(true);
+    tts.speak('Segunda'); // cancela la primera
+    const second = synth.speak.mock.calls[1]![0] as FakeUtterance;
+    second.onstart?.();
+    expect(tts.speaking).toBe(true);
+    // El onerror tardio de la PRIMERA (disparado por su cancel) no debe
+    // apagar el speaking de la segunda
+    first.onerror?.();
+    expect(tts.speaking).toBe(true);
+    second.onend?.();
+    expect(tts.speaking).toBe(false);
+  });
+
+  it('voiceschanged tardio: al llegar las voces, los speak siguientes usan la voz es-*', () => {
+    synth.getVoices.mockReturnValue([]);
+    const tts = createTtsController();
+    const listener = synth.addEventListener.mock.calls[0]![1] as () => void;
+    synth.getVoices.mockReturnValue([{ lang: 'es-PE' }]);
+    listener();
+    tts.speak('Hola');
+    const utt = synth.speak.mock.calls[0]![0] as FakeUtterance;
+    expect((utt.voice as { lang: string }).lang).toBe('es-PE');
+  });
+
   it('sin speechSynthesis: speak es no-op y dispara onUnsupported', () => {
     Object.defineProperty(window, 'speechSynthesis', { value: undefined, configurable: true });
     const onUnsupported = vi.fn();

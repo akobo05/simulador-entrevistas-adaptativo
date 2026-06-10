@@ -19,6 +19,21 @@ export function createTtsController(options: TtsOptions = {}): TtsController {
   const synth = typeof window !== 'undefined' ? window.speechSynthesis : undefined;
   let speaking = false;
   let voice: SpeechSynthesisVoice | null = null;
+  // Referencia viva a la utterance en curso. Cumple dos roles: (1) evita el
+  // bug de Chrome que recolecta utterances sin referencia a mitad del habla
+  // (y se pierde el onend), y (2) filtra los handlers tardios de utterances
+  // viejas canceladas, que NO deben apagar el speaking de la nueva.
+  let current: SpeechSynthesisUtterance | null = null;
+
+  // Cierra el habla en curso (si la hay) avisando al consumidor. Lo usan
+  // cancel() y el arranque de un speak() nuevo.
+  function releaseCurrent(): void {
+    current = null;
+    if (speaking) {
+      speaking = false;
+      options.onEnd?.();
+    }
+  }
 
   // Eleccion de voz: primera cuyo lang empiece por 'es'. Chrome carga las voces
   // de forma asincrona: si aun no estan, se reintenta una sola vez al evento
@@ -38,30 +53,33 @@ export function createTtsController(options: TtsOptions = {}): TtsController {
       return;
     }
     // Cancela la pregunta anterior para no solapar audios entre turnos
+    releaseCurrent();
     synth.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = lang;
     if (voice) utterance.voice = voice;
     utterance.onstart = () => {
+      if (utterance !== current) return; // handler tardio de una utterance vieja
       speaking = true;
       options.onStart?.();
     };
-    utterance.onend = () => {
+    // Al cancelar (barge-in) el navegador dispara error, no end: ambos liberan
+    const finish = (): void => {
+      if (utterance !== current) return;
+      current = null;
       speaking = false;
       options.onEnd?.();
     };
-    // Al cancelar (barge-in) el navegador dispara error, no end: tambien libera
-    utterance.onerror = () => {
-      speaking = false;
-      options.onEnd?.();
-    };
+    utterance.onend = finish;
+    utterance.onerror = finish;
+    current = utterance;
     synth.speak(utterance);
   }
 
   function cancel(): void {
     if (!synth) return;
+    releaseCurrent();
     synth.cancel();
-    speaking = false;
   }
 
   return {

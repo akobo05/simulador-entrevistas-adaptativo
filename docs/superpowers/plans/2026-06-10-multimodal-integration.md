@@ -242,8 +242,11 @@ export function createTtsController(options: TtsOptions = {}): TtsController {
 }
 ```
 
-Nota: si el `onEnd` doble (end + error tras cancel) molestara en la practica, NO es el caso
-aqui: ambos solo ponen `speaking=false` y el callback del consumidor es idempotente.
+Nota (ajustada tras el review de calidad): la implementacion final agrega una referencia
+`current` a la utterance en curso, con guard `utterance !== current` en los handlers. Cubre
+dos defectos reales: el bug de GC de Chrome (utterance sin referencia pierde su onend) y la
+carrera donde el onerror tardio de una utterance cancelada apagaria el speaking de la nueva.
+`cancel()` y un `speak()` nuevo liberan el habla en curso avisando con onEnd.
 
 - [ ] **Step 4: Exportar en `index.ts`**
 
