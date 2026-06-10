@@ -180,7 +180,7 @@ export function Ranking() {
           </p>
         </div>
 
-        {/* TODO: navegar a /ranking/global cuando exista la ruta */}
+        {/* TODO: navegar a /ranking/global cuando exista la ruta (issue #50) */}
         <button className="ranking-page__global-btn" disabled>
           Ver Ranking Global
         </button>

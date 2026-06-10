@@ -2,6 +2,7 @@
 // observador del peer-mock, con timer EN VIVO simulado) con datos inline,
 // como permite el enunciado del curso. La sala real con WebRTC y roles es de
 // la fase F3, ver issue #52. Pantalla original de Max (PR #48).
+
 import { useState, useEffect, useRef } from 'react';
 import './ObserverRoom.css';
 

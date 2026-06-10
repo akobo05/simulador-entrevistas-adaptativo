@@ -511,7 +511,9 @@ a:hover {
    Anula animaciones y transiciones de TODA la app (incluidas
    las pantallas mock) cuando el sistema operativo lo solicita.
    Verificado: ningun componente depende de onAnimationEnd ni
-   onTransitionEnd para limpiar estado en React. */
+   onTransitionEnd para limpiar estado en React. El movimiento
+   dirigido por JS (orbe del Home, scroll suave) queda para el
+   issue #53. */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

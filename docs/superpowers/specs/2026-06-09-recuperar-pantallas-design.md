@@ -21,7 +21,7 @@ quedaron fuera de `main` (solo como stubs "proximamente" en el sidebar), a pesar
 
 - Las 3 pantallas entran a `main` como **rutas reales con datos simulados** (mock inline,
   estilo actual de Max). **No se construye backend nuevo** en este slice.
-- Todo lo que requiera backend nuevo queda registrado como **issues de F2** en GitHub.
+- Todo lo que requiera backend nuevo queda registrado como **issues de fases futuras** (F4 gamificacion, F2 personalizacion, F3 peer-mock) en GitHub.
 - Orden global: este slice (A) primero; el cableado multimodal (B) despues.
 
 ## 3. Diseño
@@ -55,7 +55,7 @@ Adaptaciones permitidas (minimas, verificadas necesarias):
 2. **Contraste**: revisar los colores fijos de las 3 paginas contra WCAG AA y oscurecer
    los que fallen (mismo criterio aplicado en el PR #49). Solo tocar lo que falle.
 3. **Comentario de cabecera** en cada `.tsx`: datos simulados a proposito; el backend
-   real es F2 (referenciar el issue correspondiente).
+   real es de una fase futura (referenciar el issue correspondiente).
 4. **Landmark `<main>`**: la convencion de main es que cada pagina aporta su propio
    `<main>` (MainLayout renderiza un `div`). `MyProgress` ya lo trae; en `Ranking` el
    `<div className="ranking-page">` raiz pasa a `<main>`, y en `ObserverRoom` el
@@ -80,7 +80,7 @@ Verificado que NO hace falta adaptar:
 - **`App.tsx`**: 3 rutas lazy nuevas. `/observer` va junto a `/interview/:sessionId` en el
   grupo full-screen.
 - **`MainLayout.tsx`**: `FULLSCREEN_ROUTES = ['/interview', '/observer']`. La deteccion
-  por `startsWith` es intencional: deja lista la subruta dinamica de F2 (`/observer/:id`)
+  por `startsWith` es intencional: deja lista la subruta dinamica de F3 (`/observer/:id`)
   sin tocar el mecanismo.
 - **`Sidebar.tsx`**: "Mi progreso" (`/progress`, icono TrendingUp) y "Ranking"
   (`/ranking`, icono Trophy) pasan de `DEFERRED_ITEMS` a `REAL_NAV_ITEMS`; se agrega
@@ -107,13 +107,13 @@ animaciones. Se agrega la regla global estandar:
 
 Beneficia a toda la app (RNF08, perfil SK7) y es el momento natural de incluirla.
 
-### 3.5 Issues F2 (se crean en GitHub al INICIO del slice, para poder enlazarlos)
+### 3.5 Issues de fases futuras (se crean al INICIO del slice, para poder enlazarlos)
 
-1. **[F2] Backend de gamificacion**: ranking/ligas/badges reales detras de `/ranking`.
-2. **[F2] Backend de progreso longitudinal**: historial por competencia real detras de
-   `/progress` (persistencia multi-sesion).
-3. **[F2] Sala peer-mock real**: WebRTC + roles + comentarios anclados detras de
-   `/observer`.
+1. **[F4] Backend de gamificacion** (issue #50): ranking/ligas/badges reales detras de `/ranking`.
+2. **[F2] Backend de progreso longitudinal** (issue #51): historial por competencia real
+   detras de `/progress` (persistencia multi-sesion).
+3. **[F3] Sala peer-mock real** (issue #52): WebRTC + roles + comentarios anclados detras
+   de `/observer`.
 
 Cada pantalla mock enlaza su issue en el comentario de cabecera.
 
@@ -138,7 +138,7 @@ Cada pantalla mock enlaza su issue en el comentario de cabecera.
 
 ## 5. Fuera de alcance (explicito)
 
-- Ningun endpoint ni persistencia nueva (eso son los issues F2).
+- Ningun endpoint ni persistencia nueva (eso son los issues #50/#51/#52).
 - Nada de WebRTC real.
 - El cableado multimodal (STT/camara/aura/TTS) es el Slice B.
 - No se tocan `InterviewPage`, `PlanPage`, `SetupPage` ni el backend.
