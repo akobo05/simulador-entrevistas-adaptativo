@@ -103,7 +103,7 @@ function DeltaBadge({ delta }: { delta: number }) {
     );
   return (
     <span className="ranking__delta ranking__delta--down">
-      <TrendingDown size={11} /> {delta}
+      <TrendingDown size={11} /> {Math.abs(delta)}
     </span>
   );
 }

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink } from 'react-router-dom';
 import { House, Plus, TrendingUp, Trophy, Eye, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import './Sidebar.css';
 
@@ -17,7 +17,6 @@ const PLACEHOLDER_USER = { initials: 'W' };
 
 export function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
-  const location = useLocation();
 
   return (
     <aside className={`sidebar${collapsed ? ' sidebar--collapsed' : ''}`}>
@@ -29,23 +28,21 @@ export function Sidebar() {
 
       {/* Nav */}
       <nav className="sidebar__nav" aria-label="Navegacion principal">
-        {NAV_ITEMS.map(({ to, icon: Icon, label }) => {
-          const isActive =
-            to === '/' ? location.pathname === '/' : location.pathname.startsWith(to);
-
-          return (
-            <NavLink
-              key={to}
-              to={to}
-              className={`sidebar__item${isActive ? ' sidebar__item--active' : ''}`}
-              aria-current={isActive ? 'page' : undefined}
-              title={collapsed ? label : undefined}
-            >
-              <Icon size={18} className="sidebar__item-icon" />
-              {!collapsed && <span className="sidebar__item-label">{label}</span>}
-            </NavLink>
-          );
-        })}
+        {/* NavLink resuelve solo el estado activo (por segmentos, no por
+            prefijo crudo) y pone aria-current="page" nativamente; `end` evita
+            que "/" quede activo en todas las rutas. */}
+        {NAV_ITEMS.map(({ to, icon: Icon, label }) => (
+          <NavLink
+            key={to}
+            to={to}
+            end={to === '/'}
+            className={({ isActive }) => `sidebar__item${isActive ? ' sidebar__item--active' : ''}`}
+            title={collapsed ? label : undefined}
+          >
+            <Icon size={18} className="sidebar__item-icon" />
+            {!collapsed && <span className="sidebar__item-label">{label}</span>}
+          </NavLink>
+        ))}
       </nav>
 
       {/* Footer: avatar + collapse */}
