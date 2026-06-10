@@ -75,11 +75,14 @@ Verificado que NO hace falta adaptar:
 
 - **`App.tsx`**: 3 rutas lazy nuevas. `/observer` va junto a `/interview/:sessionId` en el
   grupo full-screen.
-- **`MainLayout.tsx`**: `FULLSCREEN_ROUTES = ['/interview', '/observer']`.
+- **`MainLayout.tsx`**: `FULLSCREEN_ROUTES = ['/interview', '/observer']`. La deteccion
+  por `startsWith` es intencional: deja lista la subruta dinamica de F2 (`/observer/:id`)
+  sin tocar el mecanismo.
 - **`Sidebar.tsx`**: "Mi progreso" (`/progress`, icono TrendingUp) y "Ranking"
   (`/ranking`, icono Trophy) pasan de `DEFERRED_ITEMS` a `REAL_NAV_ITEMS`; se agrega
   "Sala de observador" (`/observer`, icono `Eye`). `DEFERRED_ITEMS` queda vacio y se
-  elimina junto con su bloque de render y el CSS `.sidebar__item-soon` si queda huerfano.
+  elimina junto con su bloque de render y el CSS `.sidebar__item-soon` (verificado: el
+  patron "proximamente" solo se usa en Sidebar; eliminarlo es seguro y completo).
 
 ### 3.4 Mejora transversal de accesibilidad
 
@@ -113,8 +116,18 @@ Cada pantalla mock enlaza su issue en el comentario de cabecera.
 ## 4. Pruebas
 
 - **1 test de render por pagina** (convencion de main: paginas con logica llevan test;
-  para mocks basta el render): la pagina monta y muestra su heading principal.
-  `ObserverRoom` usa `setInterval` para el timer; el test solo asierta el render inicial.
+  para mocks basta el render): la pagina monta y muestra su heading principal. Los tests
+  importan el componente DIRECTO (como `PlanPage.test.tsx`), sin pasar por el lazy de
+  `App.tsx`, asi que no necesitan `Suspense` ni queries asincronas.
+- `ObserverRoom` corre dos `setInterval` (timer 1s, toggle speaking 4s); ambos tienen
+  cleanup en su `useEffect` y el `afterEach(cleanup())` de `test-setup.ts` desmonta entre
+  tests, asi que el render test no filtra timers. El timer dinamico se CONSERVA (decision:
+  es parte del efecto "EN VIVO" de la demo). Si apareciera un warning de `act()`, usar
+  `vi.useFakeTimers()` en ese test.
+- **Actualizar `Sidebar.test.tsx`** (hoy asierta que "Ranking" tiene ancestro
+  `aria-disabled="true"`, lo que dejara de ser cierto): asertar que "Mi progreso",
+  "Ranking" y "Sala de observador" son links con `href` a `/progress`, `/ranking` y
+  `/observer`, y eliminar la asercion de item deshabilitado.
 - Suite completa, lint, typecheck y build verdes.
 - Lighthouse CI no audita rutas nuevas (audita el `staticDistDir` del SPA), pero la
   revision de contraste del punto 3.2.2 se hace igual.
