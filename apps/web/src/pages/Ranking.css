@@ -1,0 +1,442 @@
+/* ══════════════════════════════════════════════════════════
+   RANKING PAGE — Warachikuy
+   Colores desde variables de global.css
+   ══════════════════════════════════════════════════════════ */
+
+/* ── Page shell ──────────────────────────────────────────── */
+.ranking-page {
+  padding: var(--space-6) var(--space-6) var(--space-8);
+  max-width: 1100px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-6);
+}
+
+/* ── Header ──────────────────────────────────────────────── */
+.ranking-page__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.ranking-page__title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: var(--text);
+  margin-bottom: var(--space-1);
+}
+
+.ranking-page__title-icon {
+  color: var(--accent);
+}
+
+.ranking-page__subtitle {
+  font-size: 14px;
+  color: var(--text-muted);
+}
+
+.ranking-page__global-btn {
+  padding: 10px var(--space-5);
+  border: 1px solid var(--border-solid);
+  border-radius: var(--radius-full);
+  background: var(--bg2);
+  color: var(--text-muted);
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: not-allowed;     /* TODO: habilitar cuando exista /ranking/global */
+  opacity: 0.6;
+  transition: all var(--transition-fast);
+  flex-shrink: 0;
+}
+
+/* Quitar :hover mientras esté disabled */
+.ranking-page__global-btn:not(:disabled):hover {
+  background: #EFF6FF;
+  color: var(--accent);
+  border-color: #BFDBFE;
+}
+
+/* ── Body: dos columnas ──────────────────────────────────── */
+.ranking-page__body {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: var(--space-6);
+  align-items: start;
+}
+
+/* ── Section titles ──────────────────────────────────────── */
+.ranking-page__section-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: var(--space-3);
+}
+
+/* ══════════════════════════════════════════════════════════
+   TABS
+   ══════════════════════════════════════════════════════════ */
+.ranking__tabs {
+  display: flex;
+  background: #F1F5F9;
+  border-radius: var(--radius-md);
+  padding: 4px;
+  gap: 2px;
+  margin-bottom: var(--space-3);
+  width: fit-content;
+}
+
+.ranking__tab {
+  padding: 7px var(--space-4);
+  border: none;
+  border-radius: calc(var(--radius-md) - 2px);
+  background: transparent;
+  color: var(--text-muted);
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  border-bottom: 2px solid transparent;
+}
+
+.ranking__tab:hover:not(.ranking__tab--active) {
+  color: var(--text);
+  background: rgba(255,255,255,0.6);
+}
+
+.ranking__tab--active {
+  background: #FFFFFF;
+  color: #2563EB;
+  border-bottom-color: #2563EB;
+  box-shadow: var(--shadow-sm);
+}
+
+/* ══════════════════════════════════════════════════════════
+   LISTA DE USUARIOS
+   ══════════════════════════════════════════════════════════ */
+.ranking__list-card {
+  overflow: hidden;    /* recorta el sticky */
+  position: relative;
+}
+
+.ranking__list {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Fila base ───────────────────────────────────────────── */
+.ranking__row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 14px var(--space-4);
+  background: #FFFFFF;
+  border-bottom: 1px solid #F1F5F9;
+  transition: background var(--transition-fast);
+
+  /* Animación staggered de entrada */
+  animation: rowFadeIn 0.35s ease both;
+}
+
+@keyframes rowFadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0);   }
+}
+
+.ranking__row:last-child {
+  border-bottom: none;
+}
+
+.ranking__row:hover {
+  background: #F8FAFC;
+}
+
+/* ── Top 3 ───────────────────────────────────────────────── */
+.ranking__row--top3 {
+  background: #FAFBFF;
+  border-left: 3px solid #2563EB;
+}
+
+.ranking__row--top3:hover {
+  background: #EFF6FF;
+}
+
+/* ── Usuario actual ──────────────────────────────────────── */
+.ranking__row--current {
+  background: #EFF6FF;
+  border: 1px solid #BFDBFE;
+  border-radius: var(--radius-sm);
+  margin: 2px var(--space-2);
+}
+
+.ranking__row--current:hover {
+  background: #DBEAFE;
+}
+
+/* ── Sticky bottom ───────────────────────────────────────── */
+.ranking__sticky {
+  position: sticky;
+  bottom: 0;
+  background: #FFF7ED;
+  border-top: 2px solid #F59E0B;
+  padding: 2px 0 0;
+}
+
+.ranking__sticky .ranking__row {
+  background: #FFF7ED;
+  animation: none;
+}
+
+.ranking__sticky .ranking__row:hover {
+  background: #FEF3C7;
+}
+
+/* ── Medalla / posición ──────────────────────────────────── */
+.ranking__medal {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.ranking__medal--gold   { background: #FEF9C3; color: #854D0E; }
+.ranking__medal--silver { background: #F1F5F9; color: #475569; }
+.ranking__medal--bronze { background: #FEF3C7; color: #92400E; }
+.ranking__medal--default {
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+/* ── Avatar ──────────────────────────────────────────────── */
+.ranking__avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #DBEAFE;
+  color: #1D4ED8;
+  font-family: var(--font-display);
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* ── Info ────────────────────────────────────────────────── */
+.ranking__info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.ranking__name {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ranking__sessions {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* ── Score col ───────────────────────────────────────────── */
+.ranking__score-col {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 3px;
+  flex-shrink: 0;
+}
+
+.ranking__score {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--text);
+}
+
+/* ── Delta badge ─────────────────────────────────────────── */
+.ranking__delta {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 6px;
+  border-radius: var(--radius-full);
+  font-size: 11px;
+  font-weight: 700;
+  font-family: var(--font-display);
+}
+
+.ranking__delta--up {
+  background: #DCFCE7;
+  color: #16A34A;
+}
+
+.ranking__delta--down {
+  background: #FEE2E2;
+  color: #DC2626;
+}
+
+.ranking__delta--neutral {
+  background: #F1F5F9;
+  color: var(--text-muted);
+}
+
+/* ══════════════════════════════════════════════════════════
+   RETOS GRUPALES
+   ══════════════════════════════════════════════════════════ */
+.ranking__challenges {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.ranking__challenge-card {
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+/* ── Header del reto ─────────────────────────────────────── */
+.challenge__header {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+}
+
+.challenge__icon {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-sm);
+  background: #EFF6FF;
+  color: var(--accent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: 1px solid #BFDBFE;
+}
+
+.challenge__meta {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.challenge__title {
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.challenge__members {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+/* ── Descripción ─────────────────────────────────────────── */
+.challenge__desc {
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+/* ── Progress row ────────────────────────────────────────── */
+.challenge__progress-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.challenge__bar-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.challenge__bar-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-muted);
+  font-family: var(--font-display);
+}
+
+.challenge__bar-label span {
+  color: var(--accent);
+}
+
+.challenge__bar-track {
+  height: 6px;
+  background: #E2E8F0;
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.challenge__bar-fill {
+  height: 100%;
+  background: #2563EB;
+  border-radius: var(--radius-full);
+  transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ══════════════════════════════════════════════════════════
+   RESPONSIVE
+   ══════════════════════════════════════════════════════════ */
+@media (max-width: 900px) {
+  .ranking-page__body {
+    grid-template-columns: 1fr;
+  }
+
+  .ranking-page__right {
+    order: -1;     /* retos arriba en móvil */
+  }
+}
+
+@media (max-width: 480px) {
+  .ranking-page {
+    padding: var(--space-4);
+  }
+
+  .ranking__row {
+    padding: 12px var(--space-3);
+  }
+}
