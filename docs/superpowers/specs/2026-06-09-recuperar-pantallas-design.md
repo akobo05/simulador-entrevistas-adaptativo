@@ -56,6 +56,10 @@ Adaptaciones permitidas (minimas, verificadas necesarias):
    los que fallen (mismo criterio aplicado en el PR #49). Solo tocar lo que falle.
 3. **Comentario de cabecera** en cada `.tsx`: datos simulados a proposito; el backend
    real es F2 (referenciar el issue correspondiente).
+4. **Landmark `<main>`**: la convencion de main es que cada pagina aporta su propio
+   `<main>` (MainLayout renderiza un `div`). `MyProgress` ya lo trae; en `Ranking` el
+   `<div className="ranking-page">` raiz pasa a `<main>`, y en `ObserverRoom` el
+   `<div className="obs-body">` pasa a `<main>` (el CSS usa clases, no cambia nada).
 
 Verificado que NO hace falta adaptar:
 
