@@ -336,7 +336,7 @@
 }
 
 .mp-path-node--done .mp-path-node__sub {
-  color: #1D4ED8;
+  color: var(--accent-hover);
 }
 
 /* Active */
@@ -351,11 +351,11 @@
 }
 
 .mp-path-node--active .mp-path-node__label {
-  color: #1D4ED8;
+  color: var(--accent-hover);
 }
 
 .mp-path-node--active .mp-path-node__sub {
-  color: #1D4ED8;
+  color: var(--accent-hover);
 }
 
 .mp-path-node__pulse {
@@ -392,6 +392,8 @@
 }
 
 .mp-path-node--locked .mp-path-node__label {
+  /* Texto a tono pleno: el opacity 0.7 del nodo bloqueado lo compone a un
+     gris que pasa AA; si se quita ese opacity hay que re-evaluar el color */
   color: #0F172A;
 }
 
@@ -674,7 +676,7 @@
   box-shadow: 0 0 0 3px rgba(37,99,235,0.08);
 }
 
-.mp-chat-input::placeholder { color: #5E6E82; }
+.mp-chat-input::placeholder { color: var(--text-muted); }
 
 .mp-chat-send {
   width: 36px;

@@ -298,12 +298,12 @@
 
 .ranking__delta--up {
   background: #DCFCE7;
-  color: #15803D;
+  color: var(--color-success);
 }
 
 .ranking__delta--down {
   background: #FEE2E2;
-  color: #B91C1C;
+  color: var(--color-danger);
 }
 
 .ranking__delta--neutral {

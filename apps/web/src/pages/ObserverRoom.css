@@ -543,7 +543,7 @@
 }
 
 .obs-tab:hover {
-  color: #94A3B8;
+  color: #CBD5E1;
   background: rgba(255,255,255,0.02);
 }
 
@@ -965,7 +965,7 @@
 
 .obs-anchor-modal__cancel:hover {
   border-color: rgba(255,255,255,0.15);
-  color: #94A3B8;
+  color: #CBD5E1;
 }
 
 .obs-anchor-modal__save {
