@@ -165,6 +165,8 @@ describe('InterviewPage', () => {
     vi.spyOn(apiClient, 'endSession').mockResolvedValue({ sessionId: 's1', planId: 'p1' });
     socketSpy.mockReturnValue(fakeSocket({ closing: true }));
     renderPage();
+    // Al entrar en closing el mic se detiene solo
+    expect(voiceStop).toHaveBeenCalled();
     fireEvent.click(screen.getByRole('button', { name: /ver mi plan/i }));
     await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/plan/s1'));
   });
@@ -185,6 +187,8 @@ describe('InterviewPage', () => {
     renderPage();
     expect(screen.getByTestId('ip-terminal')).toHaveTextContent('Sesion expirada');
     expect(screen.queryByRole('textbox')).toBeNull();
+    // La pregunta no puede seguir sonando sobre la pantalla terminal
+    expect(ttsCancel).toHaveBeenCalled();
   });
 
   it('ante una desconexion inesperada muestra aviso y oculta el form', () => {
@@ -217,6 +221,35 @@ describe('InterviewPage', () => {
       </MemoryRouter>,
     );
     expect(ttsSpeak).toHaveBeenCalledOnce();
+  });
+
+  it('un mensaje nuevo del candidato no dispara el TTS', () => {
+    const items = [interviewerItem('m1', 'Pregunta')];
+    socketSpy.mockReturnValue(fakeSocket({ items }));
+    const { rerender } = renderPage();
+    expect(ttsSpeak).toHaveBeenCalledOnce();
+    // Llega la respuesta del candidato: array nuevo, mismo conteo interviewer
+    socketSpy.mockReturnValue(
+      fakeSocket({
+        items: [...items, { id: 'c1', role: 'candidate', text: 'mi r', timestamp: 2 }],
+      }),
+    );
+    rerender(
+      <MemoryRouter>
+        <SessionProvider>
+          <InterviewPage />
+        </SessionProvider>
+      </MemoryRouter>,
+    );
+    expect(ttsSpeak).toHaveBeenCalledOnce();
+  });
+
+  it('el pipeline recibe sessionId, permiso de camara y el sendMetrics del socket', () => {
+    const sock = fakeSocket();
+    socketSpy.mockReturnValue(sock);
+    const auraSpy = vi.spyOn(auraMod, 'useAuraPipeline');
+    renderPage();
+    expect(auraSpy).toHaveBeenLastCalledWith('s1', true, sock.sendMetrics);
   });
 
   it('con historial de golpe (reconexion) habla solo el ultimo mensaje', () => {

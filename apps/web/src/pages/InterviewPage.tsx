@@ -102,7 +102,11 @@ export function InterviewPage() {
 
   useEffect(() => {
     if (socket.closing || ended) voice.stop();
-    // voice.stop es estable; el efecto solo debe reaccionar al cierre
+    // En estado terminal tampoco puede seguir sonando la pregunta (en closing
+    // si: el mensaje de cierre se habla). El stop/cancel son idempotentes y el
+    // efecto solo debe reaccionar a los booleanos de cierre, no a la identidad
+    // por-render de voice.stop.
+    if (ended) ttsRef.current?.cancel();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [socket.closing, ended]);
 
