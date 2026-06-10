@@ -44,7 +44,7 @@ export function PermissionGate({ onReady }: PermissionGateProps) {
         navegador y <strong>nunca sale de tu equipo</strong>: solo viajan métricas numéricas.
       </p>
       <div className="pg-actions">
-        <Button onClick={() => void activate()} disabled={requesting}>
+        <Button onClick={() => void activate()} loading={requesting}>
           {requesting ? 'Solicitando permisos...' : 'Activar micrófono y cámara'}
         </Button>
         <button

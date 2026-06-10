@@ -31,6 +31,30 @@ describe('PermissionGate', () => {
     await waitFor(() => expect(onReady).toHaveBeenCalledWith({ mic: true, camera: true }));
     // Los streams solo se pedian para el permiso: se detienen al instante
     expect(stopTrack).toHaveBeenCalledTimes(2);
+    // Dos solicitudes SEPARADAS y en orden: primero el audio, despues el video
+    const gum = navigator.mediaDevices.getUserMedia as ReturnType<typeof vi.fn>;
+    expect(gum).toHaveBeenNthCalledWith(1, { audio: true });
+    expect(gum).toHaveBeenNthCalledWith(2, { video: true });
+  });
+
+  it('mic denegado pero camara ok -> el caso simetrico tambien degrada bien', async () => {
+    mockGetUserMedia(['fail', 'ok']);
+    const onReady = vi.fn();
+    render(<PermissionGate onReady={onReady} />);
+    fireEvent.click(screen.getByRole('button', { name: /activar micrófono y cámara/i }));
+    await waitFor(() => expect(onReady).toHaveBeenCalledWith({ mic: false, camera: true }));
+  });
+
+  it('mientras solicita, ambos botones quedan deshabilitados', () => {
+    // getUserMedia que nunca resuelve: el gate queda en estado "solicitando"
+    Object.defineProperty(navigator, 'mediaDevices', {
+      value: { getUserMedia: vi.fn(() => new Promise(() => undefined)) },
+      configurable: true,
+    });
+    render(<PermissionGate onReady={vi.fn()} />);
+    fireEvent.click(screen.getByRole('button', { name: /activar micrófono y cámara/i }));
+    expect(screen.getByRole('button', { name: /solicitando permisos/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /continuar sin activar/i })).toBeDisabled();
   });
 
   it('mic ok pero camara denegada -> degradacion parcial', async () => {
