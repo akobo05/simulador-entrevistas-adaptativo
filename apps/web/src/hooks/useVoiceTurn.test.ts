@@ -72,6 +72,32 @@ describe('useVoiceTurn', () => {
     expect(result.current.micStatus).toBe('unsupported');
   });
 
+  it('stop no borra los estados terminales (denied queda pegajoso)', () => {
+    const { result } = renderHook(() => useVoiceTurn('s1', vi.fn(), vi.fn()));
+    act(() => result.current.start());
+    act(() => capturedOnError?.('not-allowed'));
+    act(() => result.current.stop());
+    expect(result.current.micStatus).toBe('denied');
+  });
+
+  it('un transcript tardio despues de stop se ignora', () => {
+    const onFinal = vi.fn();
+    const onSpeechStart = vi.fn();
+    const { result } = renderHook(() => useVoiceTurn('s1', onFinal, onSpeechStart));
+    act(() => result.current.start());
+    act(() => result.current.stop());
+    act(() => capturedOnTranscript(transcript('tardio', true)));
+    expect(onSpeechStart).not.toHaveBeenCalled();
+    expect(onFinal).not.toHaveBeenCalled();
+  });
+
+  it('start sin sessionId no arranca (la sesion aun no existe)', () => {
+    const { result } = renderHook(() => useVoiceTurn('', vi.fn(), vi.fn()));
+    act(() => result.current.start());
+    expect(startMock).not.toHaveBeenCalled();
+    expect(result.current.micStatus).toBe('idle');
+  });
+
   it('stop detiene el STT y al desmontar tambien se detiene', () => {
     const { result, unmount } = renderHook(() => useVoiceTurn('s1', vi.fn(), vi.fn()));
     act(() => result.current.start());

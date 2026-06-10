@@ -28,12 +28,20 @@ export function useVoiceTurn(
   onSpeechStartRef.current = onSpeechStart;
   // true mientras hay un turno hablado en curso (ya se aviso onSpeechStart)
   const inTurnRef = useRef(false);
+  // true entre start() y stop(): la Web Speech API puede entregar un resultado
+  // final DESPUES de stop(), y ese transcript tardio no debe disparar barge-in
+  // ni enviarse como respuesta
+  const activeRef = useRef(false);
 
+  // OJO: el controlador captura sessionId en el PRIMER start() y no se recrea.
+  // En esta app la pagina vive atada a una sesion (remonta al cambiar), y
+  // start() no corre sin sessionId, asi que el invariante se sostiene.
   function ensureController(): SttController {
     if (controllerRef.current === null) {
       controllerRef.current = createSttController(
         sessionId,
         (t) => {
+          if (!activeRef.current) return; // resultado tardio tras stop(): se ignora
           if (!inTurnRef.current) {
             inTurnRef.current = true;
             onSpeechStartRef.current();
@@ -46,7 +54,11 @@ export function useVoiceTurn(
         {
           // Errores terminales (not-allowed, audio-capture, service-not-allowed,
           // max-restart-attempts-exceeded): el mic queda fuera, cae el fallback tecleado
-          onError: () => setMicStatus('denied'),
+          onError: () => {
+            activeRef.current = false;
+            inTurnRef.current = false;
+            setMicStatus('denied');
+          },
         },
       );
     }
@@ -54,8 +66,10 @@ export function useVoiceTurn(
   }
 
   function start(): void {
+    if (!sessionId) return; // sin sesion no hay transcript valido que construir
     try {
       ensureController().start();
+      activeRef.current = true;
       setMicStatus('listening');
     } catch {
       // createSttController.start lanza sincronicamente si no hay Web Speech API
@@ -65,8 +79,11 @@ export function useVoiceTurn(
 
   function stop(): void {
     controllerRef.current?.stop();
+    activeRef.current = false;
     inTurnRef.current = false;
-    setMicStatus('idle');
+    // Los estados terminales (denied/unsupported) son pegajosos: un stop()
+    // programatico (cierre de sesion) no debe resucitar el boton del mic
+    setMicStatus((s) => (s === 'listening' ? 'idle' : s));
   }
 
   // Al desmontar la sala el STT no puede quedar escuchando
