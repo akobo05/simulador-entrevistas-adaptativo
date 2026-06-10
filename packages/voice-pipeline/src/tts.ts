@@ -1,0 +1,74 @@
+export interface TtsOptions {
+  /** Locale BCP-47 de la utterance. Default: 'es-PE'. */
+  lang?: string;
+  onStart?: () => void;
+  onEnd?: () => void;
+  /** Navegador sin speechSynthesis: la app sigue solo con texto. */
+  onUnsupported?: () => void;
+}
+
+export interface TtsController {
+  /** Cancela lo que este sonando y habla este texto. */
+  speak: (text: string) => void;
+  cancel: () => void;
+  readonly speaking: boolean;
+}
+
+export function createTtsController(options: TtsOptions = {}): TtsController {
+  const lang = options.lang ?? 'es-PE';
+  const synth = typeof window !== 'undefined' ? window.speechSynthesis : undefined;
+  let speaking = false;
+  let voice: SpeechSynthesisVoice | null = null;
+
+  // Eleccion de voz: primera cuyo lang empiece por 'es'. Chrome carga las voces
+  // de forma asincrona: si aun no estan, se reintenta una sola vez al evento
+  // voiceschanged. Si nunca aparece una voz es-*, la utterance usa la default.
+  function pickVoice(): void {
+    if (!synth) return;
+    voice = synth.getVoices().find((v) => v.lang.toLowerCase().startsWith('es')) ?? null;
+  }
+  if (synth) {
+    pickVoice();
+    if (!voice) synth.addEventListener('voiceschanged', pickVoice, { once: true });
+  }
+
+  function speak(text: string): void {
+    if (!synth) {
+      options.onUnsupported?.();
+      return;
+    }
+    // Cancela la pregunta anterior para no solapar audios entre turnos
+    synth.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = lang;
+    if (voice) utterance.voice = voice;
+    utterance.onstart = () => {
+      speaking = true;
+      options.onStart?.();
+    };
+    utterance.onend = () => {
+      speaking = false;
+      options.onEnd?.();
+    };
+    // Al cancelar (barge-in) el navegador dispara error, no end: tambien libera
+    utterance.onerror = () => {
+      speaking = false;
+      options.onEnd?.();
+    };
+    synth.speak(utterance);
+  }
+
+  function cancel(): void {
+    if (!synth) return;
+    synth.cancel();
+    speaking = false;
+  }
+
+  return {
+    speak,
+    cancel,
+    get speaking() {
+      return speaking;
+    },
+  };
+}
