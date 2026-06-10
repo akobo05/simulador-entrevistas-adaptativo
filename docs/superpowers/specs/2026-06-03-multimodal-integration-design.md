@@ -34,6 +34,10 @@ En la web ya existe y SE REUSA (no se construye):
   `speaking={false}` (linea 122): ahi se enchufa lo real.
 - `@warachikuy/voice-pipeline` ya esta declarado como dependencia en el package.json de
   la web (quedo del andamiaje), aunque ningun fuente lo importa todavia.
+- Detalle de empaquetado: el `exports` del paquete resuelve a `dist/` en build, pero el
+  worker se crea con `new URL('./metrics-worker.ts', import.meta.url)`, que en dist
+  apunta a un `.ts` inexistente. La web lo consume via alias de Vite al codigo fuente
+  (`resolve.alias` en `vite.config.ts`) para que Vite empaquete el worker en dev y build.
 
 Lo que falta y cubre este diseno:
 
@@ -103,7 +107,11 @@ interface AuraPipeline {
   feedTranscript: (t: CandidateTranscript) => void;  // empuja STT al tracker de habla
   cameraStatus: 'off' | 'starting' | 'on' | 'denied' | 'failed';
 }
-function useAuraPipeline(sessionId: string, onSnapshot: (s: AuraState) => void): AuraPipeline;
+function useAuraPipeline(
+  sessionId: string,
+  cameraEnabled: boolean, // viene del PermissionGate: sin permiso no se pide la camara
+  onSnapshot: (s: AuraState) => void,
+): AuraPipeline;
 ```
 
 Responsabilidades:
