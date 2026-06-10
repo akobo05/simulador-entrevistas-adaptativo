@@ -1,18 +1,15 @@
 import { useState } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { House, Plus, TrendingUp, Trophy, ChevronsLeft, ChevronsRight } from 'lucide-react';
+import { House, Plus, TrendingUp, Trophy, Eye, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import './Sidebar.css';
 
 // Rutas reales activas en esta version
 const REAL_NAV_ITEMS = [
   { to: '/', icon: House, label: 'Inicio' },
   { to: '/setup', icon: Plus, label: 'Nueva sesion' },
-];
-
-// Items F2 diferidos — no navegan, muestran "proximamente"
-const DEFERRED_ITEMS = [
-  { icon: TrendingUp, label: 'Mi progreso' },
-  { icon: Trophy, label: 'Ranking' },
+  { to: '/progress', icon: TrendingUp, label: 'Mi progreso' },
+  { to: '/ranking', icon: Trophy, label: 'Ranking' },
+  { to: '/observer', icon: Eye, label: 'Sala de observador' },
 ];
 
 // Placeholder neutro: no usa datos de persona real
@@ -50,25 +47,6 @@ export function Sidebar() {
             </NavLink>
           );
         })}
-
-        {/* Items diferidos F2 — labels no interactivos (no son botones ni links):
-            no van en el tab order, solo anuncian la feature futura. */}
-        {DEFERRED_ITEMS.map(({ icon: Icon, label }) => (
-          <span
-            key={label}
-            className="sidebar__item sidebar__item--disabled"
-            aria-disabled="true"
-            title={collapsed ? label : undefined}
-          >
-            <Icon size={18} className="sidebar__item-icon" />
-            {!collapsed && (
-              <>
-                <span className="sidebar__item-label">{label}</span>
-                <span className="sidebar__item-soon">proximamente</span>
-              </>
-            )}
-          </span>
-        ))}
       </nav>
 
       {/* Footer: avatar + collapse */}

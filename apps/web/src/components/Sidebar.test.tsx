@@ -3,7 +3,7 @@ import { test, expect } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import { Sidebar } from './Sidebar';
 
-test('Sidebar enlaza a rutas reales y marca F2 como proximamente', () => {
+test('Sidebar enlaza a todas las rutas reales sin items diferidos', () => {
   render(
     <MemoryRouter>
       <Sidebar />
@@ -11,6 +11,12 @@ test('Sidebar enlaza a rutas reales y marca F2 como proximamente', () => {
   );
   expect(screen.getByRole('link', { name: /inicio/i })).toHaveAttribute('href', '/');
   expect(screen.getByRole('link', { name: /nueva sesion/i })).toHaveAttribute('href', '/setup');
-  const ranking = screen.getByText(/ranking/i).closest('[aria-disabled="true"]');
-  expect(ranking).toBeTruthy();
+  expect(screen.getByRole('link', { name: /mi progreso/i })).toHaveAttribute('href', '/progress');
+  expect(screen.getByRole('link', { name: /ranking/i })).toHaveAttribute('href', '/ranking');
+  expect(screen.getByRole('link', { name: /sala de observador/i })).toHaveAttribute(
+    'href',
+    '/observer',
+  );
+  // El patron "proximamente" desaparecio por completo
+  expect(screen.queryByText(/proximamente/i)).toBeNull();
 });
