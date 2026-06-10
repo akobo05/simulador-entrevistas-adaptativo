@@ -518,6 +518,14 @@ a:hover {
   *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
+    animation-delay: 0s !important;
     transition-duration: 0.01ms !important;
+    transition-delay: 0s !important;
+  }
+
+  /* El scroll-behavior smooth (html y contenedores) tambien es movimiento */
+  html,
+  * {
+    scroll-behavior: auto !important;
   }
 }
