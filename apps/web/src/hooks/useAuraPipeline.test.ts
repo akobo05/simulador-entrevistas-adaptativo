@@ -40,7 +40,10 @@ function mockGetUserMedia(impl: () => Promise<MediaStream>) {
   });
 }
 function fakeStream(): MediaStream {
-  return { getTracks: () => [{ stop: stopTrack }] } as unknown as MediaStream;
+  // El track expone addEventListener porque el hook escucha su evento 'ended'
+  return {
+    getTracks: () => [{ stop: stopTrack, addEventListener: vi.fn() }],
+  } as unknown as MediaStream;
 }
 
 describe('useAuraPipeline', () => {
@@ -142,6 +145,65 @@ describe('useAuraPipeline', () => {
     });
     const last = onSnapshot.mock.calls.at(-1)?.[0] as { metrics: AuraMetric[] };
     expect(last.metrics).toEqual(expect.arrayContaining([speechMetric, eyeMetric]));
+  });
+
+  it('si el worker no inicializa -> failed y se libera la camara', async () => {
+    mockGetUserMedia(() => Promise.resolve(fakeStream()));
+    workerApi.initialize.mockRejectedValueOnce(new Error('model_load_failed'));
+    const { result } = renderHook(() => useAuraPipeline('s1', true, vi.fn()));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(result.current.cameraStatus).toBe('failed');
+    expect(stopTrack).toHaveBeenCalled();
+  });
+
+  it('al apagar la camara dejan de emitirse las metricas de ojo', async () => {
+    mockGetUserMedia(() => Promise.resolve(fakeStream()));
+    trackerMock.getMetrics.mockReturnValue([speechMetric]);
+    const realCreate = document.createElement.bind(document);
+    vi.spyOn(document, 'createElement').mockImplementation((tag: string) => {
+      if (tag === 'video') {
+        return {
+          videoWidth: 2,
+          videoHeight: 2,
+          muted: false,
+          srcObject: null,
+          play: vi.fn(async () => undefined),
+        } as unknown as HTMLVideoElement;
+      }
+      if (tag === 'canvas') {
+        return {
+          width: 0,
+          height: 0,
+          getContext: () => ({
+            drawImage: vi.fn(),
+            getImageData: () => ({ data: new Uint8ClampedArray(16), width: 2, height: 2 }),
+          }),
+        } as unknown as HTMLCanvasElement;
+      }
+      return realCreate(tag);
+    });
+    const onSnapshot = vi.fn();
+    const { rerender } = renderHook(({ cam }) => useAuraPipeline('s1', cam, onSnapshot), {
+      initialProps: { cam: true },
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(600);
+    });
+    const withCamera = onSnapshot.mock.calls.at(-1)?.[0] as { metrics: AuraMetric[] };
+    expect(withCamera.metrics).toEqual(expect.arrayContaining([eyeMetric]));
+    // Camara apagada: el eye_contact congelado NO puede seguir emitiendose
+    rerender({ cam: false });
+    onSnapshot.mockClear();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(300);
+    });
+    const last = onSnapshot.mock.calls.at(-1)?.[0] as { metrics: AuraMetric[] };
+    expect(last.metrics).toEqual([speechMetric]);
   });
 
   it('feedTranscript delega al tracker de habla', () => {

@@ -19,6 +19,10 @@ export interface AuraPipeline {
 
 // 250 ms = 4 Hz, el maximo que acepta el backend para metrics.update
 const SNAPSHOT_INTERVAL_MS = 250;
+// El frame loop corre MAS LENTO que el throttle interno del worker (250 ms):
+// con el mismo periodo, el jitter del postMessage hace que el worker descarte
+// frames y devuelva [] intermitente (el aura parpadearia "sin datos")
+const FRAME_INTERVAL_MS = 300;
 
 // Combina las dos fuentes de metricas (habla y camara) en AuraState periodicos.
 // Las metricas sin senal se OMITEN del array (contrato 3.4: "sin datos" honesto);
@@ -72,9 +76,22 @@ export function useAuraPipeline(
       video.muted = true;
       video.srcObject = stream;
       await video.play().catch(() => undefined);
+      if (cancelled) return; // desmonte durante el play: no abrir el frame loop
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d', { willReadFrequently: true });
       setCameraStatus('on');
+
+      // Si la camara muere a mitad de sesion (se desenchufa, el SO revoca el
+      // permiso) el <video> queda congelado y MediaPipe seguiria midiendo esa
+      // imagen fija con timestamps frescos: hay que cortar el loop y avisar.
+      stream.getTracks().forEach((track) =>
+        track.addEventListener('ended', () => {
+          if (cancelled) return;
+          if (frameTimer) clearInterval(frameTimer);
+          eyeMetricsRef.current = [];
+          setCameraStatus('failed');
+        }),
+      );
 
       frameTimer = setInterval(() => {
         if (!ctx || !worker || video.videoWidth === 0) return;
@@ -92,7 +109,7 @@ export function useAuraPipeline(
           .catch(() => {
             // Frame perdido: se reintenta en el proximo tick
           });
-      }, SNAPSHOT_INTERVAL_MS);
+      }, FRAME_INTERVAL_MS);
     }
 
     if (cameraEnabled) void startCamera();
@@ -111,6 +128,9 @@ export function useAuraPipeline(
       clearInterval(snapshotTimer);
       worker?.terminate();
       stream?.getTracks().forEach((t) => t.stop());
+      // Sin camara no puede quedar un eye_contact congelado emitiendose: el
+      // proximo ciclo (toggle/remontaje) debe arrancar "sin datos" honesto
+      eyeMetricsRef.current = [];
     };
   }, [sessionId, cameraEnabled]);
 

@@ -861,6 +861,15 @@ Run: `pnpm --filter @warachikuy/web test src/hooks/useAuraPipeline.test.ts`
 Expected: PASS (6 tests). Si `img.data.buffer` da error de tipos (ArrayBufferLike), el cast
 `as ArrayBuffer` del codigo ya lo cubre.
 
+Nota (ajustada tras el review de calidad): la implementacion final ademas (1) resetea
+`eyeMetricsRef` en el cleanup (sin camara no puede seguir emitiendose un eye_contact
+congelado: privacidad y "sin datos" honesto), (2) chequea `cancelled` despues del
+`video.play()` (evita un frame loop huerfano si se desmonta durante el play), (3) escucha
+el evento `ended` de los tracks (camara desenchufada -> corta el loop y pasa a 'failed'),
+y (4) corre el frame loop a 300 ms (mas lento que el throttle de 250 ms del worker, que
+con el mismo periodo descartaria frames por jitter). Tests extra: path 'failed' y apagado
+de camara.
+
 - [ ] **Step 5: Lint/typecheck y commit**
 
 Run: `pnpm --filter @warachikuy/web lint && pnpm --filter @warachikuy/web typecheck`
