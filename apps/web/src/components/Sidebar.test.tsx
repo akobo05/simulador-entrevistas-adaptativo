@@ -20,3 +20,14 @@ test('Sidebar enlaza a todas las rutas reales sin items diferidos', () => {
   // El patron "proximamente" desaparecio por completo
   expect(screen.queryByText(/proximamente/i)).toBeNull();
 });
+
+test('Sidebar marca activo el item de la ruta actual y no el inicio', () => {
+  render(
+    <MemoryRouter initialEntries={['/ranking']}>
+      <Sidebar />
+    </MemoryRouter>,
+  );
+  expect(screen.getByRole('link', { name: /ranking/i })).toHaveAttribute('aria-current', 'page');
+  // El caso especial de "/" no debe marcarse activo fuera del inicio
+  expect(screen.getByRole('link', { name: /inicio/i })).not.toHaveAttribute('aria-current');
+});

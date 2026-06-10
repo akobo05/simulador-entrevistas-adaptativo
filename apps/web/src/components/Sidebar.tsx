@@ -3,8 +3,8 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { House, Plus, TrendingUp, Trophy, Eye, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import './Sidebar.css';
 
-// Rutas reales activas en esta version
-const REAL_NAV_ITEMS = [
+// Items de navegacion del sidebar
+const NAV_ITEMS = [
   { to: '/', icon: House, label: 'Inicio' },
   { to: '/setup', icon: Plus, label: 'Nueva sesion' },
   { to: '/progress', icon: TrendingUp, label: 'Mi progreso' },
@@ -29,8 +29,7 @@ export function Sidebar() {
 
       {/* Nav */}
       <nav className="sidebar__nav" aria-label="Navegacion principal">
-        {/* Items con ruta real */}
-        {REAL_NAV_ITEMS.map(({ to, icon: Icon, label }) => {
+        {NAV_ITEMS.map(({ to, icon: Icon, label }) => {
           const isActive =
             to === '/' ? location.pathname === '/' : location.pathname.startsWith(to);
 
