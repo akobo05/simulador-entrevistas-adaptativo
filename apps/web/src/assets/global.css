@@ -414,6 +414,7 @@ a:hover {
 
 .chat-form {
   display: flex;
+  align-items: flex-end;
   gap: var(--space-2);
   margin-top: var(--space-3);
 }
@@ -427,6 +428,8 @@ a:hover {
   border-radius: var(--radius-md);
   font-family: var(--font-body);
   font-size: 0.9rem;
+  line-height: 1.4;
+  resize: vertical;
   transition: border-color var(--transition-fast);
 }
 

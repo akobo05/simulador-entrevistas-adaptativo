@@ -280,7 +280,7 @@ describe('InterviewPage', () => {
 
   // ── Voz del candidato ──────────────────────────────────
 
-  it('el transcript final del mic va a sendAnswer y al pipeline', () => {
+  it('el transcript final del mic se dicta al campo y va al pipeline, sin enviarse solo', () => {
     const sendAnswer = vi.fn();
     socketSpy.mockReturnValue(fakeSocket({ sendAnswer }));
     renderPage();
@@ -290,9 +290,51 @@ describe('InterviewPage', () => {
       isFinal: true,
       timestamp: 1,
     };
-    voiceCallbacks.onFinal(t);
-    expect(sendAnswer).toHaveBeenCalledWith('mi respuesta hablada', true);
+    act(() => voiceCallbacks.onFinal(t));
+    // El dictado aparece en el campo editable, pero NO se envia automaticamente
+    expect((screen.getByRole('textbox') as HTMLTextAreaElement).value).toBe('mi respuesta hablada');
+    expect(sendAnswer).not.toHaveBeenCalled();
     expect(feedTranscript).toHaveBeenCalledWith(t);
+  });
+
+  it('los dictados consecutivos se acumulan en el campo', () => {
+    socketSpy.mockReturnValue(fakeSocket());
+    renderPage();
+    const mk = (text: string): CandidateTranscript => ({
+      sessionId: 's1',
+      text,
+      isFinal: true,
+      timestamp: 1,
+    });
+    act(() => voiceCallbacks.onFinal(mk('soy backend')));
+    act(() => voiceCallbacks.onFinal(mk('con cinco años')));
+    expect((screen.getByRole('textbox') as HTMLTextAreaElement).value).toBe(
+      'soy backend con cinco años',
+    );
+  });
+
+  it('al enviar se detiene el microfono y se limpia el campo', () => {
+    const sendAnswer = vi.fn();
+    socketSpy.mockReturnValue(fakeSocket({ sendAnswer }));
+    renderPage();
+    act(() =>
+      voiceCallbacks.onFinal({
+        sessionId: 's1',
+        text: 'mi respuesta',
+        isFinal: true,
+        timestamp: 1,
+      }),
+    );
+    fireEvent.submit(screen.getByRole('button', { name: /enviar/i }).closest('form')!);
+    expect(sendAnswer).toHaveBeenCalledWith('mi respuesta');
+    expect(voiceStop).toHaveBeenCalled();
+    expect((screen.getByRole('textbox') as HTMLTextAreaElement).value).toBe('');
+  });
+
+  it('cuando el entrevistador habla, el microfono descansa', () => {
+    socketSpy.mockReturnValue(fakeSocket({ items: [interviewerItem('m1', 'Cuentame de ti')] }));
+    renderPage();
+    expect(voiceStop).toHaveBeenCalled();
   });
 
   it('barge-in: cuando el candidato empieza a hablar se cancela el TTS', () => {

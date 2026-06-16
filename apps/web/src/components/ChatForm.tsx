@@ -1,35 +1,47 @@
-import { useState, type FormEvent } from 'react';
+import { type FormEvent, type KeyboardEvent } from 'react';
 import { Button } from './Button';
 
 interface Props {
+  // Campo controlado por el padre: el dictado del microfono se acumula aqui
+  // y el candidato lo revisa antes de enviar.
+  value: string;
+  onChange: (texto: string) => void;
   onSendMessage: (texto: string) => void;
   disabled?: boolean;
 }
 
-export function ChatForm({ onSendMessage, disabled = false }: Props) {
-  const [texto, setTexto] = useState('');
+export function ChatForm({ value, onChange, onSendMessage, disabled = false }: Props) {
+  const submit = () => {
+    if (disabled) return;
+    const limpio = value.trim();
+    if (!limpio) return;
+    // El padre limpia el campo tras enviar; aqui solo se entrega el texto.
+    onSendMessage(limpio);
+  };
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
-    if (disabled) return;
-    const limpio = texto.trim();
-    if (!limpio) return;
-    // Limpiamos el input de forma optimista (UX comun). Cuando llegue el WS
-    // real (#42), un envio fallido deberia restaurar el texto (rollback); por
-    // ahora el stub no falla.
-    onSendMessage(limpio);
-    setTexto('');
+    submit();
+  };
+
+  // Enter envia; Shift+Enter agrega un salto de linea para respuestas largas.
+  const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      submit();
+    }
   };
 
   return (
     <form onSubmit={handleSubmit} className="chat-form">
-      <input
-        type="text"
-        value={texto}
-        onChange={(e) => setTexto(e.target.value)}
-        placeholder="Escribe tu respuesta..."
+      <textarea
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        onKeyDown={handleKeyDown}
+        placeholder="Escribe o dicta tu respuesta..."
         aria-label="Escribe tu respuesta"
         className="chat-input"
+        rows={2}
         disabled={disabled}
       />
       <Button type="submit" disabled={disabled}>
