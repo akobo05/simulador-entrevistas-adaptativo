@@ -7,3 +7,5 @@ export { createMetricsWorker } from './metrics-worker-client';
 export type { MetricsWorkerClient } from './metrics-worker-client';
 export { createSpeechMetricsTracker } from './speech-metrics';
 export type { SpeechMetricsTracker } from './speech-metrics';
+export { createTtsController } from './tts';
+export type { TtsController, TtsOptions } from './tts';
