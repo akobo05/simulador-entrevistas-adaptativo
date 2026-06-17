@@ -30,6 +30,9 @@ export function InterviewPage() {
   // strings vacios (no conecta) y el componente redirige.
   const [grants, setGrants] = useState<PermissionGrants | null>(null);
   const [ttsSpeaking, setTtsSpeaking] = useState(false);
+  // Borrador del campo de respuesta: el dictado del microfono se acumula aqui
+  // y el candidato lo revisa/corrige antes de enviarlo.
+  const [draft, setDraft] = useState('');
   const ttsRef = useRef<TtsController | null>(null);
   if (ttsRef.current === null) {
     ttsRef.current = createTtsController({
@@ -65,7 +68,15 @@ export function InterviewPage() {
 
   function handleFinalTranscript(t: CandidateTranscript): void {
     pipeline.feedTranscript(t);
-    socket.sendAnswer(t.text, true);
+    // El dictado NO se envia solo: se acumula en el campo editable para que el
+    // candidato corrija errores del STT y decida cuando enviar.
+    setDraft((prev) => (prev ? `${prev} ${t.text}` : t.text));
+  }
+  function handleSend(text: string): void {
+    socket.sendAnswer(text);
+    // Al enviar termina el turno: el microfono descansa y el campo se limpia.
+    voice.stop();
+    setDraft('');
   }
   function handleSpeechStart(): void {
     // Barge-in: si el candidato habla encima de la pregunta, se corta el TTS
@@ -91,6 +102,12 @@ export function InterviewPage() {
     if (msgs.length === 0 || msgs.length === spokenCountRef.current) return;
     ttsRef.current?.speak(msgs[msgs.length - 1]!.text);
     spokenCountRef.current = msgs.length;
+    // Es el turno del entrevistador: el microfono descansa (el candidato lo
+    // reactiva con el boton cuando le toca responder).
+    voice.stop();
+    // voice.stop solo toca refs y setState funcional, asi que una referencia
+    // "vieja" por el closure es segura; el efecto reacciona solo a items.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [socket.items]);
 
   // Al salir de la sala no puede quedar audio sonando ni mic escuchando
@@ -261,7 +278,9 @@ export function InterviewPage() {
                   <div className="ip-mic-placeholder" />
                 )}
                 <ChatForm
-                  onSendMessage={(text) => socket.sendAnswer(text)}
+                  value={draft}
+                  onChange={setDraft}
+                  onSendMessage={handleSend}
                   disabled={socket.status !== 'open'}
                 />
               </div>
