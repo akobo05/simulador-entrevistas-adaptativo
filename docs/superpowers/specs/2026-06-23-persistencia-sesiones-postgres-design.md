@@ -29,6 +29,13 @@ cliente ni migraciones.
    (`getArchivedSession`) cubierto por test, no con un endpoint HTTP publico nuevo.
 4. **Tests con pglite:** Postgres real en WASM, en proceso, sin Docker (misma
    filosofia que `ioredis-mock` para Redis).
+5. **Convencion `mock://` para dev sin infra (alinear con #64):** el PR #64 ya
+   introdujo que un `REDIS_URL` con prefijo `mock://` usa `ioredis-mock` (dev sin
+   Redis real). `createDb` replica el patron: un `DATABASE_URL` con prefijo
+   `mock://` usa pglite en proceso en vez de `postgres.js`. Asi el mismo camino
+   pglite sirve para los tests y para el modo "dev sin infra", y `runMigrations`
+   nunca rompe el arranque por falta de Postgres. `mock://...` pasa la validacion
+   `z.string().url()` de `env.ts` (igual que ya lo hace para Redis).
 
 ## 3. Arquitectura
 
@@ -91,10 +98,16 @@ Cada archivo con una responsabilidad clara:
 - **`src/db/schema.ts`** — define la tabla `interview_sessions` (drizzle) y exporta
   los tipos inferidos `InterviewSessionRow` (`$inferSelect`) y `NewInterviewSession`
   (`$inferInsert`).
-- **`src/db/client.ts`** — `createDb(databaseUrl: string): Db` construye la conexion
-  `postgres.js` + la instancia drizzle. Exporta el tipo `Db`
-  (`PostgresJsDatabase<typeof schema>`). Tambien exporta `runMigrations(db)` que
-  aplica las migraciones de la carpeta `drizzle/`.
+- **`src/db/client.ts`** — `createDb(databaseUrl: string): Db`:
+  - Si `databaseUrl` arranca con `mock://`, construye una instancia drizzle sobre
+    `@electric-sql/pglite` (Postgres en proceso) para dev sin infra y tests.
+    pglite y su adaptador drizzle se cargan dinamicamente (createRequire), igual
+    que #64 hace con `ioredis-mock`, para no contaminar el bundle de produccion.
+  - Si no, construye la conexion `postgres.js` real + drizzle.
+  - Exporta el tipo `Db` (la union estructural de ambos drivers expone los mismos
+    metodos drizzle que usa el repositorio). Tambien exporta `runMigrations(db)`
+    que aplica las migraciones de la carpeta `drizzle/` (funciona en ambos drivers;
+    en `mock://` es in-process, asi que nunca falla por falta de Postgres).
 - **`src/db/session-archive.ts`** — repositorio puro sobre `Db`, sin tocar Fastify:
   - `archiveSession(db, row: NewInterviewSession): Promise<void>` — `INSERT ...
     ON CONFLICT (id) DO NOTHING` (idempotente, como el guard de `/end`).
@@ -138,8 +151,9 @@ Cada archivo con una responsabilidad clara:
 
 ## 8. Pruebas (vitest + pglite)
 
-Helper de test `makeTestDb()` que crea un `Db` sobre `@electric-sql/pglite`
-(in-process) y corre las migraciones, devolviendo una base limpia por test.
+Helper de test `makeTestDb()` que reusa el mismo camino pglite del cliente:
+`const db = createDb('mock://test'); await runMigrations(db);` devolviendo una
+base limpia por test (cada pglite es una instancia nueva en memoria).
 
 - **session-archive (unit):**
   - `archiveSession` + `getArchivedSession` round-trip: la fila se guarda y se lee
