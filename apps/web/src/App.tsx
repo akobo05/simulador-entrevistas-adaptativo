@@ -93,18 +93,17 @@ export function App() {
         <ScrollToTop />
         <Suspense fallback={<LoadingScreen />}>
           <MainLayout>
-            <ErrorBoundary>
-              <Routes>
-                <Route path="/" element={<Home />} />
-                <Route path="/setup" element={<SetupPage />} />
-                <Route path="/interview/:sessionId" element={<InterviewPage />} />
-                <Route path="/plan/:sessionId" element={<PlanPage />} />
-                <Route path="/ranking" element={<Ranking />} />
-                <Route path="/progress" element={<MyProgress />} />
-                <Route path="/observer" element={<ObserverRoom />} />
-                <Route path="*" element={<NotFound />} />
-              </Routes>
-            </ErrorBoundary>
+            <Routes>
+              <Route path="/" element={<Home />} />
+              <Route path="/setup" element={<SetupPage />} />
+              <Route path="/interview/:sessionId" element={<InterviewPage />} />
+              <Route path="/plan/:sessionId" element={<PlanPage />} />
+              <Route path="/ranking" element={<Ranking />} />
+              <Route path="/progress" element={<MyProgress />} />
+              <Route path="/observer" element={<ObserverRoom />} />
+              <Route path="/observer/:roomId" element={<ObserverRoom />} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
           </MainLayout>
         </Suspense>
       </BrowserRouter>
