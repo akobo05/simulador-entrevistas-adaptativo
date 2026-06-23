@@ -97,11 +97,12 @@ export async function buildServer(env: Env, deps: BuildServerDeps = {}): Promise
   // `errorResponseBuilder` hace que el 429 cumpla el envelope ApiError
   // documentado en la spec 3.6 en vez del default del plugin (que es
   // { statusCode, error: 'Too Many Requests', message }).
+  // Si Redis es mock, usa rate-limit in-memory (sin Redis) para desarrollo local
+  const rateLimitOpts = env.REDIS_URL.startsWith('mock://')
+    ? { global: true, max: 1000, timeWindow: '1 hour' as const }
+    : { redis, global: true, max: 1000, timeWindow: '1 hour' as const };
   await server.register(rateLimit, {
-    redis,
-    global: true,
-    max: 1000,
-    timeWindow: '1 hour',
+    ...rateLimitOpts,
     allowList: (req) => req.url.split('?')[0] === '/health',
     errorResponseBuilder: (_req, context) => ({
       error: {

@@ -8,7 +8,7 @@ import {
   type PlanResponse,
 } from '@warachikuy/shared-types';
 
-const BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:3000';
+const BASE = import.meta.env.VITE_API_URL ?? '';
 
 export class ApiClientError extends Error {
   constructor(
@@ -55,7 +55,21 @@ export async function createSession(req: CreateSessionRequest): Promise<CreateSe
     body: JSON.stringify(req),
   });
   if (!res.ok) throw await readError(res);
-  return CreateSessionResponseSchema.parse(await res.json());
+  const data = CreateSessionResponseSchema.parse(await res.json());
+  // La API construye websocketUrl con WS_BASE_URL (ej: ws://localhost:3000).
+  // Desde el navegador del cliente, localhost apunta a su maquina, no al servidor.
+  // En desarrollo (sin VITE_API_URL) usamos el mismo host/puerto de la pagina
+  // para que el WebSocket pase por el proxy de Vite (evita bloqueos de red).
+  // En produccion (con VITE_API_URL) usamos el host de la API.
+  const wsUrl = new URL(data.websocketUrl);
+  if (BASE) {
+    wsUrl.host = new URL(BASE).host;
+  } else {
+    wsUrl.host = window.location.host;
+  }
+  wsUrl.protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  data.websocketUrl = wsUrl.toString();
+  return data;
 }
 
 export async function endSession(

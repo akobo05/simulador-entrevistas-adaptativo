@@ -109,12 +109,16 @@ export function useInterviewSocket(websocketUrl: string, sessionId: string): Int
           { id: crypto.randomUUID(), role: 'candidate', text, timestamp: Date.now() },
         ]);
       }
-      socket.send(
-        JSON.stringify({
-          type: 'candidate.transcript',
-          payload: { sessionId, text, isFinal, timestamp: Date.now() },
-        }),
-      );
+      try {
+        socket.send(
+          JSON.stringify({
+            type: 'candidate.transcript',
+            payload: { sessionId, text, isFinal, timestamp: Date.now() },
+          }),
+        );
+      } catch {
+        // Si el socket se cerro entre el guard y el send, se ignora
+      }
     },
     [sessionId],
   );
@@ -122,7 +126,11 @@ export function useInterviewSocket(websocketUrl: string, sessionId: string): Int
   const sendMetrics = useCallback((state: AuraState) => {
     const socket = socketRef.current;
     if (!socket || socket.readyState !== WebSocket.OPEN) return;
-    socket.send(JSON.stringify({ type: 'metrics.update', payload: state }));
+    try {
+      socket.send(JSON.stringify({ type: 'metrics.update', payload: state }));
+    } catch {
+      // Si el socket se cerro entre el guard y el send, se ignora
+    }
   }, []);
 
   return { items, phase, turnNumber, status, lastError, closing, sendAnswer, sendMetrics };
