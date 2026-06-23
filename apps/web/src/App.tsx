@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { SessionProvider } from './context/SessionContext';
 import { MainLayout } from './layouts/MainLayout';
 import { Home } from './pages/Home';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import './assets/global.css';
 
 /* ── Lazy (paginas no criticas) ─────────────────────────── */
@@ -92,16 +93,18 @@ export function App() {
         <ScrollToTop />
         <Suspense fallback={<LoadingScreen />}>
           <MainLayout>
-            <Routes>
-              <Route path="/" element={<Home />} />
-              <Route path="/setup" element={<SetupPage />} />
-              <Route path="/interview/:sessionId" element={<InterviewPage />} />
-              <Route path="/plan/:sessionId" element={<PlanPage />} />
-              <Route path="/ranking" element={<Ranking />} />
-              <Route path="/progress" element={<MyProgress />} />
-              <Route path="/observer" element={<ObserverRoom />} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
+            <ErrorBoundary>
+              <Routes>
+                <Route path="/" element={<Home />} />
+                <Route path="/setup" element={<SetupPage />} />
+                <Route path="/interview/:sessionId" element={<InterviewPage />} />
+                <Route path="/plan/:sessionId" element={<PlanPage />} />
+                <Route path="/ranking" element={<Ranking />} />
+                <Route path="/progress" element={<MyProgress />} />
+                <Route path="/observer" element={<ObserverRoom />} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </ErrorBoundary>
           </MainLayout>
         </Suspense>
       </BrowserRouter>
