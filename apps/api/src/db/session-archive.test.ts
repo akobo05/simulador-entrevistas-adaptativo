@@ -75,4 +75,12 @@ describe('session-archive', () => {
     const got = await getArchivedSession(db, '99999999-9999-4999-8999-999999999999');
     expect(got).toBeNull();
   });
+
+  it('updateArchivedPlan sobre un id inexistente no lanza (UPDATE de 0 filas)', async () => {
+    // Invariante que sostiene el diseno no-fatal: si /end no alcanzo a archivar
+    // (Postgres caido), el update del plan no debe romper.
+    const db = await makeTestDb();
+    const plan = samplePlan('44444444-4444-4444-8444-444444444444');
+    await expect(updateArchivedPlan(db, plan.sessionId, plan)).resolves.toBeUndefined();
+  });
 });
