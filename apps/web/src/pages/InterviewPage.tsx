@@ -12,6 +12,7 @@ import { createTtsController, type TtsController } from '@warachikuy/voice-pipel
 import { useVoiceTurn } from '../hooks/useVoiceTurn';
 import { useAuraPipeline } from '../hooks/useAuraPipeline';
 import { PermissionGate, type PermissionGrants } from '../components/PermissionGate';
+import { usePreferences } from '../hooks/usePreferences';
 import type { CandidateTranscript } from '@warachikuy/shared-types';
 import './InterviewPage.css';
 
@@ -25,6 +26,8 @@ export function InterviewPage() {
   const navigate = useNavigate();
   const [ending, setEnding] = useState(false);
   const [endError, setEndError] = useState<string | null>(null);
+  const { prefs, setPref } = usePreferences();
+  const [ttsActive, setTtsActive] = useState(() => prefs.ttsEnabled);
 
   // Hooks antes de cualquier return condicional. Si no hay sesion el hook recibe
   // strings vacios (no conecta) y el componente redirige.
@@ -100,7 +103,7 @@ export function InterviewPage() {
   useEffect(() => {
     const msgs = socket.items.filter((i) => i.role === 'interviewer');
     if (msgs.length === 0 || msgs.length === spokenCountRef.current) return;
-    ttsRef.current?.speak(msgs[msgs.length - 1]!.text);
+    if (ttsActive) ttsRef.current?.speak(msgs[msgs.length - 1]!.text);
     spokenCountRef.current = msgs.length;
     // Es el turno del entrevistador: el microfono descansa (el candidato lo
     // reactiva con el boton cuando le toca responder).
@@ -192,6 +195,21 @@ export function InterviewPage() {
         </p>
 
         <div className="ip-header__right">
+          <button
+            type="button"
+            className={ttsActive ? 'ip-btn-tts ip-btn-tts--on' : 'ip-btn-tts'}
+            onClick={() => {
+              const next = !ttsActive;
+              setTtsActive(next);
+              setPref('ttsEnabled', next);
+              if (!next) ttsRef.current?.cancel();
+            }}
+            aria-pressed={ttsActive}
+            title={ttsActive ? 'Silenciar entrevistador' : 'Activar voz del entrevistador'}
+            data-testid="ip-btn-tts"
+          >
+            {ttsActive ? '🔊' : '🔇'}
+          </button>
           {!ended && !socket.closing && (
             <button
               className="ip-btn-end"

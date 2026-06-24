@@ -100,6 +100,28 @@
   color: #f59e0b;
 }
 
+/* Boton TTS toggle */
+.ip-btn-tts {
+  padding: 6px 10px;
+  background: transparent;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  color: #94a3b8;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: border-color 150ms ease, color 150ms ease;
+}
+
+.ip-btn-tts--on {
+  border-color: #2563eb;
+  color: #f0f4ff;
+}
+
+.ip-btn-tts:hover {
+  border-color: #2563eb;
+  color: #f0f4ff;
+}
+
 /* Boton Finalizar */
 .ip-btn-end {
   padding: 9px 22px;

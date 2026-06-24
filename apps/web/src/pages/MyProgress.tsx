@@ -7,6 +7,8 @@
 import { useState, useRef, useEffect } from 'react';
 import { Card } from '../components/Card';
 import { SparklineChart } from '../components/SparklineChart';
+import { useReducedMotion } from '../hooks/useReducedMotion';
+import { usePreferences } from '../hooks/usePreferences';
 import './MyProgress.css';
 
 /* ── Lucide icons (inline SVG para evitar dependencia extra) ── */
@@ -364,13 +366,16 @@ export function MyProgress() {
   const [chatHistory, setChatHistory] = useState<ChatMsg[]>(INITIAL_CHAT);
   const [inputText, setInputText] = useState('');
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const systemReduced = useReducedMotion();
+  const { prefs } = usePreferences();
+  const reduced = prefs.reducedMotion ?? systemReduced;
 
   const xpPct = Math.round((USER.xp / USER.xpNext) * 100);
 
-  /* Auto-scroll chat */
+  /* Auto-scroll chat: instant si el usuario prefiere movimiento reducido */
   useEffect(() => {
-    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [chatHistory]);
+    chatEndRef.current?.scrollIntoView({ behavior: reduced ? 'instant' : 'smooth' });
+  }, [chatHistory, reduced]);
 
   const sendMessage = () => {
     const trimmed = inputText.trim();

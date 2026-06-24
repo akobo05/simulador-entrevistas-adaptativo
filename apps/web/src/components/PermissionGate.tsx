@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { Button } from './Button';
+import { usePreferences } from '../hooks/usePreferences';
 import './PermissionGate.css';
 
 export interface PermissionGrants {
@@ -17,6 +18,7 @@ interface PermissionGateProps {
 // modo tecleado, sin camara el eye_contact sale "sin datos".
 export function PermissionGate({ onReady }: PermissionGateProps) {
   const [requesting, setRequesting] = useState(false);
+  const { prefs, setPref } = usePreferences();
 
   async function requestOne(constraints: MediaStreamConstraints): Promise<boolean> {
     try {
@@ -33,8 +35,22 @@ export function PermissionGate({ onReady }: PermissionGateProps) {
     setRequesting(true);
     const mic = await requestOne({ audio: true });
     const camera = await requestOne({ video: true });
+    setPref('responseMode', 'voice');
+    setPref('cameraEnabled', camera);
     onReady({ mic, camera });
   }
+
+  function skipToText(): void {
+    setPref('responseMode', 'text');
+    setPref('cameraEnabled', false);
+    onReady({ mic: false, camera: false });
+  }
+
+  const hasPrevPref = prefs.cameraEnabled !== null;
+  const prevLabel =
+    prefs.responseMode === 'text'
+      ? 'Continuar como la última vez (modo texto)'
+      : 'Continuar como la última vez (voz y cámara)';
 
   return (
     <section className="pg-root" data-testid="permission-gate">
@@ -47,14 +63,25 @@ export function PermissionGate({ onReady }: PermissionGateProps) {
         <Button onClick={() => void activate()} loading={requesting}>
           {requesting ? 'Solicitando permisos...' : 'Activar micrófono y cámara'}
         </Button>
-        <button
-          type="button"
-          className="pg-skip"
-          onClick={() => onReady({ mic: false, camera: false })}
-          disabled={requesting}
-        >
+        <button type="button" className="pg-skip" onClick={skipToText} disabled={requesting}>
           Continuar sin activar (responderé por texto)
         </button>
+        {hasPrevPref && (
+          <button
+            type="button"
+            className="pg-skip pg-skip--prev"
+            onClick={() => {
+              if (prefs.responseMode === 'text') {
+                skipToText();
+              } else {
+                void activate();
+              }
+            }}
+            disabled={requesting}
+          >
+            {prevLabel}
+          </button>
+        )}
       </div>
     </section>
   );
