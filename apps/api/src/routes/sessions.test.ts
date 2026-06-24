@@ -304,7 +304,8 @@ describe('POST /api/v1/sessions/:sessionId/end y GET /api/v1/sessions/:sessionId
     expect(end.statusCode).toBe(202);
 
     // La fila durable existe con los metadatos, el transcript y las metricas
-    // correctos, y el plan aun en null
+    // correctos. El plan lo completa generatePlan en un segundo paso
+    // (fire-and-forget desde /end), por lo que no lo afirmamos aqui.
     const archived = await getArchivedSession(db, sessionId);
     expect(archived?.industry).toBe('backend');
     expect(archived?.level).toBe('mid');
@@ -315,7 +316,6 @@ describe('POST /api/v1/sessions/:sessionId/end y GET /api/v1/sessions/:sessionId
       { role: 'candidate', text: 'Soy backend', timestamp: 2 },
     ]);
     expect(archived?.metrics).toEqual({ fluency: 88, eye_contact: null, speech_rate: 60 });
-    expect(archived?.plan).toBeNull();
 
     // "Sobrevive el TTL de Redis": vaciamos Redis y la sesion sigue consultable
     await redis.flushall();

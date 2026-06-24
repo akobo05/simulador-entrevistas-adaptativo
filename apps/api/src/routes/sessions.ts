@@ -120,7 +120,7 @@ export async function registerSessionsRoutes(server: FastifyInstance): Promise<v
       }
 
       void generatePlan(
-        { redis: server.redis, gemini: server.gemini, log: req.log },
+        { redis: server.redis, gemini: server.gemini, log: req.log, db: server.db },
         ended,
         planId,
       ).catch((err: unknown) => {

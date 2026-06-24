@@ -8,6 +8,9 @@ import { GeminiTransientError } from './gemini-client.js';
 import { generatePlan } from './coach.service.js';
 import { readPlan } from './plan-store.js';
 import { persistAggregate } from './metrics-aggregator.js';
+import { makeTestDb } from '../db/test-helpers.js';
+import type { Db } from '../db/client.js';
+import { archiveSession, getArchivedSession } from '../db/session-archive.js';
 
 function silentLog(): FastifyBaseLogger {
   const l = {
@@ -57,6 +60,11 @@ describe('generatePlan', () => {
     await (new RedisMock() as unknown as Redis).flushall();
   });
 
+  let db: Db;
+  beforeEach(async () => {
+    db = await makeTestDb();
+  });
+
   it('ensambla el plan inyectando los puntajes medidos y lo marca ready', async () => {
     const redis = new RedisMock() as unknown as Redis;
     await persistAggregate(redis, makeState().id, {
@@ -69,7 +77,7 @@ describe('generatePlan', () => {
       generateJson: async () => COACH_OUTPUT,
     };
     await generatePlan(
-      { redis, gemini, log: silentLog() },
+      { redis, gemini, log: silentLog(), db },
       makeState(),
       '550e8400-e29b-41d4-a716-446655440099',
     );
@@ -97,7 +105,7 @@ describe('generatePlan', () => {
       generateJson: async () => COACH_OUTPUT, // contentScore: 75
     };
     await generatePlan(
-      { redis, gemini, log: silentLog() },
+      { redis, gemini, log: silentLog(), db },
       makeState(),
       '550e8400-e29b-41d4-a716-446655440099',
     );
@@ -114,7 +122,7 @@ describe('generatePlan', () => {
     const redis = new RedisMock() as unknown as Redis;
     const generateJson = vi.fn().mockRejectedValue(new GeminiTransientError('net'));
     await generatePlan(
-      { redis, gemini: { generate: async () => '', generateJson }, log: silentLog() },
+      { redis, gemini: { generate: async () => '', generateJson }, log: silentLog(), db },
       makeState(),
       'plan-1',
     );
@@ -129,7 +137,7 @@ describe('generatePlan', () => {
       generate: async () => '',
       generateJson: async () => ({ garbage: true }),
     };
-    await generatePlan({ redis, gemini, log: silentLog() }, makeState(), 'plan-1');
+    await generatePlan({ redis, gemini, log: silentLog(), db }, makeState(), 'plan-1');
     expect((await readPlan(redis, makeState().id))?.status).toBe('failed');
   });
 
@@ -145,12 +153,40 @@ describe('generatePlan', () => {
       .mockRejectedValueOnce(new GeminiTransientError('net'))
       .mockResolvedValueOnce(COACH_OUTPUT);
     await generatePlan(
-      { redis, gemini: { generate: async () => '', generateJson }, log: silentLog() },
+      { redis, gemini: { generate: async () => '', generateJson }, log: silentLog(), db },
       makeState(),
       '550e8400-e29b-41d4-a716-446655440099',
     );
     expect(generateJson).toHaveBeenCalledTimes(2);
     const rec = await readPlan(redis, makeState().id);
     expect(rec?.status).toBe('ready');
+  });
+
+  it('tras generar el plan, lo escribe en la fila archivada de Postgres', async () => {
+    const redis = new RedisMock() as unknown as Redis;
+    const state = makeState();
+    // La fila ya existe (como la dejaria /end), con el plan en null
+    await archiveSession(db, {
+      id: state.id,
+      industry: state.industry,
+      level: state.level,
+      status: 'ended',
+      startedAt: new Date(state.startedAt),
+      endedAt: new Date(state.startedAt + 1000),
+      durationMs: 1000,
+      transcript: [],
+      metrics: { fluency: null, eye_contact: null, speech_rate: null },
+    });
+    const gemini: GeminiClient = {
+      generate: async () => '',
+      generateJson: async () => COACH_OUTPUT,
+    };
+    await generatePlan(
+      { redis, gemini, log: silentLog(), db },
+      state,
+      '550e8400-e29b-41d4-a716-446655440099',
+    );
+    const archived = await getArchivedSession(db, state.id);
+    expect(archived?.plan?.planId).toBe('550e8400-e29b-41d4-a716-446655440099');
   });
 });
