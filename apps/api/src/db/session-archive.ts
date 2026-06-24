@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { and, asc, eq, isNotNull } from 'drizzle-orm';
 import type { ImprovementPlan } from '@warachikuy/shared-types';
 import type { Db } from './client.js';
 import { interviewSessions, type InterviewSessionRow, type NewInterviewSession } from './schema.js';
@@ -29,4 +29,18 @@ export async function getArchivedSession(
     .where(eq(interviewSessions.id, sessionId))
     .limit(1);
   return rows[0] ?? null;
+}
+
+// Historial del candidato para el progreso longitudinal (#51): solo sesiones
+// con plan (las que aportan competencias), ordenadas cronologicamente. Usa el
+// indice sobre candidate_id (#56).
+export async function listCandidateSessions(
+  db: Db,
+  candidateId: string,
+): Promise<InterviewSessionRow[]> {
+  return db
+    .select()
+    .from(interviewSessions)
+    .where(and(eq(interviewSessions.candidateId, candidateId), isNotNull(interviewSessions.plan)))
+    .orderBy(asc(interviewSessions.endedAt));
 }
