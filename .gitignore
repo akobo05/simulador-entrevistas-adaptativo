@@ -43,6 +43,9 @@ Thumbs.db
 tmp/
 temp/
 
+# MediaPipe WASM: archivos grandes generados por pnpm copy:wasm, no van en git
+apps/web/public/mediapipe-wasm/
+
 # LaTeX auxiliares
 *.aux
 *.out

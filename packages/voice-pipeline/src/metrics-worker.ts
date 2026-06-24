@@ -11,8 +11,10 @@ import { FaceLandmarker, FilesetResolver } from '@mediapipe/tasks-vision';
 import type { AuraMetric } from '@warachikuy/shared-types';
 
 const THROTTLE_MS = 250;
-// Versión fija para reproducibilidad y evitar deriva del CDN
-const WASM_URL = 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.35/wasm';
+// WASM alojado localmente en apps/web/public/mediapipe-wasm/ para no depender
+// del CDN en tiempo de ejecucion. El modelo (~30 MB) sigue en Google Storage
+// porque es demasiado grande para el repositorio; se cachea en el navegador.
+const WASM_URL = '/mediapipe-wasm';
 const MODEL_URL =
   'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task';
 
