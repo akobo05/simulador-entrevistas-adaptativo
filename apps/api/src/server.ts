@@ -8,7 +8,9 @@ import { buildRedisClient } from './services/redis.js';
 import { registerSessionsRoutes } from './routes/sessions.js';
 import { MAX_WS_PAYLOAD_BYTES } from './ws/constants.js';
 import { ConnectionRegistry } from './services/connection-registry.js';
+import { RoomRegistry } from './services/room-registry.js';
 import { registerSessionsWsRoute } from './routes/sessions.ws.js';
+import { registerRoomsWsRoute } from './routes/rooms.ws.js';
 import { apiError } from './errors.js';
 import { buildGeminiClient, type GeminiClient } from './interviewer/gemini-client.js';
 import { createDb, type Db } from './db/client.js';
@@ -20,6 +22,7 @@ declare module 'fastify' {
     redis: Redis;
     env: Env;
     connections: ConnectionRegistry;
+    rooms: RoomRegistry;
     gemini: GeminiClient;
     db: Db;
   }
@@ -130,13 +133,17 @@ export async function buildServer(env: Env, deps: BuildServerDeps = {}): Promise
   const connections = new ConnectionRegistry();
   server.decorate('connections', connections);
 
+  const rooms = new RoomRegistry();
+  server.decorate('rooms', rooms);
+
   const gemini = deps.gemini ?? buildGeminiClient(env);
   server.decorate('gemini', gemini);
 
-  // Registramos la ruta WS fuera del prefijo /api/v1 para matchear el
-  // contrato arquitectonico (spec 3.4): /v1/sessions/:id/ws
+  // Registramos las rutas WS fuera del prefijo /api/v1 para matchear el
+  // contrato arquitectonico (spec 3.4): /v1/sessions/:id/ws y /v1/rooms/:id/ws
   await server.register(async (api) => {
     await registerSessionsWsRoute(api);
+    await registerRoomsWsRoute(api);
   });
 
   await server.register(

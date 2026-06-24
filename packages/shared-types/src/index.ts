@@ -6,3 +6,4 @@ export * from './llm';
 export * from './ws';
 export * from './errors';
 export * from './sessions';
+export * from './room';

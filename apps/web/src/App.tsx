@@ -102,6 +102,7 @@ export function App() {
                 <Route path="/ranking" element={<Ranking />} />
                 <Route path="/progress" element={<MyProgress />} />
                 <Route path="/observer" element={<ObserverRoom />} />
+                <Route path="/observer/:roomId" element={<ObserverRoom />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </ErrorBoundary>

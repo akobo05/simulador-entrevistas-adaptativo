@@ -1,636 +1,465 @@
-// Pantalla MOCK a proposito: demuestra el modulo de interactividad (sala del
-// observador del peer-mock, con timer EN VIVO simulado) con datos inline,
-// como permite el enunciado del curso. La sala real con WebRTC y roles es de
-// la fase F3, ver issue #52. Pantalla original de Max (PR #48).
-
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import type { RoomRole } from '@warachikuy/shared-types';
+import { CompetencyRing } from '../components/CompetencyRing';
+import { useRoomSocket } from '../hooks/useRoomSocket';
+import { useAuraPipeline } from '../hooks/useAuraPipeline';
 import './ObserverRoom.css';
 
-/* ── ObserverAura inline (aura local de esta sala) ─────────────── */
-function ObserverAura({ speaking }: { speaking: boolean }) {
+/* ── Types ────────────────────────────────────────────────── */
+interface TimestampComment {
+  id: string;
+  timestamp: number;
+  text: string;
+}
+
+/* ── Helpers ──────────────────────────────────────────────── */
+const STUN = {
+  iceServers: [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }],
+};
+
+function formatTimer(s: number): string {
+  const m = Math.floor(s / 60)
+    .toString()
+    .padStart(2, '0');
+  const sec = (s % 60).toString().padStart(2, '0');
+  return `${m}:${sec}`;
+}
+
+/* ── Lobby ────────────────────────────────────────────────── */
+function Lobby({ onJoin }: { onJoin: (roomId: string, role: RoomRole) => void }) {
+  const [roomId] = useState(() => crypto.randomUUID().slice(0, 8));
+  const [role, setRole] = useState<RoomRole>('observer');
+  const [inputRoom, setInputRoom] = useState(roomId);
+
+  const handleJoin = () => {
+    const id = inputRoom.trim() || roomId;
+    onJoin(id, role);
+  };
+
   return (
-    <div className={`aura-root ${speaking ? 'aura-root--speaking' : ''}`}>
-      <div className="aura-ring aura-ring--1" />
-      <div className="aura-ring aura-ring--2" />
-      <div className="aura-ring aura-ring--3" />
-      <div className="aura-core">
-        <svg
-          viewBox="0 0 64 64"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-          className="aura-icon"
-        >
-          <circle cx="32" cy="32" r="32" fill="rgba(37,99,235,0.15)" />
-          <circle cx="32" cy="24" r="10" fill="#2563EB" opacity="0.9" />
-          <ellipse cx="32" cy="46" rx="16" ry="10" fill="#2563EB" opacity="0.7" />
-          <path
-            d="M14 32 Q18 26 22 32 Q26 38 30 32"
-            stroke="#0EA5E9"
-            strokeWidth="2"
-            strokeLinecap="round"
-            fill="none"
-            className="aura-wave"
+    <div className="obs-lobby">
+      <div className="obs-lobby-card">
+        <div className="obs-lobby-icon">W</div>
+        <h1 className="obs-lobby-title">Sala de observación</h1>
+        <p className="obs-lobby-sub">Conéctate como observador, entrevistador o candidato</p>
+
+        <div className="obs-lobby-field">
+          <label className="obs-lobby-label">ID de sala</label>
+          <input
+            className="obs-lobby-input"
+            value={inputRoom}
+            onChange={(e) => setInputRoom(e.target.value)}
+            placeholder="room-id"
           />
-          <path
-            d="M34 32 Q38 26 42 32 Q46 38 50 32"
-            stroke="#6366F1"
-            strokeWidth="2"
-            strokeLinecap="round"
-            fill="none"
-            className="aura-wave aura-wave--delayed"
-          />
-        </svg>
+        </div>
+
+        <div className="obs-lobby-field">
+          <label className="obs-lobby-label">Tu rol</label>
+          <div className="obs-lobby-roles">
+            {(['candidate', 'interviewer', 'observer'] as const).map((r) => (
+              <button
+                key={r}
+                className={`obs-lobby-role ${role === r ? 'obs-lobby-role--active' : ''}`}
+                onClick={() => setRole(r)}
+              >
+                {r === 'candidate' && '🎤 Candidato'}
+                {r === 'interviewer' && '🎙 Entrevistador'}
+                {r === 'observer' && '👁 Observador'}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <button className="obs-lobby-join" onClick={handleJoin}>
+          Entrar a la sala
+        </button>
       </div>
     </div>
   );
 }
 
-/* ── Tipos ──────────────────────────────────────────────── */
-interface TranscriptLine {
-  id: number;
-  speaker: 'candidate' | 'ai';
-  text: string;
-  time: string;
-}
+/* ── VideoBox ─────────────────────────────────────────────── */
+function VideoBox({
+  stream,
+  label,
+  muted,
+  mirrored,
+}: {
+  stream: MediaStream | null;
+  label: string;
+  muted?: boolean;
+  mirrored?: boolean;
+}) {
+  const ref = useRef<HTMLVideoElement>(null);
 
-interface Comment {
-  id: number;
-  text: string;
-  time: string;
-  anchoredTo: string;
-}
-
-/* ── Datos mock ─────────────────────────────────────────── */
-const CANDIDATE_NAME = 'Valentina Ríos';
-const CANDIDATE_ROLE = 'Senior UX Research Lead';
-
-const MOCK_TRANSCRIPT: TranscriptLine[] = [
-  {
-    id: 1,
-    speaker: 'ai',
-    text: 'Buenos días Valentina, gracias por estar con nosotros hoy. ¿Podrías comenzar contándonos sobre tu experiencia liderando equipos de investigación?',
-    time: '09:01',
-  },
-  {
-    id: 2,
-    speaker: 'candidate',
-    text: 'Por supuesto. En los últimos cuatro años he liderado equipos de entre cinco y doce investigadores en proyectos de fintech y salud digital. Mi enfoque siempre ha sido mezclar métodos cualitativos con análisis de datos cuantitativos para generar insights accionables.',
-    time: '09:02',
-  },
-  {
-    id: 3,
-    speaker: 'ai',
-    text: 'Interesante. ¿Puedes darnos un ejemplo concreto de cómo un hallazgo tuyo cambió la dirección de un producto?',
-    time: '09:03',
-  },
-  {
-    id: 4,
-    speaker: 'candidate',
-    text: 'Claro. En mi último proyecto con una fintech, descubrimos mediante entrevistas etnográficas que el 68% de los usuarios abandonaban el onboarding en el paso de verificación de identidad. No por dificultad técnica, sino por desconfianza. Rediseñamos la narrativa de ese paso y la tasa de completación subió 34 puntos en dos semanas.',
-    time: '09:05',
-  },
-  {
-    id: 5,
-    speaker: 'ai',
-    text: '¿Qué metodologías utilizaste para llegar a esa conclusión sobre la desconfianza?',
-    time: '09:06',
-  },
-  {
-    id: 6,
-    speaker: 'candidate',
-    text: 'Combinamos entrevistas semiestructuradas con grabaciones de sesión y un análisis de los micromomentos de fricción. También usamos card sorting para entender el modelo mental del usuario respecto a la seguridad financiera digital.',
-    time: '09:07',
-  },
-  {
-    id: 7,
-    speaker: 'ai',
-    text: 'Excelente. Ahora cuéntame, ¿cómo manejas el conflicto cuando tus hallazgos van en contra de lo que el equipo de producto ya asumía?',
-    time: '09:09',
-  },
-  {
-    id: 8,
-    speaker: 'candidate',
-    text: 'Es uno de los momentos más delicados pero también más importantes del trabajo. Siempre presento los datos de forma que cuenten una historia, no una sentencia. Invito al equipo a co-interpretar los hallazgos, lo que genera apropiación en lugar de resistencia.',
-    time: '09:11',
-  },
-  {
-    id: 9,
-    speaker: 'ai',
-    text: '¿Alguna vez no lograste convencer al equipo y el producto sufrió consecuencias?',
-    time: '09:12',
-  },
-  {
-    id: 10,
-    speaker: 'candidate',
-    text: 'Sí, una vez. Y fue una lección muy valiosa sobre la importancia de documentar las recomendaciones formalmente. Cuando los resultados confirmaron mis hallazgos tres meses después, pudimos usar esa experiencia para establecer un proceso de validación obligatorio antes de cualquier lanzamiento mayor.',
-    time: '09:14',
-  },
-];
-
-const METRICS = [
-  {
-    key: 'confidence',
-    label: 'Confianza',
-    value: 78,
-    color: '#2563EB',
-    bg: 'rgba(37,99,235,0.12)',
-  },
-  { key: 'attention', label: 'Atención', value: 85, color: '#0EA5E9', bg: 'rgba(14,165,233,0.12)' },
-  { key: 'stress', label: 'Estrés', value: 32, color: '#DC2626', bg: 'rgba(220,38,38,0.12)' },
-  {
-    key: 'engagement',
-    label: 'Engagement',
-    value: 91,
-    color: '#16A34A',
-    bg: 'rgba(22,163,74,0.12)',
-  },
-];
-
-const TABS = ['Transcripción', 'Análisis', 'Notas'] as const;
-type Tab = (typeof TABS)[number];
-
-/* ══════════════════════════════════════════════════════════
-   COMPONENTE PRINCIPAL
-   ══════════════════════════════════════════════════════════ */
-export function ObserverRoom() {
-  const [activeTab, setActiveTab] = useState<Tab>('Transcripción');
-  const [speaking, setSpeaking] = useState(true);
-  const [anchorOpen, setAnchorOpen] = useState(false);
-  const [anchorText, setAnchorText] = useState('');
-  const [anchoredLine, setAnchoredLine] = useState<TranscriptLine | null>(null);
-  const [comments, setComments] = useState<Comment[]>([]);
-  const [elapsed, setElapsed] = useState(823); // segundos
-  const transcriptRef = useRef<HTMLDivElement>(null);
-
-  /* Auto-scroll transcripción */
   useEffect(() => {
-    if (transcriptRef.current) {
-      transcriptRef.current.scrollTop = transcriptRef.current.scrollHeight;
+    if (ref.current) ref.current.srcObject = stream;
+  }, [stream]);
+
+  if (!stream) {
+    return (
+      <div className="obs-video-box obs-video-box--empty">
+        <div className="obs-video-avatar">
+          <svg width="40" height="40" viewBox="0 0 64 64" fill="none">
+            <circle cx="32" cy="24" r="14" fill="#1E293B" />
+            <ellipse cx="32" cy="52" rx="22" ry="14" fill="#1E293B" />
+          </svg>
+        </div>
+        <span className="obs-video-label">{label}</span>
+        <span className="obs-video-waiting">Esperando conexión…</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="obs-video-box">
+      <video
+        ref={ref}
+        autoPlay
+        playsInline
+        muted={muted}
+        className={`obs-video-el ${mirrored ? 'obs-video-el--mirrored' : ''}`}
+      />
+      <span className="obs-video-label">{label}</span>
+    </div>
+  );
+}
+
+/* ── Room ─────────────────────────────────────────────────── */
+function Room({ roomId, role }: { roomId: string; role: RoomRole }) {
+  const [localStream, setLocalStream] = useState<MediaStream | null>(null);
+  const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
+  const [elapsed, setElapsed] = useState(0);
+  const [comments, setComments] = useState<TimestampComment[]>([]);
+  const [commentInput, setCommentInput] = useState('');
+  const [metrics, setMetrics] = useState<{
+    fluency: number | null;
+    eyeContact: number | null;
+    speechRate: number | null;
+  }>({
+    fluency: null,
+    eyeContact: null,
+    speechRate: null,
+  });
+  const pcRef = useRef<RTCPeerConnection | null>(null);
+  const pendingCandidates: RTCIceCandidateInit[] = [];
+  let remoteDescSet = false;
+
+  const isCaller = role === 'candidate' || role === 'interviewer';
+
+  const { peerId, participants, send } = useRoomSocket({
+    roomId,
+    role,
+    onSignalOffer: (from, desc) => {
+      const pc = getOrCreatePC();
+      pc.setRemoteDescription(new RTCSessionDescription(desc as RTCSessionDescriptionInit))
+        .then(() => {
+          remoteDescSet = true;
+          flushCandidates(pc);
+          return pc.createAnswer();
+        })
+        .then((answer) => pc.setLocalDescription(answer))
+        .then(() => {
+          const ld = pc.localDescription;
+          if (ld && ld.sdp) {
+            send({
+              type: 'signal.answer',
+              payload: { description: { type: ld.type, sdp: ld.sdp } },
+            });
+          }
+        })
+        .catch(console.error);
+    },
+    onSignalAnswer: (_from, desc) => {
+      const pc = getOrCreatePC();
+      pc.setRemoteDescription(new RTCSessionDescription(desc as RTCSessionDescriptionInit))
+        .then(() => {
+          remoteDescSet = true;
+          flushCandidates(pc);
+        })
+        .catch(console.error);
+    },
+    onIceCandidate: (_from, candidate) => {
+      const pc = pcRef.current;
+      if (pc && remoteDescSet) {
+        pc.addIceCandidate(new RTCIceCandidate(candidate)).catch(() => {});
+      } else {
+        pendingCandidates.push(candidate);
+      }
+    },
+    onPeerJoined: (peer) => {
+      if (role !== 'observer' && peer.role !== 'observer' && pcRef.current === null) {
+        startCall();
+      }
+    },
+    onMetricsUpdate: (_from, incoming) => {
+      if (role !== 'observer') return;
+      const m = {
+        fluency: null as number | null,
+        eyeContact: null as number | null,
+        speechRate: null as number | null,
+      };
+      for (const metric of incoming) {
+        if (metric.name === 'fluency') m.fluency = metric.value;
+        else if (metric.name === 'eye_contact') m.eyeContact = metric.value;
+        else if (metric.name === 'speech_rate') m.speechRate = metric.value;
+      }
+      setMetrics(m);
+    },
+  });
+
+  const { auraState } = useAuraPipeline(
+    roomId,
+    isCaller,
+    useCallback(
+      (state) => {
+        send({ type: 'metrics.update', payload: { metrics: state.metrics } });
+      },
+      [send],
+    ),
+  );
+
+  useEffect(() => {
+    if (auraState && isCaller) {
+      const m = {
+        fluency: null as number | null,
+        eyeContact: null as number | null,
+        speechRate: null as number | null,
+      };
+      for (const metric of auraState.metrics) {
+        if (metric.name === 'fluency') m.fluency = metric.value;
+        else if (metric.name === 'eye_contact') m.eyeContact = metric.value;
+        else if (metric.name === 'speech_rate') m.speechRate = metric.value;
+      }
+      setMetrics(m);
     }
-  }, [activeTab]);
+  }, [auraState, isCaller]);
 
-  /* Simula speaking toggle cada 4s */
+  const flushCandidates = (pc: RTCPeerConnection) => {
+    while (pendingCandidates.length) {
+      pc.addIceCandidate(new RTCIceCandidate(pendingCandidates.shift()!)).catch(() => {});
+    }
+  };
+
+  const getOrCreatePC = useCallback((): RTCPeerConnection => {
+    if (pcRef.current) return pcRef.current;
+
+    const pc = new RTCPeerConnection(STUN);
+    pcRef.current = pc;
+
+    pc.onicecandidate = (e) => {
+      if (e.candidate) {
+        send({
+          type: 'signal.ice-candidate',
+          payload: {
+            candidate: {
+              candidate: e.candidate.candidate,
+              sdpMid: e.candidate.sdpMid,
+              sdpMLineIndex: e.candidate.sdpMLineIndex,
+            },
+          },
+        });
+      }
+    };
+
+    pc.ontrack = (e) => {
+      setRemoteStream(e.streams[0] ?? null);
+    };
+
+    pc.onconnectionstatechange = () => {
+      // connection state changed
+    };
+
+    if (localStream) {
+      for (const track of localStream.getTracks()) {
+        pc.addTrack(track, localStream);
+      }
+    }
+
+    return pc;
+  }, [localStream, send]);
+
+  const startCall = useCallback(async () => {
+    const pc = getOrCreatePC();
+    try {
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+      if (offer.sdp) {
+        send({
+          type: 'signal.offer',
+          payload: { description: { type: offer.type, sdp: offer.sdp } },
+        });
+      }
+    } catch (err) {
+      console.error('Error creating offer:', err);
+    }
+  }, [getOrCreatePC, send]);
+
   useEffect(() => {
-    const id = setInterval(() => setSpeaking((p) => !p), 4000);
-    return () => clearInterval(id);
-  }, []);
+    if (role === 'observer') return;
+    navigator.mediaDevices
+      .getUserMedia({ audio: true, video: true })
+      .then((stream) => {
+        setLocalStream(stream);
+      })
+      .catch(() => {});
+  }, [role]);
 
-  /* Timer */
   useEffect(() => {
     const id = setInterval(() => setElapsed((p) => p + 1), 1000);
     return () => clearInterval(id);
   }, []);
 
-  const formatTime = (s: number) => {
-    const m = Math.floor(s / 60)
-      .toString()
-      .padStart(2, '0');
-    const sec = (s % 60).toString().padStart(2, '0');
-    return `${m}:${sec}`;
+  useEffect(() => {
+    return () => {
+      pcRef.current?.close();
+      pcRef.current = null;
+      localStream?.getTracks().forEach((t) => t.stop());
+    };
+  }, [localStream]);
+
+  const addComment = () => {
+    const text = commentInput.trim();
+    if (!text) return;
+    setComments((prev) => [...prev, { id: crypto.randomUUID(), timestamp: elapsed, text }]);
+    setCommentInput('');
   };
 
-  /* Anclar comentario */
-  const openAnchor = (line: TranscriptLine) => {
-    setAnchoredLine(line);
-    setAnchorOpen(true);
-    setAnchorText('');
-  };
-
-  const saveComment = () => {
-    if (!anchorText.trim() || !anchoredLine) return;
-    setComments((prev) => [
-      ...prev,
-      {
-        id: Date.now(),
-        text: anchorText.trim(),
-        time: new Date().toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' }),
-        anchoredTo: anchoredLine.text.slice(0, 48) + '…',
-      },
-    ]);
-    setAnchorOpen(false);
-    setAnchorText('');
-    setAnchoredLine(null);
-  };
-
-  const cancelAnchor = () => {
-    setAnchorOpen(false);
-    setAnchorText('');
-    setAnchoredLine(null);
-  };
+  const otherRole =
+    role === 'candidate' ? 'interviewer' : role === 'interviewer' ? 'candidate' : 'candidate';
 
   return (
-    <div className="obs-root">
-      {/* ── HEADER ─────────────────────────────────────────── */}
+    <div className="obs-room">
       <header className="obs-header">
         <div className="obs-header__left">
           <div className="obs-logo">W</div>
           <div className="obs-header__info">
-            <span className="obs-header__name">{CANDIDATE_NAME}</span>
-            <span className="obs-header__role">{CANDIDATE_ROLE}</span>
+            <span className="obs-header__name">Sala: {roomId}</span>
+            <span className="obs-header__role">
+              {role === 'candidate' && 'Candidato'}
+              {role === 'interviewer' && 'Entrevistador'}
+              {role === 'observer' && 'Observador'}
+            </span>
           </div>
         </div>
 
         <div className="obs-header__center">
           <span className="obs-live-dot" />
           <span className="obs-live-label">EN VIVO</span>
-          <span className="obs-timer">{formatTime(elapsed)}</span>
+          <span className="obs-timer">{formatTimer(elapsed)}</span>
         </div>
 
         <div className="obs-header__right">
-          <div className="obs-badge obs-badge--observer">
-            <svg
-              width="12"
-              height="12"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-            >
-              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-              <circle cx="12" cy="12" r="3" />
-            </svg>
-            Observador
+          <div className={`obs-badge obs-badge--${role}`}>
+            {participants.length} participante{participants.length !== 1 ? 's' : ''}
           </div>
         </div>
       </header>
 
-      {/* ── BODY ───────────────────────────────────────────── */}
       <main className="obs-body">
-        {/* ── COL IZQUIERDA: Video + Avatar + Audio ─────────── */}
-        <div className="obs-col obs-col--left">
-          {/* Video candidato */}
-          <div className="obs-video-card">
-            <div className="obs-video-placeholder">
-              <div className="obs-video-avatar">
-                <svg width="48" height="48" viewBox="0 0 64 64" fill="none">
-                  <circle cx="32" cy="24" r="14" fill="#1E293B" />
-                  <ellipse cx="32" cy="52" rx="22" ry="14" fill="#1E293B" />
-                </svg>
-              </div>
-              <span className="obs-video-name">{CANDIDATE_NAME}</span>
-            </div>
-            <div className="obs-video-badge">
-              <span className="obs-video-dot" />
-              CAM
+        <div className="obs-videos">
+          {isCaller && (
+            <>
+              <VideoBox stream={localStream} label="Tú" muted mirrored />
+              <VideoBox
+                stream={remoteStream}
+                label={otherRole === 'candidate' ? 'Candidato' : 'Entrevistador'}
+              />
+            </>
+          )}
+          {role === 'observer' && (
+            <>
+              <VideoBox stream={remoteStream} label="Candidato" />
+              <VideoBox stream={null} label="Entrevistador" />
+            </>
+          )}
+        </div>
+
+        {role === 'observer' && (
+          <div className="obs-metrics">
+            <h3>Métricas en vivo</h3>
+            <div className="obs-metrics__rings">
+              <CompetencyRing label="Fluidez" score={metrics.fluency} />
+              <CompetencyRing label="Contacto visual" score={metrics.eyeContact} />
+              <CompetencyRing label="Ritmo del habla" score={metrics.speechRate} />
             </div>
           </div>
+        )}
 
-          {/* Avatar IA + ObserverAura */}
-          <div className="obs-avatar-card">
-            <div className="obs-avatar-label">Entrevistador IA</div>
-            <ObserverAura speaking={speaking} />
-            <div className="obs-avatar-status">
-              {speaking ? (
-                <>
-                  <span className="obs-pulse obs-pulse--blue" /> Hablando…
-                </>
-              ) : (
-                <>
-                  <span className="obs-pulse obs-pulse--gray" /> Escuchando
-                </>
-              )}
-            </div>
-          </div>
-
-          {/* Onda de audio */}
-          <div className="obs-audio-card">
-            <div className="obs-audio-header">
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="#0EA5E9"
-                strokeWidth="2"
-              >
-                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
-                <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
-                <line x1="12" y1="19" x2="12" y2="23" />
-                <line x1="8" y1="23" x2="16" y2="23" />
-              </svg>
-              <span>Audio en tiempo real</span>
-            </div>
-            <div className="obs-waveform">
-              {Array.from({ length: 28 }).map((_, i) => (
-                <div key={i} className="obs-wave-bar" style={{ animationDelay: `${i * 60}ms` }} />
+        <div className="obs-bottom">
+          <div className="obs-participants">
+            <h3>Participantes</h3>
+            <div className="obs-participant-list">
+              {participants.map((p) => (
+                <div key={p.peerId} className="obs-participant-item">
+                  <span className={`obs-participant-dot obs-participant-dot--${p.role}`} />
+                  <span>
+                    {p.role === 'candidate'
+                      ? 'Candidato'
+                      : p.role === 'interviewer'
+                        ? 'Entrevistador'
+                        : 'Observador'}
+                  </span>
+                  {p.peerId === peerId && <span className="obs-participant-you">(tú)</span>}
+                </div>
               ))}
             </div>
           </div>
-        </div>
 
-        {/* ── COL CENTRAL: Métricas ─────────────────────────── */}
-        <div className="obs-col obs-col--center">
-          <div className="obs-metrics-title">
-            <svg
-              width="14"
-              height="14"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="#0EA5E9"
-              strokeWidth="2"
-            >
-              <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
-            </svg>
-            Análisis en tiempo real
-          </div>
-
-          {METRICS.map((m) => (
-            <div
-              key={m.key}
-              className="obs-metric-card"
-              style={{ '--metric-bg': m.bg } as React.CSSProperties}
-            >
-              <div className="obs-metric-top">
-                <span className="obs-metric-label">{m.label}</span>
-                <span className="obs-metric-value" style={{ color: m.color }}>
-                  {m.value}%
-                </span>
-              </div>
-              <div className="obs-progress-track">
-                <div
-                  className="obs-progress-fill"
-                  style={
-                    {
-                      width: `${m.value}%`,
-                      background: m.color,
-                      '--fill-color': m.color,
-                    } as React.CSSProperties
-                  }
-                />
-              </div>
-            </div>
-          ))}
-
-          {/* Score global */}
-          <div className="obs-score-card">
-            <div className="obs-score-label">Score Global</div>
-            <div className="obs-score-ring">
-              <svg viewBox="0 0 80 80" className="obs-score-svg">
-                <circle cx="40" cy="40" r="34" fill="none" stroke="#1E293B" strokeWidth="6" />
-                <circle
-                  cx="40"
-                  cy="40"
-                  r="34"
-                  fill="none"
-                  stroke="url(#scoreGrad)"
-                  strokeWidth="6"
-                  strokeLinecap="round"
-                  strokeDasharray="213.6"
-                  strokeDashoffset="46"
-                  transform="rotate(-90 40 40)"
-                />
-                <defs>
-                  <linearGradient id="scoreGrad" x1="0" y1="0" x2="1" y2="0">
-                    <stop offset="0%" stopColor="#2563EB" />
-                    <stop offset="100%" stopColor="#0EA5E9" />
-                  </linearGradient>
-                </defs>
-              </svg>
-              <span className="obs-score-number">78</span>
-            </div>
-            <div className="obs-score-sub">Excelente candidato/a</div>
-          </div>
-
-          {/* Comentarios anclados */}
-          {comments.length > 0 && (
-            <div className="obs-comments-card">
-              <div className="obs-comments-title">
-                <svg
-                  width="13"
-                  height="13"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="#0EA5E9"
-                  strokeWidth="2"
-                >
-                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                </svg>
-                Notas ancladas
-              </div>
+          <div className="obs-comments">
+            <h3>Comentarios</h3>
+            <div className="obs-comments__list">
+              {comments.length === 0 && (
+                <span className="obs-comments__empty">Aún no hay comentarios</span>
+              )}
               {comments.map((c) => (
                 <div key={c.id} className="obs-comment-item">
-                  <div className="obs-comment-anchor">&ldquo;{c.anchoredTo}&rdquo;</div>
-                  <div className="obs-comment-text">{c.text}</div>
-                  <div className="obs-comment-time">{c.time}</div>
+                  <span className="obs-comment-time">{formatTimer(c.timestamp)}</span>
+                  <span className="obs-comment-text">{c.text}</span>
                 </div>
               ))}
             </div>
-          )}
-        </div>
-
-        {/* ── COL DERECHA: Transcripción / Análisis / Notas ─── */}
-        <div className="obs-col obs-col--right">
-          {/* Tabs */}
-          <div className="obs-tabs">
-            {TABS.map((tab) => (
+            <div className="obs-comments__input-row">
+              <input
+                className="obs-comments__input"
+                value={commentInput}
+                onChange={(e) => setCommentInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    addComment();
+                  }
+                }}
+                placeholder="Ancla un comentario en este momento…"
+              />
               <button
-                key={tab}
-                className={`obs-tab ${activeTab === tab ? 'obs-tab--active' : ''}`}
-                onClick={() => setActiveTab(tab)}
+                className="obs-comments__send"
+                onClick={addComment}
+                disabled={!commentInput.trim()}
               >
-                {tab}
+                Anclar
               </button>
-            ))}
+            </div>
           </div>
-
-          {/* Panel transcripción */}
-          {activeTab === 'Transcripción' && (
-            <div className="obs-transcript" ref={transcriptRef}>
-              {MOCK_TRANSCRIPT.map((line) => (
-                <div
-                  key={line.id}
-                  className={`obs-transcript-line obs-transcript-line--${line.speaker}`}
-                >
-                  <div className="obs-transcript-meta">
-                    <span className="obs-transcript-speaker">
-                      {line.speaker === 'ai' ? 'IA Entrevistador' : CANDIDATE_NAME}
-                    </span>
-                    <span className="obs-transcript-time">{line.time}</span>
-                  </div>
-                  <p className="obs-transcript-text">{line.text}</p>
-                  <button
-                    className="obs-anchor-btn"
-                    onClick={() => openAnchor(line)}
-                    title="Anclar comentario"
-                  >
-                    <svg
-                      width="11"
-                      height="11"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="2"
-                    >
-                      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                    </svg>
-                    Anclar nota
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* Panel análisis */}
-          {activeTab === 'Análisis' && (
-            <div className="obs-analysis">
-              <div className="obs-analysis-section">
-                <div className="obs-analysis-head">Fortalezas detectadas</div>
-                {[
-                  'Comunicación estructurada con evidencia cuantitativa',
-                  'Alta capacidad de reflexión sobre errores pasados',
-                  'Dominio metodológico mixto (cual + cuant)',
-                  'Habilidad para gestionar resistencia organizacional',
-                ].map((f, i) => (
-                  <div key={i} className="obs-analysis-item obs-analysis-item--positive">
-                    <svg
-                      width="13"
-                      height="13"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="#16A34A"
-                      strokeWidth="2.5"
-                    >
-                      <polyline points="20 6 9 17 4 12" />
-                    </svg>
-                    {f}
-                  </div>
-                ))}
-              </div>
-              <div className="obs-analysis-section">
-                <div className="obs-analysis-head">Áreas de atención</div>
-                {[
-                  'Respuestas algo extensas — podría ser más concisa',
-                  'Poca mención de métricas de impacto de negocio',
-                ].map((f, i) => (
-                  <div key={i} className="obs-analysis-item obs-analysis-item--warning">
-                    <svg
-                      width="13"
-                      height="13"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="#D97706"
-                      strokeWidth="2.5"
-                    >
-                      <circle cx="12" cy="12" r="10" />
-                      <line x1="12" y1="8" x2="12" y2="12" />
-                      <line x1="12" y1="16" x2="12.01" y2="16" />
-                    </svg>
-                    {f}
-                  </div>
-                ))}
-              </div>
-              <div className="obs-analysis-section">
-                <div className="obs-analysis-head">Palabras clave detectadas</div>
-                <div className="obs-tags">
-                  {[
-                    'UX Research',
-                    'Fintech',
-                    'Onboarding',
-                    'Entrevistas',
-                    'Card sorting',
-                    'Métricas',
-                    'Insights',
-                    'Stakeholders',
-                  ].map((tag) => (
-                    <span key={tag} className="obs-tag">
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Panel notas */}
-          {activeTab === 'Notas' && (
-            <div className="obs-notes">
-              {comments.length === 0 ? (
-                <div className="obs-notes-empty">
-                  <svg
-                    width="36"
-                    height="36"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="#334155"
-                    strokeWidth="1.5"
-                  >
-                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-                  </svg>
-                  <p>No hay notas aún.</p>
-                  <p>Ancla comentarios desde la transcripción.</p>
-                </div>
-              ) : (
-                comments.map((c) => (
-                  <div key={c.id} className="obs-note-card">
-                    <div className="obs-note-anchor">
-                      <svg
-                        width="11"
-                        height="11"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="#0EA5E9"
-                        strokeWidth="2"
-                      >
-                        <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
-                        <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
-                      </svg>
-                      {c.anchoredTo}
-                    </div>
-                    <p className="obs-note-text">{c.text}</p>
-                    <span className="obs-note-time">{c.time}</span>
-                  </div>
-                ))
-              )}
-            </div>
-          )}
         </div>
       </main>
-
-      {/* ── INPUT FLOTANTE: Anclar comentario ──────────────── */}
-      {anchorOpen && (
-        <div className="obs-anchor-overlay" onClick={cancelAnchor}>
-          <div className="obs-anchor-modal" onClick={(e) => e.stopPropagation()}>
-            <div className="obs-anchor-modal__header">
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="#0EA5E9"
-                strokeWidth="2"
-              >
-                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-              </svg>
-              Anclar nota
-            </div>
-            {anchoredLine && (
-              <div className="obs-anchor-modal__ref">
-                &ldquo;{anchoredLine.text.slice(0, 80)}&hellip;&rdquo;
-              </div>
-            )}
-            <textarea
-              className="obs-anchor-modal__input"
-              placeholder="Escribe tu observación…"
-              value={anchorText}
-              onChange={(e) => setAnchorText(e.target.value)}
-              autoFocus
-              rows={4}
-            />
-            <div className="obs-anchor-modal__actions">
-              <button className="obs-anchor-modal__cancel" onClick={cancelAnchor}>
-                Cancelar
-              </button>
-              <button
-                className="obs-anchor-modal__save"
-                onClick={saveComment}
-                disabled={!anchorText.trim()}
-              >
-                Guardar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
+}
+
+/* ══════════════════════════════════════════════════════════
+   PAGE
+   ══════════════════════════════════════════════════════════ */
+export function ObserverRoom() {
+  const [joined, setJoined] = useState<{ roomId: string; role: RoomRole } | null>(null);
+
+  const handleJoin = (roomId: string, role: RoomRole) => {
+    setJoined({ roomId, role });
+  };
+
+  if (joined) {
+    return <Room roomId={joined.roomId} role={joined.role} />;
+  }
+
+  return <Lobby onJoin={handleJoin} />;
 }
