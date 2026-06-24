@@ -2,8 +2,20 @@ import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
-export default defineConfig({
+// Funcion para distinguir dev (serve) de build via `command`.
+export default defineConfig(({ command }) => ({
   plugins: [react()],
+  define: {
+    // Fuente del WASM de MediaPipe para el worker del aura. En dev (serve) se usa
+    // el CDN: MediaPipe hace import() dinamico del loader y Vite DEV no permite
+    // importar /public como modulo, pero si deja pasar import() a URLs http. En
+    // build se usa el local /mediapipe-wasm (copiado por copy:wasm), sin CDN.
+    __MEDIAPIPE_WASM_URL__: JSON.stringify(
+      command === 'serve'
+        ? 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.35/wasm'
+        : '/mediapipe-wasm',
+    ),
+  },
   resolve: {
     alias: {
       // El paquete de voz se consume desde su codigo fuente: su worker se crea
@@ -29,4 +41,4 @@ export default defineConfig({
       },
     },
   },
-});
+}));

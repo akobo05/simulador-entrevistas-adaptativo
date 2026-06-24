@@ -89,7 +89,7 @@ function fakeVoice(micStatus: MicStatus = 'idle'): VoiceTurn {
 // Pipeline espiable
 const feedTranscript = vi.fn();
 function fakePipeline(over: Partial<AuraPipeline> = {}): AuraPipeline {
-  return { auraState: null, feedTranscript, cameraStatus: 'off', ...over };
+  return { auraState: null, feedTranscript, cameraStatus: 'off', videoStream: null, ...over };
 }
 
 function interviewerItem(id: string, text: string): ChatItem {

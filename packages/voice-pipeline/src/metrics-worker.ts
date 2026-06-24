@@ -11,10 +11,18 @@ import { FaceLandmarker, FilesetResolver } from '@mediapipe/tasks-vision';
 import type { AuraMetric } from '@warachikuy/shared-types';
 
 const THROTTLE_MS = 250;
-// WASM alojado localmente en apps/web/public/mediapipe-wasm/ para no depender
-// del CDN en tiempo de ejecucion. El modelo (~30 MB) sigue en Google Storage
-// porque es demasiado grande para el repositorio; se cachea en el navegador.
-const WASM_URL = '/mediapipe-wasm';
+
+// Fuente del WASM de MediaPipe, inyectada por Vite (define en vite.config):
+// en DEV es el CDN externo y en BUILD el local /mediapipe-wasm. Razon: MediaPipe
+// hace import() dinamico del loader; Vite DEV NO permite importar un archivo de
+// /public como modulo ("should not be imported from source code"), pero si deja
+// pasar los import() a URLs http (CDN). En build no hay middleware dev, asi que
+// el asset local de /mediapipe-wasm (copiado por copy:wasm, #77/#78) funciona y
+// no se depende del CDN. La version del CDN matchea @mediapipe/tasks-vision.
+declare const __MEDIAPIPE_WASM_URL__: string;
+const WASM_URL = __MEDIAPIPE_WASM_URL__;
+// Ayuda de verificacion: muestra en la consola del worker la fuente usada.
+console.info('[aura] MediaPipe WASM source:', WASM_URL);
 const MODEL_URL =
   'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task';
 
