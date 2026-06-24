@@ -7,6 +7,7 @@ import {
   type Industry,
   type PlanResponse,
 } from '@warachikuy/shared-types';
+import { getOrCreateCandidateId } from './candidate';
 
 const BASE = import.meta.env.VITE_API_URL ?? '';
 
@@ -52,7 +53,9 @@ export async function createSession(req: CreateSessionRequest): Promise<CreateSe
   const res = await fetch(`${BASE}/api/v1/sessions`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify(req),
+    // El cliente es dueno de la identidad: el candidateId del navegador
+    // sobrescribe a proposito cualquiera que venga en req.
+    body: JSON.stringify({ ...req, candidateId: getOrCreateCandidateId() }),
   });
   if (!res.ok) throw await readError(res);
   const data = CreateSessionResponseSchema.parse(await res.json());

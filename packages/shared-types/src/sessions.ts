@@ -9,6 +9,8 @@ export type Level = z.infer<typeof LevelSchema>;
 export const CreateSessionRequestSchema = z.object({
   industry: IndustrySchema,
   level: LevelSchema,
+  // Id local anonimo del candidato (#56). Opcional: omitido => sesion anonima.
+  candidateId: z.string().uuid().optional(),
 });
 export type CreateSessionRequest = z.infer<typeof CreateSessionRequestSchema>;
 
@@ -33,6 +35,8 @@ export const SessionStateSchema = z.object({
   phase: SessionPhaseSchema,
   turnNumber: z.number().int().nonnegative(),
   startedAt: z.number().int(),
+  // Dueno de la sesion para el historial multi-sesion (#56). Opcional.
+  candidateId: z.string().uuid().optional(),
   token: z.string().regex(/^[0-9a-f]{64}$/, 'token debe ser 64 chars hex'),
 });
 export type SessionState = z.infer<typeof SessionStateSchema>;

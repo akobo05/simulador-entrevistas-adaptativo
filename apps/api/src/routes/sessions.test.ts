@@ -128,7 +128,7 @@ const coachOutput = {
   exercises: [{ title: 't', description: 'd' }],
 };
 
-function seedSession(redis: Redis, sessionId: string): Promise<unknown> {
+function seedSession(redis: Redis, sessionId: string, candidateId?: string): Promise<unknown> {
   const state: SessionState = {
     id: sessionId,
     industry: 'backend',
@@ -137,6 +137,7 @@ function seedSession(redis: Redis, sessionId: string): Promise<unknown> {
     phase: 'closing',
     turnNumber: 6,
     startedAt: Date.now(),
+    candidateId,
     token: 'a'.repeat(64),
   };
   return redis.set(`session:${sessionId}`, JSON.stringify(state), 'EX', 3600);
@@ -359,6 +360,37 @@ describe('POST /api/v1/sessions/:sessionId/end y GET /api/v1/sessions/:sessionId
     expect(insertSpy).toHaveBeenCalled();
     await failServer.close();
   });
+
+  it('estampa el candidate_id en la fila archivada cuando la sesion tiene candidateId', async () => {
+    const candidateId = '550e8400-e29b-41d4-a716-446655440000';
+    const create = await server.inject({
+      method: 'POST',
+      url: '/api/v1/sessions',
+      payload: { industry: 'backend', level: 'mid', candidateId },
+    });
+    const { sessionId, token } = JSON.parse(create.body);
+    await server.inject({
+      method: 'POST',
+      url: `/api/v1/sessions/${sessionId}/end?token=${token}`,
+    });
+    const archived = await getArchivedSession(db, sessionId);
+    expect(archived?.candidateId).toBe(candidateId);
+  });
+
+  it('archiva candidate_id null cuando la sesion no tiene candidateId', async () => {
+    const create = await server.inject({
+      method: 'POST',
+      url: '/api/v1/sessions',
+      payload: { industry: 'backend', level: 'mid' },
+    });
+    const { sessionId, token } = JSON.parse(create.body);
+    await server.inject({
+      method: 'POST',
+      url: `/api/v1/sessions/${sessionId}/end?token=${token}`,
+    });
+    const archived = await getArchivedSession(db, sessionId);
+    expect(archived?.candidateId).toBeNull();
+  });
 });
 
 describe('GET /api/v1/sessions/:sessionId', () => {
@@ -394,6 +426,19 @@ describe('GET /api/v1/sessions/:sessionId', () => {
     // El token (secreto) y la fase (estado interno) no se filtran.
     expect(body.session.token).toBeUndefined();
     expect(body.session.phase).toBeUndefined();
+  });
+
+  it('el resumen no filtra el candidateId aunque la sesion lo tenga', async () => {
+    await seedSession(redis, sessionId, '550e8400-e29b-41d4-a716-446655440000');
+    const res = await server.inject({
+      method: 'GET',
+      url: `/api/v1/sessions/${sessionId}?token=${token}`,
+    });
+    expect(res.statusCode).toBe(200);
+    const body = JSON.parse(res.body);
+    expect(body.session.id).toBe(sessionId);
+    // El candidateId es interno: no se expone en el resumen publico.
+    expect(body.session.candidateId).toBeUndefined();
   });
 
   it('responde 401 cuando el token tiene formato valido pero es distinto', async () => {

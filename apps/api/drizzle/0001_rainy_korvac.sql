@@ -1,0 +1,1 @@
+CREATE INDEX "interview_sessions_candidate_id_idx" ON "interview_sessions" USING btree ("candidate_id");

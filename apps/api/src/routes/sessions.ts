@@ -106,6 +106,7 @@ export async function registerSessionsRoutes(server: FastifyInstance): Promise<v
         const metrics = await readAggregate(server.redis, sessionId, req.log);
         await archiveSession(server.db, {
           id: sessionId,
+          candidateId: ended.candidateId ?? null,
           industry: ended.industry,
           level: ended.level,
           status: ended.status,
