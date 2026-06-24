@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { Industry, Level } from '@warachikuy/shared-types';
 import { createSession, getIndustries, type IndustryOption } from '../lib/apiClient';
+import { loadProfile, saveProfile } from '../lib/candidateProfile';
 import { useSession } from '../context/SessionContext';
 import { Button } from '../components';
 import './SetupPage.css';
@@ -15,9 +16,10 @@ const LEVELS: { id: Level; name: string }[] = [
 export function SetupPage() {
   const navigate = useNavigate();
   const { setSession } = useSession();
+  const [initialProfile] = useState(loadProfile);
   const [industries, setIndustries] = useState<IndustryOption[]>([]);
-  const [industry, setIndustry] = useState<Industry>('backend');
-  const [level, setLevel] = useState<Level>('mid');
+  const [industry, setIndustry] = useState<Industry>(initialProfile.industry);
+  const [level, setLevel] = useState<Level>(initialProfile.level);
   const [loadError, setLoadError] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -28,7 +30,7 @@ export function SetupPage() {
       .then((list) => {
         if (!active) return;
         setIndustries(list);
-        if (list[0]) setIndustry(list[0].id);
+        setIndustry((prev) => (list.some((opt) => opt.id === prev) ? prev : (list[0]?.id ?? prev)));
       })
       .catch(() => active && setLoadError(true));
     return () => {
@@ -42,6 +44,7 @@ export function SetupPage() {
     setSubmitError(null);
     try {
       const res = await createSession({ industry, level });
+      saveProfile({ industry, level });
       setSession({ ...res, industry, level });
       navigate(`/interview/${res.sessionId}`);
     } catch {

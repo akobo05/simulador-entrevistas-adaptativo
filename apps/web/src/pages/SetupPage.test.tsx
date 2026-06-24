@@ -16,6 +16,7 @@ describe('SetupPage', () => {
   beforeEach(() => {
     navigateMock.mockReset();
     sessionStorage.clear();
+    localStorage.clear();
     vi.spyOn(apiClient, 'getIndustries').mockResolvedValue([
       { id: 'backend', name: 'Backend' },
       { id: 'frontend', name: 'Frontend' },
@@ -61,5 +62,49 @@ describe('SetupPage', () => {
     await waitFor(() => expect(screen.getByText('Backend')).toBeInTheDocument());
     fireEvent.click(screen.getByRole('button', { name: /comenzar entrevista/i }));
     await waitFor(() => expect(screen.getByText(/no se pudo crear/i)).toBeInTheDocument());
+  });
+
+  it('precarga industry/level desde el perfil guardado', async () => {
+    localStorage.setItem(
+      'warachikuy:candidateProfile',
+      JSON.stringify({ industry: 'frontend', level: 'senior' }),
+    );
+    vi.spyOn(apiClient, 'createSession').mockResolvedValue({
+      sessionId: '550e8400-e29b-41d4-a716-446655440000',
+      websocketUrl: 'ws://x',
+      token: 'a'.repeat(64),
+    });
+    renderPage();
+    await waitFor(() => expect(screen.getByTestId('setup-industry')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('Backend')).toBeInTheDocument());
+    fireEvent.click(screen.getByRole('button', { name: /comenzar entrevista/i }));
+    await waitFor(() =>
+      expect(apiClient.createSession).toHaveBeenCalledWith(
+        expect.objectContaining({ industry: 'frontend', level: 'senior' }),
+      ),
+    );
+  });
+
+  it('si la industria guardada no esta en el catalogo del API, cae a la primera opcion', async () => {
+    // El mock de getIndustries devuelve [backend, frontend]; 'data' es valida pero no esta en esa lista
+    localStorage.setItem(
+      'warachikuy:candidateProfile',
+      JSON.stringify({ industry: 'data', level: 'mid' }),
+    );
+    vi.spyOn(apiClient, 'createSession').mockResolvedValue({
+      sessionId: '550e8400-e29b-41d4-a716-446655440000',
+      websocketUrl: 'ws://x',
+      token: 'a'.repeat(64),
+    });
+    renderPage();
+    await waitFor(() => expect(screen.getByTestId('setup-industry')).toBeInTheDocument());
+    await waitFor(() => expect(screen.getByText('Backend')).toBeInTheDocument());
+    fireEvent.click(screen.getByRole('button', { name: /comenzar entrevista/i }));
+    // tras reconciliar, la industria efectiva debe ser 'backend' (list[0])
+    await waitFor(() =>
+      expect(apiClient.createSession).toHaveBeenCalledWith(
+        expect.objectContaining({ industry: 'backend' }),
+      ),
+    );
   });
 });
