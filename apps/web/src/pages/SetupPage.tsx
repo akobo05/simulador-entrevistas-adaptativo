@@ -16,9 +16,10 @@ const LEVELS: { id: Level; name: string }[] = [
 export function SetupPage() {
   const navigate = useNavigate();
   const { setSession } = useSession();
+  const [initialProfile] = useState(loadProfile);
   const [industries, setIndustries] = useState<IndustryOption[]>([]);
-  const [industry, setIndustry] = useState<Industry>(loadProfile().industry);
-  const [level, setLevel] = useState<Level>(loadProfile().level);
+  const [industry, setIndustry] = useState<Industry>(initialProfile.industry);
+  const [level, setLevel] = useState<Level>(initialProfile.level);
   const [loadError, setLoadError] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -29,6 +30,7 @@ export function SetupPage() {
       .then((list) => {
         if (!active) return;
         setIndustries(list);
+        setIndustry((prev) => (list.some((opt) => opt.id === prev) ? prev : (list[0]?.id ?? prev)));
       })
       .catch(() => active && setLoadError(true));
     return () => {
