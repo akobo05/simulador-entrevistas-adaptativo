@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import type { AuraMetric, CandidateTranscript } from '@warachikuy/shared-types';
+import { createFaceLandmarker } from '@warachikuy/voice-pipeline';
 import { useAuraPipeline } from './useAuraPipeline';
 
 const speechMetric: AuraMetric = {
@@ -20,16 +21,12 @@ const trackerMock = {
   onTranscript: vi.fn(),
   getMetrics: vi.fn((): AuraMetric[] => []),
 };
-const workerApi = {
-  initialize: vi.fn(async () => undefined),
-  processFrame: vi.fn(async (): Promise<AuraMetric[]> => [eyeMetric]),
-  dispose: vi.fn(),
-};
-const terminateMock = vi.fn();
+const detectMock = vi.fn((): AuraMetric[] => [eyeMetric]);
+const closeMock = vi.fn();
 
 vi.mock('@warachikuy/voice-pipeline', () => ({
   createSpeechMetricsTracker: vi.fn(() => trackerMock),
-  createMetricsWorker: vi.fn(() => ({ api: workerApi, terminate: terminateMock })),
+  createFaceLandmarker: vi.fn(async () => ({ detect: detectMock, close: closeMock })),
 }));
 
 const stopTrack = vi.fn();
@@ -40,10 +37,39 @@ function mockGetUserMedia(impl: () => Promise<MediaStream>) {
   });
 }
 function fakeStream(): MediaStream {
-  // El track expone addEventListener porque el hook escucha su evento 'ended'
   return {
     getTracks: () => [{ stop: stopTrack, addEventListener: vi.fn() }],
   } as unknown as MediaStream;
+}
+
+// Capturar createElement ANTES de cualquier spy para evitar recursion infinita
+// cuando makeVideoEl es llamada dentro de un mockImplementation de createElement.
+const realCreateElement = document.createElement.bind(document);
+
+// Crea un elemento video REAL (para que appendChild/remove funcionen en happy-dom)
+// con play() mockeado y videoWidth/videoHeight configurables.
+// srcObject se redefine como propiedad de datos para evitar que el setter de
+// happy-dom valide el tipo y lance al asignar un MediaStream simulado.
+function makeVideoEl(opts: { videoWidth?: number; playFn?: () => Promise<void> } = {}) {
+  const videoEl = realCreateElement('video');
+  const w = opts.videoWidth ?? 2;
+  Object.defineProperty(videoEl, 'videoWidth', { get: () => w, configurable: true });
+  Object.defineProperty(videoEl, 'videoHeight', { get: () => w, configurable: true });
+  // Redefinir srcObject como dato mutable para que la asignacion en el hook no lance
+  Object.defineProperty(videoEl, 'srcObject', { value: null, writable: true, configurable: true });
+  videoEl.play = vi.fn(opts.playFn ?? (async () => undefined));
+  return videoEl;
+}
+
+// Avanza promesas pendientes drenando la cola de microtareas varias veces.
+// Necesario porque el flujo async tiene multiples await encadenados:
+// getUserMedia -> setState(stream) -> re-render -> play() -> createFaceLandmarker().
+async function flushAsync(): Promise<void> {
+  for (let i = 0; i < 5; i++) {
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+  }
 }
 
 describe('useAuraPipeline', () => {
@@ -55,17 +81,21 @@ describe('useAuraPipeline', () => {
 
   afterEach(() => {
     vi.useRealTimers();
+    vi.restoreAllMocks();
   });
 
-  it('con camara deshabilitada no pide la camara y emite snapshots solo de habla', () => {
+  it('con camara deshabilitada no pide la camara y emite snapshots solo de habla', async () => {
     mockGetUserMedia(() => Promise.reject(new Error('no debe llamarse')));
     trackerMock.getMetrics.mockReturnValue([speechMetric]);
     const onSnapshot = vi.fn();
     const { result } = renderHook(() => useAuraPipeline('s1', false, onSnapshot));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
     expect(result.current.cameraStatus).toBe('off');
     expect(navigator.mediaDevices.getUserMedia).not.toHaveBeenCalled();
-    act(() => {
-      vi.advanceTimersByTime(250);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(250);
     });
     expect(onSnapshot).toHaveBeenCalledWith(
       expect.objectContaining({ sessionId: 's1', metrics: [speechMetric] }),
@@ -73,12 +103,12 @@ describe('useAuraPipeline', () => {
     expect(result.current.auraState?.metrics).toEqual([speechMetric]);
   });
 
-  it('sin ninguna metrica no emite snapshots (nada de AuraState vacios)', () => {
+  it('sin ninguna metrica no emite snapshots (nada de AuraState vacios)', async () => {
     mockGetUserMedia(() => Promise.reject(new Error('x')));
     const onSnapshot = vi.fn();
     renderHook(() => useAuraPipeline('s1', false, onSnapshot));
-    act(() => {
-      vi.advanceTimersByTime(1000);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1000);
     });
     expect(onSnapshot).not.toHaveBeenCalled();
   });
@@ -94,54 +124,31 @@ describe('useAuraPipeline', () => {
       await vi.advanceTimersByTimeAsync(0);
     });
     expect(result.current.cameraStatus).toBe('denied');
-    act(() => {
-      vi.advanceTimersByTime(250);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(250);
     });
     expect(onSnapshot).toHaveBeenCalled();
   });
 
-  it('camara ok -> on, inicializa el worker y combina habla + camara', async () => {
+  it('camara ok -> on, crea el landmarker y combina habla + camara', async () => {
     mockGetUserMedia(() => Promise.resolve(fakeStream()));
     trackerMock.getMetrics.mockReturnValue([speechMetric]);
-    // El hook crea <video>/<canvas> internos: se stubean via createElement para
-    // que el frame loop funcione en happy-dom (que no tiene video real)
-    const realCreate = document.createElement.bind(document);
     vi.spyOn(document, 'createElement').mockImplementation((tag: string) => {
-      if (tag === 'video') {
-        return {
-          videoWidth: 2,
-          videoHeight: 2,
-          muted: false,
-          srcObject: null,
-          play: vi.fn(async () => undefined),
-        } as unknown as HTMLVideoElement;
-      }
-      if (tag === 'canvas') {
-        return {
-          width: 0,
-          height: 0,
-          getContext: () => ({
-            drawImage: vi.fn(),
-            getImageData: () => ({ data: new Uint8ClampedArray(16), width: 2, height: 2 }),
-          }),
-        } as unknown as HTMLCanvasElement;
-      }
-      return realCreate(tag);
+      if (tag === 'video') return makeVideoEl({ videoWidth: 2 });
+      return realCreateElement(tag);
     });
 
     const onSnapshot = vi.fn();
     const { result } = renderHook(() => useAuraPipeline('s1', true, onSnapshot));
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(0);
-    });
+
+    // Drenar toda la cadena de promesas async: getUserMedia -> stream -> play -> createFaceLandmarker
+    await flushAsync();
+
     expect(result.current.cameraStatus).toBe('on');
-    expect(workerApi.initialize).toHaveBeenCalledOnce();
+    expect(createFaceLandmarker).toHaveBeenCalledOnce();
     await act(async () => {
       await vi.advanceTimersByTimeAsync(300);
     });
-    // Segundo avance: el snapshot de t=500 ya ve la metrica de camara que
-    // processFrame resolvio tras el tick de t=250 (waitFor no detecta los
-    // fake timers de vitest sin el global `jest` y se colgaria)
     await act(async () => {
       await vi.advanceTimersByTimeAsync(300);
     });
@@ -149,82 +156,95 @@ describe('useAuraPipeline', () => {
     expect(last.metrics).toEqual(expect.arrayContaining([speechMetric, eyeMetric]));
   });
 
-  it('si el worker no inicializa -> on_no_metrics, mantiene el preview y no detiene la camara', async () => {
+  it('si createFaceLandmarker falla -> on_no_metrics: camara activa sin eye_contact', async () => {
     mockGetUserMedia(() => Promise.resolve(fakeStream()));
-    workerApi.initialize.mockRejectedValueOnce(new Error('model_load_failed'));
-    const { result } = renderHook(() => useAuraPipeline('s1', true, vi.fn()));
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(0);
+    vi.mocked(createFaceLandmarker).mockRejectedValueOnce(new Error('model_load_failed'));
+    vi.spyOn(document, 'createElement').mockImplementation((tag: string) => {
+      if (tag === 'video') return makeVideoEl({ videoWidth: 2 });
+      return realCreateElement(tag);
     });
+    const { result } = renderHook(() => useAuraPipeline('s1', true, vi.fn()));
+
+    await flushAsync();
+
+    // La camara sigue "on" pero con degradacion: self-view visible sin metricas
     expect(result.current.cameraStatus).toBe('on_no_metrics');
-    expect(result.current.videoStream).not.toBeNull();
+    // La camara NO se libera (el self-view sigue activo aunque falle el landmarker)
     expect(stopTrack).not.toHaveBeenCalled();
   });
 
-  it('si el video de analisis no reproduce -> on_no_metrics, mantiene el preview', async () => {
+  it('fallo de play() -> on_no_metrics: camara activa sin metricas de ojo', async () => {
     mockGetUserMedia(() => Promise.resolve(fakeStream()));
-    const realCreate = document.createElement.bind(document);
     vi.spyOn(document, 'createElement').mockImplementation((tag: string) => {
-      if (tag === 'video') {
-        return {
-          videoWidth: 2,
-          videoHeight: 2,
-          muted: false,
-          playsInline: false,
-          srcObject: null,
-          play: vi.fn(() => Promise.reject(new Error('NotAllowedError'))),
-        } as unknown as HTMLVideoElement;
-      }
-      return realCreate(tag);
+      if (tag === 'video')
+        return makeVideoEl({
+          videoWidth: 0,
+          playFn: () => Promise.reject(new Error('NotAllowedError')),
+        });
+      return realCreateElement(tag);
     });
-    const { result } = renderHook(() => useAuraPipeline('s1', true, vi.fn()));
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(0);
-    });
+    const onSnapshot = vi.fn();
+    const { result } = renderHook(() => useAuraPipeline('s1', true, onSnapshot));
+
+    await flushAsync();
+
+    // play() falla -> degrada a on_no_metrics
     expect(result.current.cameraStatus).toBe('on_no_metrics');
+    // El stream sigue activo (el self-view permanece, solo falla el analisis)
     expect(result.current.videoStream).not.toBeNull();
+    // La pista de video NO se detiene: el self-view sigue vivo
     expect(stopTrack).not.toHaveBeenCalled();
+  });
+
+  it('con processingEnabled=false no se emiten metricas de ojo en los snapshots', async () => {
+    mockGetUserMedia(() => Promise.resolve(fakeStream()));
+    trackerMock.getMetrics.mockReturnValue([speechMetric]);
+    vi.spyOn(document, 'createElement').mockImplementation((tag: string) => {
+      if (tag === 'video') return makeVideoEl({ videoWidth: 2 });
+      return realCreateElement(tag);
+    });
+    const onSnapshot = vi.fn();
+    // processingEnabled = false (cuarto argumento)
+    const { result } = renderHook(() => useAuraPipeline('s1', true, onSnapshot, false));
+
+    await flushAsync();
+
+    expect(result.current.cameraStatus).toBe('on');
+    // Avanzamos varios frames y un intervalo de snapshot
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(600);
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(300);
+    });
+    // Con processingEnabled=false el frame loop vacia eyeMetricsRef, por tanto
+    // los snapshots no deben incluir la metrica de ojo
+    const calls = onSnapshot.mock.calls;
+    expect(calls.length).toBeGreaterThan(0);
+    for (const [snapshot] of calls as [{ metrics: AuraMetric[] }][]) {
+      expect(snapshot.metrics.some((m) => m.name === 'eye_contact')).toBe(false);
+    }
   });
 
   it('al apagar la camara dejan de emitirse las metricas de ojo', async () => {
     mockGetUserMedia(() => Promise.resolve(fakeStream()));
     trackerMock.getMetrics.mockReturnValue([speechMetric]);
-    const realCreate = document.createElement.bind(document);
     vi.spyOn(document, 'createElement').mockImplementation((tag: string) => {
-      if (tag === 'video') {
-        return {
-          videoWidth: 2,
-          videoHeight: 2,
-          muted: false,
-          srcObject: null,
-          play: vi.fn(async () => undefined),
-        } as unknown as HTMLVideoElement;
-      }
-      if (tag === 'canvas') {
-        return {
-          width: 0,
-          height: 0,
-          getContext: () => ({
-            drawImage: vi.fn(),
-            getImageData: () => ({ data: new Uint8ClampedArray(16), width: 2, height: 2 }),
-          }),
-        } as unknown as HTMLCanvasElement;
-      }
-      return realCreate(tag);
+      if (tag === 'video') return makeVideoEl({ videoWidth: 2 });
+      return realCreateElement(tag);
     });
     const onSnapshot = vi.fn();
     const { rerender } = renderHook(({ cam }) => useAuraPipeline('s1', cam, onSnapshot), {
       initialProps: { cam: true },
     });
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(0);
-    });
+
+    await flushAsync();
+
     await act(async () => {
       await vi.advanceTimersByTimeAsync(600);
     });
     const withCamera = onSnapshot.mock.calls.at(-1)?.[0] as { metrics: AuraMetric[] };
     expect(withCamera.metrics).toEqual(expect.arrayContaining([eyeMetric]));
-    // Camara apagada: el eye_contact congelado NO puede seguir emitiendose
     rerender({ cam: false });
     onSnapshot.mockClear();
     await act(async () => {
@@ -242,33 +262,24 @@ describe('useAuraPipeline', () => {
     expect(trackerMock.onTranscript).toHaveBeenCalledWith(t);
   });
 
-  it('al desmontar libera worker, stream y timers', async () => {
+  it('al desmontar libera el landmarker y los timers', async () => {
     mockGetUserMedia(() => Promise.resolve(fakeStream()));
-    const realCreate = document.createElement.bind(document);
     vi.spyOn(document, 'createElement').mockImplementation((tag: string) => {
-      if (tag === 'video')
-        return {
-          videoWidth: 0,
-          videoHeight: 0,
-          muted: false,
-          srcObject: null,
-          play: vi.fn(async () => undefined),
-        } as unknown as HTMLVideoElement;
-      if (tag === 'canvas') return { getContext: () => null } as unknown as HTMLCanvasElement;
-      return realCreate(tag);
+      if (tag === 'video') return makeVideoEl({ videoWidth: 2 });
+      return realCreateElement(tag);
     });
     const onSnapshot = vi.fn();
     const { unmount } = renderHook(() => useAuraPipeline('s1', true, onSnapshot));
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(0);
-    });
+
+    await flushAsync();
+
     unmount();
-    expect(terminateMock).toHaveBeenCalledOnce();
+    expect(closeMock).toHaveBeenCalledOnce();
     expect(stopTrack).toHaveBeenCalled();
     onSnapshot.mockClear();
-    act(() => {
-      vi.advanceTimersByTime(1000);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1000);
     });
-    expect(onSnapshot).not.toHaveBeenCalled(); // timers limpiados
+    expect(onSnapshot).not.toHaveBeenCalled();
   });
 });

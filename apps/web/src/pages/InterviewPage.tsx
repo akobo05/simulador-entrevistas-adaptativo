@@ -15,6 +15,7 @@ import { PermissionGate, type PermissionGrants } from '../components/PermissionG
 import { TtsSelector } from '../components/TtsSelector';
 import { usePreferences } from '../hooks/usePreferences';
 import type { CandidateTranscript } from '@warachikuy/shared-types';
+import { Camera, CameraOff, Mic, MicOff, Volume2, VolumeX } from 'lucide-react';
 import './InterviewPage.css';
 
 // Carga diferida para que Three.js no bloquee el handshake WS
@@ -29,6 +30,8 @@ export function InterviewPage() {
   const [endError, setEndError] = useState<string | null>(null);
   const { prefs, setPref } = usePreferences();
   const [ttsActive, setTtsActive] = useState(() => prefs.ttsEnabled);
+  const [cameraOn, setCameraOn] = useState(true);
+  const [micMuted, setMicMuted] = useState(false);
 
   // Hooks antes de cualquier return condicional. Si no hay sesion el hook recibe
   // strings vacios (no conecta) y el componente redirige.
@@ -70,18 +73,23 @@ export function InterviewPage() {
 
   const pipeline = useAuraPipeline(
     session?.sessionId ?? '',
-    // En estado terminal la camara se apaga (el LED no puede quedar prendido
-    // detras de la pantalla de error); el guard de sendMetrics ya descartaba
-    // los snapshots, esto libera ademas el hardware.
-    (grants?.camera ?? false) && !ended,
+    // El boton de camara libera el hardware completamente (LED apagado) para
+    // que el cliente tenga la certeza de que nadie usa su camara.
+    (grants?.camera ?? false) && !ended && cameraOn,
     socket.sendMetrics,
+    cameraOn,
   );
 
   // Self-view: refleja el stream de la camara en un <video> visible para que el
   // candidato vea que el hardware esta capturando (no hay preview por defecto).
   const selfVideoRef = useRef<HTMLVideoElement>(null);
   useEffect(() => {
-    if (selfVideoRef.current) selfVideoRef.current.srcObject = pipeline.videoStream;
+    const el = selfVideoRef.current;
+    if (!el) return;
+    el.srcObject = pipeline.videoStream;
+    if (pipeline.videoStream && typeof el.play === 'function') {
+      el.play().catch(() => {});
+    }
   }, [pipeline.videoStream]);
 
   function handleFinalTranscript(t: CandidateTranscript): void {
@@ -101,6 +109,15 @@ export function InterviewPage() {
     ttsRef.current?.cancel();
   }
   const voice = useVoiceTurn(session?.sessionId ?? '', handleFinalTranscript, handleSpeechStart);
+  function toggleMic(): void {
+    if (micMuted) {
+      setMicMuted(false);
+      if (voice.micStatus === 'idle') voice.start();
+    } else {
+      voice.stop();
+      setMicMuted(true);
+    }
+  }
 
   // El timer arranca cuando el WS abre. timer.start es estable (useCallback),
   // asi que solo socket.status entra en las dependencias.
@@ -223,7 +240,7 @@ export function InterviewPage() {
             title={ttsActive ? 'Silenciar entrevistador' : 'Activar voz del entrevistador'}
             data-testid="ip-btn-tts"
           >
-            {ttsActive ? '🔊' : '🔇'}
+            {ttsActive ? <Volume2 size={18} /> : <VolumeX size={18} />}
           </button>
           {!ended && !socket.closing && (
             <button
@@ -238,6 +255,49 @@ export function InterviewPage() {
         </div>
       </header>
 
+      {/* ── Camera module (esquina superior izquierda) ── */}
+      {grants.camera && (
+        <div className="ip-camera-module" data-testid="ip-camera-module">
+          <div className="ip-cam-view">
+            <video
+              ref={selfVideoRef}
+              className={`ip-cam-video${!cameraOn ? ' ip-cam-video--hidden' : ''}`}
+              autoPlay
+              muted
+              playsInline
+              data-testid="ip-selfview"
+            />
+            {(!pipeline.videoStream || !cameraOn) && (
+              <div className="ip-cam-placeholder">
+                <CameraOff size={24} />
+              </div>
+            )}
+          </div>
+          <div className="ip-cam-controls">
+            <button
+              type="button"
+              className={cameraOn ? 'ip-cam-btn ip-cam-btn--on' : 'ip-cam-btn'}
+              onClick={() => setCameraOn((p) => !p)}
+              aria-pressed={cameraOn}
+              title={cameraOn ? 'Apagar cámara' : 'Encender cámara'}
+              data-testid="ip-btn-cam"
+            >
+              {cameraOn ? <Camera size={16} /> : <CameraOff size={16} />}
+            </button>
+            <button
+              type="button"
+              className={micMuted ? 'ip-cam-btn' : 'ip-cam-btn ip-cam-btn--on'}
+              onClick={toggleMic}
+              aria-pressed={!micMuted}
+              title={micMuted ? 'Activar micrófono' : 'Silenciar micrófono'}
+              data-testid="ip-btn-mic"
+            >
+              {micMuted ? <MicOff size={16} /> : <Mic size={16} />}
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* ── Stage ───────────────────────────────────── */}
       <main className="ip-stage">
         {/* Avatar + aura (izquierda) */}
@@ -245,16 +305,6 @@ export function InterviewPage() {
           <Suspense fallback={<div className="aura-fallback" />}>
             <AvatarAura {...auraProps} speaking={ttsSpeaking} />
           </Suspense>
-          {pipeline.videoStream && (
-            <video
-              ref={selfVideoRef}
-              className="ip-selfview"
-              autoPlay
-              muted
-              playsInline
-              data-testid="ip-selfview"
-            />
-          )}
           {(pipeline.cameraStatus === 'denied' ||
             pipeline.cameraStatus === 'failed' ||
             pipeline.cameraStatus === 'on_no_metrics' ||

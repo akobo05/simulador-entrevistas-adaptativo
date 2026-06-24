@@ -2,26 +2,20 @@ import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
-// Funcion para distinguir dev (serve) de build via `command`.
-export default defineConfig(({ command }) => ({
+export default defineConfig(() => ({
   plugins: [react()],
-  define: {
-    // Fuente del WASM de MediaPipe para el worker del aura. En dev (serve) se usa
-    // el CDN: MediaPipe hace import() dinamico del loader y Vite DEV no permite
-    // importar /public como modulo, pero si deja pasar import() a URLs http. En
-    // build se usa el local /mediapipe-wasm (copiado por copy:wasm), sin CDN.
-    __MEDIAPIPE_WASM_URL__: JSON.stringify(
-      command === 'serve'
-        ? 'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.35/wasm'
-        : '/mediapipe-wasm',
-    ),
+  // Pre-bundlea @mediapipe/tasks-vision al arrancar el dev server. El worker del
+  // aura la carga de forma diferida (al prender la camara); sin esto, Vite la
+  // optimiza recien en ese momento y RECARGA la pagina ("new dependencies
+  // optimized, reloading"), lo que se ve como un refresco al dar permisos.
+  optimizeDeps: {
+    include: ['@mediapipe/tasks-vision'],
   },
   resolve: {
     alias: {
-      // El paquete de voz se consume desde su codigo fuente: su worker se crea
-      // con new URL('./metrics-worker.ts', import.meta.url), que en el dist
-      // compilado apuntaria a un .ts inexistente. Desde src, Vite empaqueta el
-      // worker como chunk propio tanto en dev como en build.
+      // El paquete de voz se consume desde su codigo fuente: MediaPipe corre en
+      // el hilo principal (no hay worker), asi que Vite no necesita empaquetar
+      // ningun chunk de worker. El alias permite importar los tipos TS directamente.
       '@warachikuy/voice-pipeline': fileURLToPath(
         new URL('../../packages/voice-pipeline/src/index.ts', import.meta.url),
       ),

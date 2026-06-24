@@ -249,7 +249,7 @@ describe('InterviewPage', () => {
     socketSpy.mockReturnValue(sock);
     const auraSpy = vi.spyOn(auraMod, 'useAuraPipeline');
     renderPage();
-    expect(auraSpy).toHaveBeenLastCalledWith('s1', true, sock.sendMetrics);
+    expect(auraSpy).toHaveBeenLastCalledWith('s1', true, sock.sendMetrics, true);
   });
 
   it('con historial de golpe (reconexion) habla solo el ultimo mensaje', () => {

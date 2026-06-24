@@ -370,22 +370,81 @@
   background: rgba(14, 21, 32, 0.9);
 }
 
-/* Self-view de la camara: miniatura en la esquina del area del avatar, espejada
-   como un self-view de videollamada. Da feedback de que el hardware captura. */
-.ip-avatar-wrap {
-  position: relative;
+/* ── Camera module (esquina superior izquierda) ──────────── */
+.ip-camera-module {
+  position: fixed;
+  top: 68px;
+  left: 16px;
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: rgba(8, 12, 20, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(240, 244, 255, 0.1);
+  border-radius: 12px;
+  padding: 8px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  min-width: 160px;
 }
-.ip-selfview {
-  position: absolute;
-  bottom: 12px;
-  right: 12px;
+
+.ip-cam-view {
+  position: relative;
   width: 160px;
-  max-width: 38%;
   aspect-ratio: 4 / 3;
-  object-fit: cover;
-  border-radius: 10px;
-  border: 1px solid var(--border-solid);
-  box-shadow: 0 2px 14px rgba(0, 0, 0, 0.45);
-  transform: scaleX(-1);
+  border-radius: 8px;
+  overflow: hidden;
   background: #000;
+}
+
+.ip-cam-video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transform: scaleX(-1);
+  display: block;
+}
+
+.ip-cam-video--hidden {
+  display: none;
+}
+
+.ip-cam-placeholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(30, 41, 59, 0.6);
+  color: #94a3b8;
+}
+
+.ip-cam-controls {
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+}
+
+.ip-cam-btn {
+  flex: 1;
+  padding: 5px 0;
+  border: 1px solid rgba(240, 244, 255, 0.15);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.05);
+  color: #94a3b8;
+  font-size: 14px;
+  cursor: pointer;
+  transition: border-color 150ms ease, background 150ms ease;
+  line-height: 1;
+}
+
+.ip-cam-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(240, 244, 255, 0.3);
+}
+
+.ip-cam-btn--on {
+  border-color: #2563eb;
+  color: #f0f4ff;
 }
