@@ -32,6 +32,28 @@ describe('apiClient', () => {
     expect(await createSession({ industry: 'backend', level: 'mid' })).toEqual(resp);
   });
 
+  it('createSession adjunta el candidateId al body', async () => {
+    const resp = {
+      sessionId: '550e8400-e29b-41d4-a716-446655440000',
+      websocketUrl: 'ws://localhost:3000/v1/sessions/x/ws?token=abc',
+      token: 'a'.repeat(64),
+    };
+    const fetchMock: ReturnType<typeof vi.fn<typeof fetch>> = vi.fn(
+      async () =>
+        ({
+          ok: true,
+          status: 201,
+          json: async () => resp,
+          statusText: 'x',
+        }) as unknown as Response,
+    );
+    vi.stubGlobal('fetch', fetchMock);
+    await createSession({ industry: 'backend', level: 'mid' });
+    const init = fetchMock.mock.calls[0]?.[1] as RequestInit;
+    const body = JSON.parse(init.body as string);
+    expect(body.candidateId).toMatch(/^[0-9a-f-]{36}$/i);
+  });
+
   it('createSession lanza ApiClientError con el code del envelope', async () => {
     mockFetch(400, { error: { code: 'invalid_input', message: 'Body invalido' } });
     await expect(createSession({ industry: 'backend', level: 'mid' })).rejects.toBeInstanceOf(
