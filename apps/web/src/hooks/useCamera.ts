@@ -31,65 +31,59 @@ export function useCamera(options: UseCameraOptions = {}): UseCameraReturn {
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [status, setStatus] = useState<CameraStatus>('off');
   const streamRef = useRef<MediaStream | null>(null);
-  const cancelledRef = useRef(false);
+  const genRef = useRef(0); // generacion: cada start/stop la incrementa e invalida lo anterior
 
-  function stopTracks(): void {
+  // Libera el stream actual SIN tocar el status (lo decide el caller).
+  function releaseStream(): void {
     const s = streamRef.current;
     if (s) {
       s.getTracks().forEach((t) => t.stop());
       streamRef.current = null;
     }
     setStream(null);
-    setStatus('off');
   }
 
   const stop = useCallback(() => {
-    cancelledRef.current = true;
-    stopTracks();
+    genRef.current += 1; // invalida cualquier start en vuelo
+    releaseStream();
+    setStatus('off');
   }, []);
 
   const start = useCallback(async () => {
-    cancelledRef.current = false;
+    const myGen = (genRef.current += 1); // esta llamada pasa a ser la vigente
     setStatus('starting');
-
-    stopTracks();
+    releaseStream(); // limpia cualquier stream previo sin pisar 'starting'
 
     const maxRetries = 2;
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
       try {
-        const s = await navigator.mediaDevices.getUserMedia({
-          video: constraintsRef.current,
-        });
-
-        if (cancelledRef.current) {
-          s.getTracks().forEach((t) => t.stop());
+        const s = await navigator.mediaDevices.getUserMedia({ video: constraintsRef.current });
+        if (genRef.current !== myGen) {
+          s.getTracks().forEach((t) => t.stop()); // llegamos tarde: este stream ya no es el vigente
           return;
         }
-
         streamRef.current = s;
         setStream(s);
         setStatus('on');
-
         s.getTracks().forEach((track) =>
           track.addEventListener('ended', () => {
-            if (cancelledRef.current) return;
+            if (genRef.current !== myGen) return;
             setStatus('failed');
             setStream(null);
             streamRef.current = null;
           }),
         );
-
         return;
       } catch (err) {
         const isNotAllowed = (err as DOMException)?.name === 'NotAllowedError';
-        if (cancelledRef.current) return;
+        if (genRef.current !== myGen) return;
         if (isNotAllowed) {
           setStatus('denied');
           return;
         }
         if (attempt < maxRetries) {
           await delay(1000 * (attempt + 1));
-          if (cancelledRef.current) return;
+          if (genRef.current !== myGen) return;
           continue;
         }
         setStatus('failed');

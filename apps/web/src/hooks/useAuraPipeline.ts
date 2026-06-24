@@ -58,8 +58,9 @@ export function useAuraPipeline(
     const curStream: MediaStream = camera.stream;
 
     async function initWorker(): Promise<void> {
+      let w: MetricsWorkerClient | null = null;
       try {
-        const w = createMetricsWorker();
+        w = createMetricsWorker();
         await w.api.initialize();
 
         if (cancelled) {
@@ -77,6 +78,10 @@ export function useAuraPipeline(
         try {
           await video.play();
         } catch {
+          // FIX 3: degradar a on_no_metrics; el analisis no arranca pero la camara sigue
+          workerRef.current?.terminate();
+          workerRef.current = null;
+          if (!cancelled) setWorkerFailed(true);
           return;
         }
         if (cancelled) return;
@@ -85,6 +90,9 @@ export function useAuraPipeline(
 
         if (frameTimerRef.current) clearInterval(frameTimerRef.current);
 
+        // Captura w como no-nulo: en este punto initialize() ya resolvio y
+        // el cancelled check previo garantiza que w esta asignado.
+        const worker = w;
         frameTimerRef.current = setInterval(() => {
           if (!processingEnabledRef.current) {
             eyeMetricsRef.current = [];
@@ -95,7 +103,7 @@ export function useAuraPipeline(
           canvas.height = video.videoHeight;
           ctx.drawImage(video, 0, 0);
           const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
-          w.api
+          worker.api
             .processFrame(img.data.buffer as ArrayBuffer, img.width, img.height)
             .then((metrics) => {
               if (!cancelled) eyeMetricsRef.current = metrics;
@@ -103,6 +111,8 @@ export function useAuraPipeline(
             .catch(() => {});
         }, FRAME_INTERVAL_MS);
       } catch {
+        // FIX 1: no dejar el worker zombie si initialize() (u otra cosa) lanza
+        w?.terminate();
         if (!cancelled) setWorkerFailed(true);
       }
     }

@@ -65,7 +65,7 @@ services:
       - api
     # Saltamos copy:wasm (el bind mount ya expone los .wasm) y ejecutamos
     # vite directamente, si no el mkdirSync falla por EPERM en la montura.
-    command: ['npx', '--yes', 'vite', '--host', '0.0.0.0']
+    command: ['pnpm', 'exec', 'vite', '--host', '0.0.0.0']
     volumes:
       - ./apps/web/src:/workspace/apps/web/src
       # mediapipe-wasm esta en .gitignore; ejecuta pnpm --filter @warachikuy/web copy:wasm

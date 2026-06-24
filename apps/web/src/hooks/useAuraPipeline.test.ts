@@ -163,6 +163,104 @@ describe('useAuraPipeline', () => {
     expect(result.current.cameraStatus).toBe('on_no_metrics');
     // La camara NO se libera (el self-view sigue activo aunque falle el worker)
     expect(stopTrack).not.toHaveBeenCalled();
+    // FIX 1: el worker zombie se termina aunque initialize() lance
+    expect(terminateMock).toHaveBeenCalled();
+  });
+
+  it('fallo de play() -> on_no_metrics: camara activa sin metricas de ojo', async () => {
+    mockGetUserMedia(() => Promise.resolve(fakeStream()));
+    const realCreate = document.createElement.bind(document);
+    vi.spyOn(document, 'createElement').mockImplementation((tag: string) => {
+      if (tag === 'video') {
+        return {
+          videoWidth: 0,
+          videoHeight: 0,
+          muted: false,
+          playsInline: false,
+          srcObject: null,
+          play: vi.fn(() => Promise.reject(new Error('NotAllowedError'))),
+        } as unknown as HTMLVideoElement;
+      }
+      if (tag === 'canvas') {
+        return {
+          width: 0,
+          height: 0,
+          getContext: () => ({
+            drawImage: vi.fn(),
+            getImageData: () => ({ data: new Uint8ClampedArray(16), width: 2, height: 2 }),
+          }),
+        } as unknown as HTMLCanvasElement;
+      }
+      return realCreate(tag);
+    });
+    const onSnapshot = vi.fn();
+    const { result } = renderHook(() => useAuraPipeline('s1', true, onSnapshot));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    // FIX 3: play() falla -> degrada a on_no_metrics
+    expect(result.current.cameraStatus).toBe('on_no_metrics');
+    // El stream sigue activo (el self-view permanece, solo falla el analisis)
+    expect(result.current.videoStream).not.toBeNull();
+    // La pista de video NO se detiene: el self-view sigue vivo
+    expect(stopTrack).not.toHaveBeenCalled();
+    // El worker se termina al detectar el fallo de play()
+    expect(terminateMock).toHaveBeenCalled();
+  });
+
+  it('con processingEnabled=false no se emiten metricas de ojo en los snapshots', async () => {
+    mockGetUserMedia(() => Promise.resolve(fakeStream()));
+    trackerMock.getMetrics.mockReturnValue([speechMetric]);
+    const realCreate = document.createElement.bind(document);
+    vi.spyOn(document, 'createElement').mockImplementation((tag: string) => {
+      if (tag === 'video') {
+        return {
+          videoWidth: 2,
+          videoHeight: 2,
+          muted: false,
+          srcObject: null,
+          play: vi.fn(async () => undefined),
+        } as unknown as HTMLVideoElement;
+      }
+      if (tag === 'canvas') {
+        return {
+          width: 0,
+          height: 0,
+          getContext: () => ({
+            drawImage: vi.fn(),
+            getImageData: () => ({ data: new Uint8ClampedArray(16), width: 2, height: 2 }),
+          }),
+        } as unknown as HTMLCanvasElement;
+      }
+      return realCreate(tag);
+    });
+    const onSnapshot = vi.fn();
+    // processingEnabled = false (cuarto argumento)
+    const { result } = renderHook(() => useAuraPipeline('s1', true, onSnapshot, false));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(result.current.cameraStatus).toBe('on');
+    // Avanzamos varios frames y un intervalo de snapshot
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(600);
+    });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(300);
+    });
+    // Con processingEnabled=false el frame loop vacia eyeMetricsRef, por tanto
+    // los snapshots no deben incluir la metrica de ojo
+    const calls = onSnapshot.mock.calls;
+    expect(calls.length).toBeGreaterThan(0);
+    for (const [snapshot] of calls as [{ metrics: AuraMetric[] }][]) {
+      expect(snapshot.metrics.some((m) => m.name === 'eye_contact')).toBe(false);
+    }
   });
 
   it('al apagar la camara dejan de emitirse las metricas de ojo', async () => {

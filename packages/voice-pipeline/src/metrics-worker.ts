@@ -107,29 +107,37 @@ function computeEyeContact(imageData: ImageData, timestamp: number): number | nu
     const landmarks = result.faceLandmarks[0];
     if (!landmarks) return null;
 
-    // Compute iris centers as centroids of contour points (more accurate than a single point)
     const leftIris = computeIrisCenter(landmarks, LEFT_IRIS_INDICES);
     const rightIris = computeIrisCenter(landmarks, RIGHT_IRIS_INDICES);
     const leftEyeLeft = landmarks[LEFT_EYE_LEFT];
     const leftEyeRight = landmarks[LEFT_EYE_RIGHT];
+    const rightEyeInner = landmarks[362];
+    const rightEyeOuter = landmarks[263];
 
-    // Prefer left eye; fall back to right eye if left landmarks are missing
-    const iris = leftIris ?? rightIris;
-    const eyeLeft = leftEyeLeft ?? landmarks[362]; // RIGHT_EYE_INNER_CORNER
-    const eyeRight = leftEyeRight ?? landmarks[263]; // RIGHT_EYE_OUTER_CORNER
+    // Se elige UN ojo completo (iris + sus 2 esquinas) como unidad; el fallback
+    // por-campo cruzaria el iris de un ojo con las esquinas del otro.
+    let iris: { x: number; y: number };
+    let eyeA: NormalizedLandmark;
+    let eyeB: NormalizedLandmark;
+    if (leftIris && leftEyeLeft && leftEyeRight) {
+      iris = leftIris;
+      eyeA = leftEyeLeft;
+      eyeB = leftEyeRight;
+    } else if (rightIris && rightEyeInner && rightEyeOuter) {
+      iris = rightIris;
+      eyeA = rightEyeInner;
+      eyeB = rightEyeOuter;
+    } else {
+      return null;
+    }
 
-    if (!iris || !eyeLeft || !eyeRight) return null;
-
-    const eyeWidth = Math.abs(eyeRight.x - eyeLeft.x);
+    const eyeWidth = Math.abs(eyeB.x - eyeA.x);
     if (eyeWidth < 0.001) return null;
-
-    const eyeCenterX = (eyeLeft.x + eyeRight.x) / 2;
-    const eyeCenterY = (eyeLeft.y + eyeRight.y) / 2;
-
+    const eyeCenterX = (eyeA.x + eyeB.x) / 2;
+    const eyeCenterY = (eyeA.y + eyeB.y) / 2;
     const dx = Math.abs(iris.x - eyeCenterX) / eyeWidth;
     const dy = Math.abs(iris.y - eyeCenterY) / eyeWidth;
     const deviation = Math.sqrt(dx * dx + dy * dy);
-
     return Math.max(0, Math.min(100, Math.round((1 - Math.min(deviation / 0.3, 1)) * 100)));
   } catch {
     return null;
