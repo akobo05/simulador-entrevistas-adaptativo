@@ -7,7 +7,7 @@
  * y reducir picos de GC a 4 Hz. El caller usa Comlink.transfer().
  */
 import { expose } from 'comlink';
-import { FaceLandmarker, FilesetResolver } from '@mediapipe/tasks-vision';
+import { FaceLandmarker, FilesetResolver, type NormalizedLandmark } from '@mediapipe/tasks-vision';
 import type { AuraMetric } from '@warachikuy/shared-types';
 
 const THROTTLE_MS = 250;
@@ -26,7 +26,10 @@ console.info('[aura] MediaPipe WASM source:', WASM_URL);
 const MODEL_URL =
   'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task';
 
-const LEFT_IRIS_CENTER = 473;
+// Right iris contour: landmarks 473-477. Left iris contour: landmarks 468-472.
+// We compute the iris center as the centroid of the contour points for accuracy.
+const LEFT_IRIS_INDICES = [468, 469, 470, 471, 472] as const;
+const RIGHT_IRIS_INDICES = [473, 474, 475, 476, 477] as const;
 const LEFT_EYE_LEFT = 33;
 const LEFT_EYE_RIGHT = 133;
 
@@ -79,30 +82,52 @@ function dispose(): void {
 // landmarks incompletos, ojo degenerado, o exception del detector). El caller
 // debe filtrar los null antes de emitir metricas, conforme a la spec 3.4:
 // "Si una metrica no tiene confianza suficiente para reportarse, se omite del array".
+function computeIrisCenter(
+  landmarks: NormalizedLandmark[],
+  indices: readonly number[],
+): { x: number; y: number } | null {
+  let sumX = 0;
+  let sumY = 0;
+  for (const idx of indices) {
+    const p = landmarks[idx];
+    if (!p) return null;
+    sumX += p.x;
+    sumY += p.y;
+  }
+  return { x: sumX / indices.length, y: sumY / indices.length };
+}
+
 function computeEyeContact(imageData: ImageData, timestamp: number): number | null {
   if (!landmarker) return null;
 
   try {
-    // detectForVideo requiere timestamp en ms (no unix epoch, sino tiempo relativo)
     const result = landmarker.detectForVideo(imageData, timestamp);
     if (!result.faceLandmarks || result.faceLandmarks.length === 0) return null;
 
     const landmarks = result.faceLandmarks[0];
     if (!landmarks) return null;
-    const leftIris = landmarks[LEFT_IRIS_CENTER];
+
+    // Compute iris centers as centroids of contour points (more accurate than a single point)
+    const leftIris = computeIrisCenter(landmarks, LEFT_IRIS_INDICES);
+    const rightIris = computeIrisCenter(landmarks, RIGHT_IRIS_INDICES);
     const leftEyeLeft = landmarks[LEFT_EYE_LEFT];
     const leftEyeRight = landmarks[LEFT_EYE_RIGHT];
 
-    if (!leftIris || !leftEyeLeft || !leftEyeRight) return null;
+    // Prefer left eye; fall back to right eye if left landmarks are missing
+    const iris = leftIris ?? rightIris;
+    const eyeLeft = leftEyeLeft ?? landmarks[362]; // RIGHT_EYE_INNER_CORNER
+    const eyeRight = leftEyeRight ?? landmarks[263]; // RIGHT_EYE_OUTER_CORNER
 
-    const eyeWidth = Math.abs(leftEyeRight.x - leftEyeLeft.x);
+    if (!iris || !eyeLeft || !eyeRight) return null;
+
+    const eyeWidth = Math.abs(eyeRight.x - eyeLeft.x);
     if (eyeWidth < 0.001) return null;
 
-    const eyeCenterX = (leftEyeLeft.x + leftEyeRight.x) / 2;
-    const eyeCenterY = (leftEyeLeft.y + leftEyeRight.y) / 2;
+    const eyeCenterX = (eyeLeft.x + eyeRight.x) / 2;
+    const eyeCenterY = (eyeLeft.y + eyeRight.y) / 2;
 
-    const dx = Math.abs(leftIris.x - eyeCenterX) / eyeWidth;
-    const dy = Math.abs(leftIris.y - eyeCenterY) / eyeWidth;
+    const dx = Math.abs(iris.x - eyeCenterX) / eyeWidth;
+    const dy = Math.abs(iris.y - eyeCenterY) / eyeWidth;
     const deviation = Math.sqrt(dx * dx + dy * dy);
 
     return Math.max(0, Math.min(100, Math.round((1 - Math.min(deviation / 0.3, 1)) * 100)));
