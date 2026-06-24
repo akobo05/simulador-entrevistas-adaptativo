@@ -84,6 +84,7 @@ export function createSttController(
     recognition.lang = lang;
 
     recognition.onresult = (event: SpeechRecognitionEvent) => {
+      if (!active) return;
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const result = event.results[i];
         if (!result) continue;
