@@ -124,6 +124,8 @@ describe('buildCoachPrompt linea base (#60)', () => {
     expect(prompt).toContain('promedio previo 65/100'); // fluency
     expect(prompt).toContain('promedio previo sin datos'); // eye_contact null
     expect(prompt).toContain('mejoro, empeoro o se mantuvo');
+    expect(prompt).toContain('fluidez verbal: promedio previo 65/100');
+    expect(prompt).toContain('contentScore que tu mismo asignas');
   });
 
   it('sin sesiones previas (count 0), lo dice honestamente y no afirma tendencia', () => {

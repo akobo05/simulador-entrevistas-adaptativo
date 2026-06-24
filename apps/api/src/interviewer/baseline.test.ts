@@ -70,6 +70,7 @@ describe('buildBaseline', () => {
     ];
     const baseline = buildBaseline(CAND, rows);
     expect(baseline.priorSessionCount).toBe(2);
+    expect(baseline.competencies).toHaveLength(4);
     const byName = Object.fromEntries(baseline.competencies.map((c) => [c.name, c.priorAverage]));
     expect(byName.fluency).toBe(70); // (60+80)/2
     expect(byName.speech_rate).toBe(60); // (50+70)/2

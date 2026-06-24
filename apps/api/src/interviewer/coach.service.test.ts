@@ -273,6 +273,24 @@ describe('generatePlan', () => {
     expect(systemPrompt).not.toContain('primera sesion del candidato');
   });
 
+  it('dice "primera sesion" cuando el candidato no tiene sesiones previas con plan', async () => {
+    const redis = new RedisMock() as unknown as Redis;
+    await persistAggregate(redis, makeState().id, {
+      fluency: 88,
+      eye_contact: null,
+      speech_rate: 62,
+    });
+    const generateJson = vi.fn().mockResolvedValue(COACH_OUTPUT);
+    await generatePlan(
+      { redis, gemini: { generate: async () => '', generateJson }, log: silentLog(), db },
+      makeState({ candidateId: CAND }),
+      '550e8400-e29b-41d4-a716-446655440099',
+    );
+    const systemPrompt = generateJson.mock.calls[0]?.[0] as string;
+    expect(systemPrompt).toContain('primera sesion del candidato');
+    expect(systemPrompt).not.toContain('Linea base del candidato');
+  });
+
   it('cae con gracia al plan absoluto si falla la lectura de la linea base', async () => {
     const redis = new RedisMock() as unknown as Redis;
     await persistAggregate(redis, makeState().id, {

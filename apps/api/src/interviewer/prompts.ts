@@ -99,6 +99,9 @@ export function buildCoachPrompt(input: CoachPromptInput): string {
         'Para cada competencia con linea base, indica en su comentario si mejoro, empeoro o se mantuvo respecto a su promedio previo, y refleja la tendencia en el resumen y en los aspectos a mejorar.',
       );
       lines.push(
+        'Para la competencia "contenido", la comparacion es contra el contentScore que tu mismo asignas en esta sesion (no hay un valor actual en la lista de metricas de arriba).',
+      );
+      lines.push(
         'NO afirmes ninguna tendencia para una competencia cuyo promedio previo diga "sin datos": tratala como su primera medicion.',
       );
     } else {
