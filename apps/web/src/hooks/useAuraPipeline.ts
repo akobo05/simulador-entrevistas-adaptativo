@@ -143,7 +143,9 @@ export function useAuraPipeline(
         }, FRAME_INTERVAL_MS);
       } catch (err) {
         // Degradacion: el analisis no arranco, pero la camara sigue viva. Se
-        // termina el worker para no dejarlo zombie ocupando memoria.
+        // termina el worker para no dejarlo zombie ocupando memoria. terminate()
+        // es idempotente: si el cleanup ya lo llamo (unmount durante el init), el
+        // segundo llamado es un no-op seguro.
         worker?.terminate();
         worker = null;
         if (!cancelled) setCameraStatus('on_no_metrics');
