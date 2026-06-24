@@ -18,7 +18,7 @@ async function main(): Promise<void> {
 
   const db = createDb(env.DATABASE_URL);
   try {
-    await runMigrations(db);
+    await runMigrations(db, env.DATABASE_URL);
   } catch (err) {
     console.error('Fallo aplicando migraciones de la base de datos:');
     console.error(err);
