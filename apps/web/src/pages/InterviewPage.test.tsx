@@ -366,6 +366,17 @@ describe('InterviewPage', () => {
     expect(screen.getByTestId('ip-camera-note')).toBeInTheDocument();
   });
 
+  it('en on_no_metrics muestra el self-view y el aviso de analisis no disponible', () => {
+    socketSpy.mockReturnValue(fakeSocket());
+    const fakeStream = { getTracks: () => [] } as unknown as MediaStream;
+    pipelineReturn = fakePipeline({ cameraStatus: 'on_no_metrics', videoStream: fakeStream });
+    renderPage();
+    expect(screen.getByTestId('ip-selfview')).toBeInTheDocument();
+    expect(screen.getByTestId('ip-camera-note')).toHaveTextContent(
+      'análisis de contacto visual no está disponible',
+    );
+  });
+
   it('sin permiso de mic no hay boton de mic y el form tecleado queda', () => {
     socketSpy.mockReturnValue(fakeSocket());
     renderPage({ grant: false });

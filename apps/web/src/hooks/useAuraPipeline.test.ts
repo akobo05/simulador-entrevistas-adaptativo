@@ -149,15 +149,41 @@ describe('useAuraPipeline', () => {
     expect(last.metrics).toEqual(expect.arrayContaining([speechMetric, eyeMetric]));
   });
 
-  it('si el worker no inicializa -> failed y se libera la camara', async () => {
+  it('si el worker no inicializa -> on_no_metrics, mantiene el preview y no detiene la camara', async () => {
     mockGetUserMedia(() => Promise.resolve(fakeStream()));
     workerApi.initialize.mockRejectedValueOnce(new Error('model_load_failed'));
     const { result } = renderHook(() => useAuraPipeline('s1', true, vi.fn()));
     await act(async () => {
       await vi.advanceTimersByTimeAsync(0);
     });
-    expect(result.current.cameraStatus).toBe('failed');
-    expect(stopTrack).toHaveBeenCalled();
+    expect(result.current.cameraStatus).toBe('on_no_metrics');
+    expect(result.current.videoStream).not.toBeNull();
+    expect(stopTrack).not.toHaveBeenCalled();
+  });
+
+  it('si el video de analisis no reproduce -> on_no_metrics, mantiene el preview', async () => {
+    mockGetUserMedia(() => Promise.resolve(fakeStream()));
+    const realCreate = document.createElement.bind(document);
+    vi.spyOn(document, 'createElement').mockImplementation((tag: string) => {
+      if (tag === 'video') {
+        return {
+          videoWidth: 2,
+          videoHeight: 2,
+          muted: false,
+          playsInline: false,
+          srcObject: null,
+          play: vi.fn(() => Promise.reject(new Error('NotAllowedError'))),
+        } as unknown as HTMLVideoElement;
+      }
+      return realCreate(tag);
+    });
+    const { result } = renderHook(() => useAuraPipeline('s1', true, vi.fn()));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(result.current.cameraStatus).toBe('on_no_metrics');
+    expect(result.current.videoStream).not.toBeNull();
+    expect(stopTrack).not.toHaveBeenCalled();
   });
 
   it('al apagar la camara dejan de emitirse las metricas de ojo', async () => {
