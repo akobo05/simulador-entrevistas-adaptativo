@@ -1,14 +1,10 @@
-// Pantalla MOCK a proposito: demuestra el modulo de personalizacion continua
-// (XP, nivel, racha, evolucion por competencia) con datos simulados inline,
-// como permite el enunciado del curso. El backend real (historial
-// longitudinal multi-sesion) es de la fase F2, ver issue #51. Pantalla
-// original de Max (PR #48).
-
 import { useState, useRef, useEffect } from 'react';
 import { Card } from '../components/Card';
 import { SparklineChart } from '../components/SparklineChart';
 import { useReducedMotion } from '../hooks/useReducedMotion';
 import { usePreferences } from '../hooks/usePreferences';
+import { getProgress } from '../lib/apiClient';
+import type { ProgressSummary, CompetencyProgress } from '@warachikuy/shared-types';
 import './MyProgress.css';
 
 /* ── Lucide icons (inline SVG para evitar dependencia extra) ── */
@@ -254,17 +250,28 @@ const Icon = {
   ),
 };
 
-/* ── Datos mock ─────────────────────────────────────────────── */
-const USER = {
-  name: 'Camila Torres',
-  level: 4,
-  xp: 2340,
-  xpNext: 3000,
-  avatar: 'CT',
-  interviews: 12,
-  streak: 7,
-  rank: 'Top 8%',
+/* ── Helpers ──────────────────────────────────────────────────── */
+const COMPETENCY_LABELS: Record<string, string> = {
+  fluency: 'Fluidez',
+  eye_contact: 'Contacto Visual',
+  speech_rate: 'Ritmo',
+  content: 'Contenido',
 };
+
+const COMPETENCY_COLORS: Record<string, string> = {
+  fluency: '#16A34A',
+  eye_contact: '#0EA5E9',
+  speech_rate: '#2563EB',
+  content: '#F59E0B',
+};
+
+function formatDate(epochMs: number): string {
+  return new Date(epochMs).toLocaleDateString('es-PE', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+}
 
 type NodeStatus = 'done' | 'active' | 'locked';
 
@@ -273,19 +280,12 @@ const LEARNING_PATH: {
   label: string;
   sublabel: string;
   status: NodeStatus;
-  sessions: number;
 }[] = [
-  { id: 1, label: 'Fundamentos', sublabel: '8 sesiones completadas', status: 'done', sessions: 8 },
-  {
-    id: 2,
-    label: 'Entrevista Técnica',
-    sublabel: '6 sesiones completadas',
-    status: 'done',
-    sessions: 6,
-  },
-  { id: 3, label: 'Comunicación', sublabel: '2 de 5 sesiones', status: 'active', sessions: 5 },
-  { id: 4, label: 'Liderazgo', sublabel: 'Desbloquea en nivel 5', status: 'locked', sessions: 6 },
-  { id: 5, label: 'Negociación', sublabel: 'Desbloquea en nivel 6', status: 'locked', sessions: 8 },
+  { id: 1, label: 'Fundamentos', sublabel: 'Completado', status: 'done' },
+  { id: 2, label: 'Entrevista Técnica', sublabel: 'Completado', status: 'done' },
+  { id: 3, label: 'Comunicación', sublabel: 'En progreso', status: 'active' },
+  { id: 4, label: 'Liderazgo', sublabel: 'Próximamente', status: 'locked' },
+  { id: 5, label: 'Negociación', sublabel: 'Próximamente', status: 'locked' },
 ];
 
 interface Badge {
@@ -301,22 +301,22 @@ const BADGES: Badge[] = [
     name: 'Primera Entrevista',
     desc: 'Completaste tu 1ª sesión',
     icon: 'Award',
-    unlocked: true,
+    unlocked: false,
   },
   {
     id: 2,
     name: 'Racha 7 días',
     desc: '7 días consecutivos activo',
     icon: 'Flame',
-    unlocked: true,
+    unlocked: false,
   },
-  { id: 3, name: 'Comunicador', desc: 'Fluidez > 80% tres veces', icon: 'Mic', unlocked: true },
+  { id: 3, name: 'Comunicador', desc: 'Fluidez > 80% tres veces', icon: 'Mic', unlocked: false },
   {
     id: 4,
     name: 'En ascenso',
     desc: 'Mejora continua 4 semanas',
     icon: 'TrendingUp',
-    unlocked: true,
+    unlocked: false,
   },
   { id: 5, name: 'Respuesta rápida', desc: 'Pausa < 1s promedio', icon: 'Zap', unlocked: false },
   { id: 6, name: 'Sin pausa', desc: 'Sesión sin pausas > 3s', icon: 'Clock', unlocked: false },
@@ -336,12 +336,6 @@ const BADGES: Badge[] = [
   },
 ];
 
-const SPARKLINES = [
-  { label: 'Confianza', data: [52, 58, 55, 63, 70, 68, 74, 78, 75, 82], color: '#2563EB' },
-  { label: 'Fluidez', data: [60, 64, 61, 67, 72, 76, 74, 80, 83, 85], color: '#16A34A' },
-  { label: 'Engagement', data: [45, 50, 53, 49, 58, 62, 65, 61, 68, 71], color: '#0EA5E9' },
-];
-
 interface ChatMsg {
   role: 'assistant' | 'user';
   text: string;
@@ -349,19 +343,20 @@ interface ChatMsg {
 const INITIAL_CHAT: ChatMsg[] = [
   {
     role: 'assistant',
-    text: '¡Hola Camila! Revisé tus últimas 3 sesiones. Tu fluidez subió 12 puntos esta semana. ¿Quieres trabajar en las pausas?',
-  },
-  { role: 'user', text: 'Sí, siento que me trabo al inicio de las respuestas.' },
-  {
-    role: 'assistant',
-    text: 'Es normal. Te recomiendo practicar la técnica de "pausa intencional": respira 1 segundo antes de responder. Esta semana enfócate en eso.',
+    text: '¡Hola! Revisé tus últimas sesiones. ¿Quieres feedback sobre alguna competencia en particular?',
   },
 ];
+
+type PageStatus = 'loading' | 'ready' | 'empty' | 'error';
 
 /* ══════════════════════════════════════════════════════════════
    COMPONENTE PRINCIPAL
    ══════════════════════════════════════════════════════════════ */
 export function MyProgress() {
+  const [pageStatus, setPageStatus] = useState<PageStatus>('loading');
+  const [progress, setProgress] = useState<ProgressSummary | null>(null);
+  const [errorMsg, setErrorMsg] = useState('');
+
   const [assistantOpen, setAssistantOpen] = useState(true);
   const [chatHistory, setChatHistory] = useState<ChatMsg[]>(INITIAL_CHAT);
   const [inputText, setInputText] = useState('');
@@ -370,9 +365,30 @@ export function MyProgress() {
   const { prefs } = usePreferences();
   const reduced = prefs.reducedMotion ?? systemReduced;
 
-  const xpPct = Math.round((USER.xp / USER.xpNext) * 100);
+  useEffect(() => {
+    let cancelled = false;
+    setPageStatus('loading');
+    getProgress()
+      .then((data) => {
+        if (cancelled) return;
+        if (data.sessionCount === 0) {
+          setPageStatus('empty');
+        } else {
+          setProgress(data);
+          setPageStatus('ready');
+        }
+      })
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        setErrorMsg(err instanceof Error ? err.message : 'Error al cargar progreso');
+        setPageStatus('error');
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
-  /* Auto-scroll chat: instant si el usuario prefiere movimiento reducido */
+  /* Auto-scroll chat */
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: reduced ? 'instant' : 'smooth' });
   }, [chatHistory, reduced]);
@@ -396,16 +412,73 @@ export function MyProgress() {
     }
   };
 
+  /* ── Estados de carga, vacío y error ── */
+  if (pageStatus === 'loading') {
+    return (
+      <div className="mp-root">
+        <div className="mp-status-overlay">
+          <div className="mp-status-spinner" />
+          <p className="mp-status-text">Cargando tu progreso…</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (pageStatus === 'empty') {
+    return (
+      <div className="mp-root">
+        <div className="mp-status-overlay">
+          <Icon.Award />
+          <h2 className="mp-status-title">Aún no tienes sesiones</h2>
+          <p className="mp-status-text">
+            Completa tu primera entrevista para ver tu progreso, estadísticas y evolución aquí.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (pageStatus === 'error') {
+    return (
+      <div className="mp-root">
+        <div className="mp-status-overlay">
+          <p className="mp-status-text mp-status-text--error">{errorMsg}</p>
+          <button className="mp-retry-btn" onClick={() => window.location.reload()}>
+            Reintentar
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  /* ── Datos derivados ── */
+  const { sessionCount, firstSessionAt, lastSessionAt, competencies } = progress!;
+  const level = Math.min(10, Math.floor(sessionCount / 3) + 1);
+  const xp = sessionCount * 250;
+  const xpNext = (level + 1) * 750;
+  const xpPct = Math.round((xp / xpNext) * 100);
+  const firstDate = firstSessionAt ? formatDate(firstSessionAt) : '—';
+  const lastDate = lastSessionAt ? formatDate(lastSessionAt) : '—';
+
+  const competencyCards: { label: string; color: string; data: CompetencyProgress }[] =
+    competencies.map((c) => ({
+      label: COMPETENCY_LABELS[c.name] ?? c.name,
+      color: COMPETENCY_COLORS[c.name] ?? '#2563EB',
+      data: c,
+    }));
+
   return (
     <div className="mp-root">
       {/* ── HEADER ────────────────────────────────────────────── */}
       <header className="mp-header">
         <div className="mp-header__left">
-          <div className="mp-avatar">{USER.avatar}</div>
+          <div className="mp-avatar">
+            {(sessionCount + 1).toString(16).toUpperCase().slice(0, 2)}
+          </div>
           <div className="mp-header__info">
-            <span className="mp-header__name">{USER.name}</span>
+            <span className="mp-header__name">Mi Progreso</span>
             <span className="mp-header__sub">
-              Nivel {USER.level} · {USER.rank}
+              Nivel {level} · {sessionCount} sesión{sessionCount !== 1 ? 'es' : ''}
             </span>
           </div>
         </div>
@@ -415,7 +488,7 @@ export function MyProgress() {
           <div className="mp-xp-label">
             <span>XP</span>
             <span className="mp-xp-nums">
-              {USER.xp.toLocaleString()} / {USER.xpNext.toLocaleString()}
+              {xp.toLocaleString()} / {xpNext.toLocaleString()}
             </span>
           </div>
           <div className="mp-xp-track">
@@ -427,18 +500,18 @@ export function MyProgress() {
         {/* Stats rápidas */}
         <div className="mp-stats-row">
           <div className="mp-stat">
-            <span className="mp-stat__val">{USER.interviews}</span>
+            <span className="mp-stat__val">{sessionCount}</span>
             <span className="mp-stat__lbl">Entrevistas</span>
           </div>
           <div className="mp-stat-sep" />
           <div className="mp-stat">
-            <span className="mp-stat__val">{USER.streak}</span>
-            <span className="mp-stat__lbl">Racha días</span>
+            <span className="mp-stat__val">{firstDate}</span>
+            <span className="mp-stat__lbl">Primera</span>
           </div>
           <div className="mp-stat-sep" />
           <div className="mp-stat">
-            <span className="mp-stat__val">{USER.rank}</span>
-            <span className="mp-stat__lbl">Ranking</span>
+            <span className="mp-stat__val">{lastDate}</span>
+            <span className="mp-stat__lbl">Última</span>
           </div>
         </div>
       </header>
@@ -451,20 +524,17 @@ export function MyProgress() {
           <section className="mp-section">
             <div className="mp-section-header">
               <h2 className="mp-section-title">Ruta de aprendizaje</h2>
-              <span className="mp-section-badge">2 de 5 completadas</span>
+              <span className="mp-section-badge">{sessionCount} sesiones</span>
             </div>
 
             <div className="mp-path">
               {LEARNING_PATH.map((node, idx) => (
                 <div key={node.id} className="mp-path-item">
-                  {/* Línea conectora */}
                   {idx < LEARNING_PATH.length - 1 && (
                     <div
                       className={`mp-path-line ${node.status === 'done' ? 'mp-path-line--done' : ''}`}
                     />
                   )}
-
-                  {/* Nodo */}
                   <div className={`mp-path-node mp-path-node--${node.status}`}>
                     <div className="mp-path-node__icon">
                       {node.status === 'done' && <Icon.Check />}
@@ -490,27 +560,40 @@ export function MyProgress() {
           <section className="mp-section">
             <div className="mp-section-header">
               <h2 className="mp-section-title">Evolución de métricas</h2>
-              <span className="mp-section-sub">Últimas 10 sesiones</span>
+              <span className="mp-section-sub">{sessionCount} sesiones</span>
             </div>
 
             <div className="mp-sparks-grid">
-              {SPARKLINES.map((s) => {
-                const last = s.data[s.data.length - 1] ?? 0;
-                const prev = s.data[s.data.length - 2] ?? 0;
-                const delta = last - prev;
+              {competencyCards.map((c) => {
+                const values = c.data.points
+                  .map((p) => p.score)
+                  .filter((s): s is number => s !== null);
+                if (values.length < 2) {
+                  return (
+                    <Card key={c.label} className="mp-spark-card">
+                      <div className="mp-spark-top">
+                        <span className="mp-spark-label">{c.label}</span>
+                      </div>
+                      <p className="mp-spark-no-data">Datos insuficientes</p>
+                    </Card>
+                  );
+                }
+                const last = values[values.length - 1]!;
+                const prev = values.length >= 2 ? values[values.length - 2]! : null;
+                const delta = prev !== null ? last - prev : 0;
                 return (
-                  <Card key={s.label} className="mp-spark-card">
+                  <Card key={c.label} className="mp-spark-card">
                     <div className="mp-spark-top">
-                      <span className="mp-spark-label">{s.label}</span>
-                      <span className="mp-spark-value" style={{ color: s.color }}>
-                        {last}%
+                      <span className="mp-spark-label">{c.label}</span>
+                      <span className="mp-spark-value" style={{ color: c.color }}>
+                        {Math.round(last)}%
                       </span>
                     </div>
-                    <SparklineChart data={s.data} color={s.color} width={100} height={36} />
+                    <SparklineChart data={values} color={c.color} width={100} height={36} />
                     <span
                       className={`mp-spark-delta ${delta >= 0 ? 'mp-spark-delta--up' : 'mp-spark-delta--down'}`}
                     >
-                      {delta >= 0 ? '▲' : '▼'} {Math.abs(delta)}pts
+                      {delta >= 0 ? '▲' : '▼'} {Math.abs(Math.round(delta))}pts
                     </span>
                   </Card>
                 );
@@ -522,9 +605,7 @@ export function MyProgress() {
           <section className="mp-section">
             <div className="mp-section-header">
               <h2 className="mp-section-title">Logros</h2>
-              <span className="mp-section-badge">
-                {BADGES.filter((b) => b.unlocked).length} desbloqueados
-              </span>
+              <span className="mp-section-badge">Próximamente</span>
             </div>
 
             <div className="mp-badges-grid">
@@ -543,11 +624,6 @@ export function MyProgress() {
                     </div>
                     <span className="mp-badge-name">{badge.name}</span>
                     <span className="mp-badge-desc">{badge.desc}</span>
-                    {badge.unlocked && (
-                      <span className="mp-badge-star">
-                        <Icon.Star />
-                      </span>
-                    )}
                   </Card>
                 );
               })}
@@ -559,7 +635,6 @@ export function MyProgress() {
         <aside
           className={`mp-assistant ${assistantOpen ? 'mp-assistant--open' : 'mp-assistant--closed'}`}
         >
-          {/* Toggle */}
           <button
             className="mp-assistant-toggle"
             onClick={() => setAssistantOpen((p) => !p)}
@@ -578,7 +653,6 @@ export function MyProgress() {
                 <span className="mp-assistant-online" />
               </div>
 
-              {/* Historial */}
               <div className="mp-chat-history">
                 {chatHistory.map((msg, i) => (
                   <div key={i} className={`mp-chat-msg mp-chat-msg--${msg.role}`}>
@@ -591,7 +665,6 @@ export function MyProgress() {
                 <div ref={chatEndRef} />
               </div>
 
-              {/* Input */}
               <div className="mp-chat-input-wrap">
                 <textarea
                   className="mp-chat-input"

@@ -2,10 +2,12 @@ import {
   ApiErrorSchema,
   CreateSessionResponseSchema,
   PlanResponseSchema,
+  ProgressSummarySchema,
   type CreateSessionRequest,
   type CreateSessionResponse,
   type Industry,
   type PlanResponse,
+  type ProgressSummary,
 } from '@warachikuy/shared-types';
 import { getOrCreateCandidateId } from './candidate';
 
@@ -85,6 +87,13 @@ export async function endSession(
   if (!res.ok) throw await readError(res);
   // TODO(F2): validar con un schema de shared-types en vez de un cast.
   return (await res.json()) as { sessionId: string; planId: string };
+}
+
+export async function getProgress(): Promise<ProgressSummary> {
+  const candidateId = getOrCreateCandidateId();
+  const res = await fetch(`${BASE}/api/v1/candidates/${candidateId}/progress`);
+  if (!res.ok) throw await readError(res);
+  return ProgressSummarySchema.parse(await res.json());
 }
 
 export async function getPlan(sessionId: string, token: string): Promise<PlanFetchResult> {
