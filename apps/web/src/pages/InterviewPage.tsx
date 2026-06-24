@@ -12,6 +12,7 @@ import { createTtsController, type TtsController } from '@warachikuy/voice-pipel
 import { useVoiceTurn } from '../hooks/useVoiceTurn';
 import { useAuraPipeline } from '../hooks/useAuraPipeline';
 import { PermissionGate, type PermissionGrants } from '../components/PermissionGate';
+import { TtsSelector } from '../components/TtsSelector';
 import { usePreferences } from '../hooks/usePreferences';
 import type { CandidateTranscript } from '@warachikuy/shared-types';
 import './InterviewPage.css';
@@ -38,7 +39,14 @@ export function InterviewPage() {
   const [draft, setDraft] = useState('');
   const ttsRef = useRef<TtsController | null>(null);
   if (ttsRef.current === null) {
+    // Recuperar la voz guardada en localStorage antes de crear el controller
+    const savedVoice =
+      prefs.ttsVoiceURI && typeof window !== 'undefined' && window.speechSynthesis
+        ? (window.speechSynthesis.getVoices().find((v) => v.voiceURI === prefs.ttsVoiceURI) ?? null)
+        : null;
     ttsRef.current = createTtsController({
+      voice: savedVoice,
+      rate: prefs.ttsRate,
       onStart: () => setTtsSpeaking(true),
       onEnd: () => setTtsSpeaking(false),
       // Sin speechSynthesis la entrevista sigue solo con texto
@@ -304,6 +312,13 @@ export function InterviewPage() {
               </div>
             )}
           </div>
+
+          {/* Selector de voz del TTS — visible solo si TTS esta activo */}
+          {ttsActive && (
+            <div className="ip-tts-settings">
+              <TtsSelector onChange={(v, r) => ttsRef.current?.setVoice(v, r)} />
+            </div>
+          )}
         </aside>
       </main>
     </div>

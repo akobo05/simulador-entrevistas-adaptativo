@@ -9,6 +9,10 @@ export interface ExperiencePrefs {
   reducedMotion: boolean | null;
   /** Si la camara estaba activa la ultima vez que el candidato paso por el gate. */
   cameraEnabled: boolean | null;
+  /** URI de la SpeechSynthesisVoice elegida. null = auto-seleccion es-*. */
+  ttsVoiceURI: string | null;
+  /** Velocidad del TTS (0.5–2). Default: 1. */
+  ttsRate: number;
 }
 
 const STORAGE_KEY = 'warachikuy:prefs';
@@ -18,6 +22,8 @@ const DEFAULTS: ExperiencePrefs = {
   ttsEnabled: true,
   reducedMotion: null,
   cameraEnabled: null,
+  ttsVoiceURI: null,
+  ttsRate: 1,
 };
 
 function load(): ExperiencePrefs {
