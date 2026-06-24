@@ -108,3 +108,21 @@
   80% { opacity: 0.3; }
   100% { opacity: 0; transform: translateY(-30px) scale(1); }
 }
+
+/* ── Movimiento reducido (sistema o preferencia manual) ── */
+
+@media (prefers-reduced-motion: reduce) {
+  .oa-glow,
+  .oa-logo,
+  .oa-ring,
+  .oa-particle {
+    animation: none;
+  }
+}
+
+.oa-root--static .oa-glow,
+.oa-root--static .oa-logo,
+.oa-root--static .oa-ring,
+.oa-root--static .oa-particle {
+  animation: none;
+}

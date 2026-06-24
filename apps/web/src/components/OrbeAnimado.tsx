@@ -1,8 +1,14 @@
+import { useReducedMotion } from '../hooks/useReducedMotion';
+import { usePreferences } from '../hooks/usePreferences';
 import './OrbeAnimado.css';
 
 export function OrbeAnimado() {
+  const systemReduced = useReducedMotion();
+  const { prefs } = usePreferences();
+  const reduced = prefs.reducedMotion ?? systemReduced;
+
   return (
-    <div className="oa-root">
+    <div className={reduced ? 'oa-root oa-root--static' : 'oa-root'}>
       {/* capa de particulas flotantes */}
       <div className="oa-particles" aria-hidden="true">
         {Array.from({ length: 30 }).map((_, i) => (
