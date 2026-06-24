@@ -10,7 +10,8 @@ import { readAggregate, type MetricsAggregate } from './metrics-aggregator.js';
 import { buildCoachPrompt } from './prompts.js';
 import { setPlanReady, setPlanFailed } from './plan-store.js';
 import type { Db } from '../db/client.js';
-import { updateArchivedPlan } from '../db/session-archive.js';
+import { listCandidateSessions, updateArchivedPlan } from '../db/session-archive.js';
+import { buildBaseline, type CoachBaseline } from './baseline.js';
 
 export interface CoachDeps {
   redis: Redis;
@@ -144,10 +145,28 @@ export async function generatePlan(
   try {
     const history = await readHistory(deps.redis, sessionId, deps.log);
     const metrics = await readAggregate(deps.redis, sessionId, deps.log);
+
+    // Linea base del candidato (#60): promedio previo por competencia para que el
+    // plan hable de mejora relativa. Best-effort: si no hay candidateId o falla la
+    // lectura, se genera el plan absoluto (sin afirmar tendencia).
+    let baseline: CoachBaseline | undefined;
+    if (state.candidateId) {
+      try {
+        const priorRows = await listCandidateSessions(deps.db, state.candidateId);
+        baseline = buildBaseline(state.candidateId, priorRows);
+      } catch (err) {
+        deps.log.error(
+          { err, sessionId },
+          'no se pudo leer la linea base del candidato; se genera el plan absoluto',
+        );
+      }
+    }
+
     const systemPrompt = buildCoachPrompt({
       industry: state.industry,
       level: state.level,
       metrics,
+      ...(baseline !== undefined && { baseline }),
     });
     const contents = toContents(history);
 
