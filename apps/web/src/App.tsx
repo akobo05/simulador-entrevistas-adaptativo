@@ -3,7 +3,6 @@ import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { SessionProvider } from './context/SessionContext';
 import { MainLayout } from './layouts/MainLayout';
 import { Home } from './pages/Home';
-import { ErrorBoundary } from './components/ErrorBoundary';
 import './assets/global.css';
 
 /* ── Lazy (paginas no criticas) ─────────────────────────── */
