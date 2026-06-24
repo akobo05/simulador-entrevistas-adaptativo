@@ -84,12 +84,20 @@ export function useInterviewSocket(websocketUrl: string, sessionId: string): Int
         setLastError(msg.payload);
       }
     });
-    socket.addEventListener('close', () => {
+    socket.addEventListener('close', (event) => {
+      // Log de diagnostico: si el WS cierra apenas conecta, la sala entra en
+      // estado terminal y se ve la pantalla de "volver al inicio".
+      console.warn('[ws] close', {
+        code: event.code,
+        reason: event.reason,
+        wasClean: event.wasClean,
+      });
       // TODO(F2): la reconexion automatica ante caidas se integra en esta capa mas adelante.
       if (active) setStatus('closed');
     });
     socket.addEventListener('error', () => {
       // el evento 'close' que sigue maneja el estado; evitamos doble seteo
+      console.warn('[ws] error (ver el evento close para el codigo)');
     });
 
     return () => {

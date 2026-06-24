@@ -369,3 +369,23 @@
   padding: 0 16px 8px;
   background: rgba(14, 21, 32, 0.9);
 }
+
+/* Self-view de la camara: miniatura en la esquina del area del avatar, espejada
+   como un self-view de videollamada. Da feedback de que el hardware captura. */
+.ip-avatar-wrap {
+  position: relative;
+}
+.ip-selfview {
+  position: absolute;
+  bottom: 12px;
+  right: 12px;
+  width: 160px;
+  max-width: 38%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border-radius: 10px;
+  border: 1px solid var(--border-solid);
+  box-shadow: 0 2px 14px rgba(0, 0, 0, 0.45);
+  transform: scaleX(-1);
+  background: #000;
+}

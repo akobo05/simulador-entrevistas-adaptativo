@@ -15,6 +15,8 @@ export interface AuraPipeline {
   /** Empuja un transcript final del STT al tracker de habla. */
   feedTranscript: (t: CandidateTranscript) => void;
   cameraStatus: CameraStatus;
+  /** Stream de la camara para el self-view; null si no esta activa. */
+  videoStream: MediaStream | null;
 }
 
 // 250 ms = 4 Hz, el maximo que acepta el backend para metrics.update
@@ -34,6 +36,7 @@ export function useAuraPipeline(
 ): AuraPipeline {
   const [auraState, setAuraState] = useState<AuraState | null>(null);
   const [cameraStatus, setCameraStatus] = useState<CameraStatus>('off');
+  const [videoStream, setVideoStream] = useState<MediaStream | null>(null);
   const trackerRef = useRef<SpeechMetricsTracker | null>(null);
   const onSnapshotRef = useRef(onSnapshot);
   onSnapshotRef.current = onSnapshot;
@@ -80,6 +83,9 @@ export function useAuraPipeline(
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d', { willReadFrequently: true });
       setCameraStatus('on');
+      // Expone el stream para el self-view de la UI (el mismo MediaStream puede
+      // alimentar varios <video> a la vez).
+      setVideoStream(stream);
 
       // Si la camara muere a mitad de sesion (se desenchufa, el SO revoca el
       // permiso) el <video> queda congelado y MediaPipe seguiria midiendo esa
@@ -90,6 +96,7 @@ export function useAuraPipeline(
           if (frameTimer) clearInterval(frameTimer);
           eyeMetricsRef.current = [];
           setCameraStatus('failed');
+          setVideoStream(null);
         }),
       );
 
@@ -128,6 +135,7 @@ export function useAuraPipeline(
       clearInterval(snapshotTimer);
       worker?.terminate();
       stream?.getTracks().forEach((t) => t.stop());
+      setVideoStream(null);
       // Sin camara no puede quedar un eye_contact congelado emitiendose: el
       // proximo ciclo (toggle/remontaje) debe arrancar "sin datos" honesto
       eyeMetricsRef.current = [];
@@ -138,5 +146,5 @@ export function useAuraPipeline(
     trackerRef.current!.onTranscript(t);
   }
 
-  return { auraState, feedTranscript, cameraStatus };
+  return { auraState, feedTranscript, cameraStatus, videoStream };
 }

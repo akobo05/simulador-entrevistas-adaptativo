@@ -77,6 +77,13 @@ export function InterviewPage() {
     socket.sendMetrics,
   );
 
+  // Self-view: refleja el stream de la camara en un <video> visible para que el
+  // candidato vea que el hardware esta capturando (no hay preview por defecto).
+  const selfVideoRef = useRef<HTMLVideoElement>(null);
+  useEffect(() => {
+    if (selfVideoRef.current) selfVideoRef.current.srcObject = pipeline.videoStream;
+  }, [pipeline.videoStream]);
+
   function handleFinalTranscript(t: CandidateTranscript): void {
     pipeline.feedTranscript(t);
     // El dictado NO se envia solo: se acumula en el campo editable para que el
@@ -238,6 +245,16 @@ export function InterviewPage() {
           <Suspense fallback={<div className="aura-fallback" />}>
             <AvatarAura {...auraProps} speaking={ttsSpeaking} />
           </Suspense>
+          {pipeline.videoStream && (
+            <video
+              ref={selfVideoRef}
+              className="ip-selfview"
+              autoPlay
+              muted
+              playsInline
+              data-testid="ip-selfview"
+            />
+          )}
           {(pipeline.cameraStatus === 'denied' || pipeline.cameraStatus === 'failed') && (
             <p className="ip-camera-note" data-testid="ip-camera-note">
               Cámara no disponible: el contacto visual queda sin datos.
