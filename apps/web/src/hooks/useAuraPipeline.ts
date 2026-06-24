@@ -7,7 +7,7 @@ import {
 } from '@warachikuy/voice-pipeline';
 import type { AuraMetric, AuraState, CandidateTranscript } from '@warachikuy/shared-types';
 
-export type CameraStatus = 'off' | 'starting' | 'on' | 'denied' | 'failed';
+export type CameraStatus = 'off' | 'starting' | 'on' | 'on_no_metrics' | 'denied' | 'failed';
 
 export interface AuraPipeline {
   /** Ultimo snapshot, para alimentar el AvatarAura. */
@@ -87,39 +87,15 @@ export function useAuraPipeline(
         cam.getTracks().forEach((t) => t.stop());
         return;
       }
-      try {
-        worker = createMetricsWorker();
-        await worker.api.initialize();
-      } catch {
-        if (!cancelled) setCameraStatus('failed');
-        cam.getTracks().forEach((t) => t.stop());
-        return;
-      }
-      if (cancelled) return;
 
-      const video = document.createElement('video');
-      video.muted = true;
-      video.srcObject = cam;
-      try {
-        await video.play();
-      } catch {
-        if (!cancelled) {
-          setCameraStatus('failed');
-          cam.getTracks().forEach((t) => t.stop());
-        }
-        return;
-      }
-      if (cancelled) return; // desmonte durante el play: no abrir el frame loop
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d', { willReadFrequently: true });
+      // Preview YA: el self-view aparece apenas la camara entrega frames, sin
+      // esperar a MediaPipe. "Ver mi camara" no depende de "MediaPipe pudo medir
+      // contacto visual": responsabilidades separadas que deben fallar por separado.
       setCameraStatus('on');
-      // Expone el stream para el self-view de la UI (el mismo MediaStream puede
-      // alimentar varios <video> a la vez).
       setVideoStream(cam);
 
       // Si la camara muere a mitad de sesion (se desenchufa, el SO revoca el
-      // permiso) el <video> queda congelado y MediaPipe seguiria midiendo esa
-      // imagen fija con timestamps frescos: hay que cortar el loop y avisar.
+      // permiso) hay que cortar el loop y avisar.
       cam.getTracks().forEach((track) =>
         track.addEventListener('ended', () => {
           if (cancelled) return;
@@ -130,23 +106,49 @@ export function useAuraPipeline(
         }),
       );
 
-      frameTimer = setInterval(() => {
-        if (!ctx || !worker || video.videoWidth === 0) return;
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        ctx.drawImage(video, 0, 0);
-        const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        // Copia simple del buffer (sin Comlink.transfer): a 4 Hz y resolucion de
-        // webcam el costo es bajo y evita invalidar el ImageData
-        worker.api
-          .processFrame(img.data.buffer as ArrayBuffer, img.width, img.height)
-          .then((metrics) => {
-            if (!cancelled) eyeMetricsRef.current = metrics;
-          })
-          .catch(() => {
-            // Frame perdido: se reintenta en el proximo tick
-          });
-      }, FRAME_INTERVAL_MS);
+      // Analisis (MediaPipe) como paso SEPARADO. Si algo falla (carga del WASM,
+      // descarga del modelo, GPU/CPU, o el play del video de analisis), se degrada
+      // a 'on_no_metrics': la camara sigue encendida y visible, sin eye_contact.
+      try {
+        worker = createMetricsWorker();
+        await worker.api.initialize();
+        if (cancelled) return;
+
+        const video = document.createElement('video');
+        video.muted = true;
+        video.playsInline = true; // iOS Safari: sin esto play() puede rechazar
+        video.srcObject = cam;
+        await video.play();
+        if (cancelled) return;
+
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+
+        frameTimer = setInterval(() => {
+          if (!ctx || !worker || video.videoWidth === 0) return;
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
+          ctx.drawImage(video, 0, 0);
+          const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          // Copia simple del buffer (sin Comlink.transfer): a 4 Hz y resolucion de
+          // webcam el costo es bajo y evita invalidar el ImageData
+          worker.api
+            .processFrame(img.data.buffer as ArrayBuffer, img.width, img.height)
+            .then((metrics) => {
+              if (!cancelled) eyeMetricsRef.current = metrics;
+            })
+            .catch(() => {
+              // Frame perdido: se reintenta en el proximo tick
+            });
+        }, FRAME_INTERVAL_MS);
+      } catch (err) {
+        // Degradacion: el analisis no arranco, pero la camara sigue viva. Se
+        // termina el worker para no dejarlo zombie ocupando memoria.
+        worker?.terminate();
+        worker = null;
+        if (!cancelled) setCameraStatus('on_no_metrics');
+        console.warn('[aura] MediaPipe no inicializo; la camara sigue activa', err);
+      }
     }
 
     if (cameraEnabled) void startCamera();

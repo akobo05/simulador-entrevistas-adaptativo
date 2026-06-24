@@ -257,13 +257,16 @@ export function InterviewPage() {
           )}
           {(pipeline.cameraStatus === 'denied' ||
             pipeline.cameraStatus === 'failed' ||
+            pipeline.cameraStatus === 'on_no_metrics' ||
             (pipeline.cameraStatus === 'off' && !grants.camera)) && (
             <p className="ip-camera-note" data-testid="ip-camera-note" role="alert">
               {pipeline.cameraStatus === 'denied'
                 ? 'Cámara no disponible: revisa los permisos en la configuración de tu navegador.'
                 : pipeline.cameraStatus === 'failed'
                   ? 'Error al iniciar la cámara. Puedes intentar recargar la página.'
-                  : 'Cámara desactivada: el contacto visual queda sin datos.'}
+                  : pipeline.cameraStatus === 'on_no_metrics'
+                    ? 'Cámara activa, pero el análisis de contacto visual no está disponible.'
+                    : 'Cámara desactivada: el contacto visual queda sin datos.'}
             </p>
           )}
         </section>
