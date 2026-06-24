@@ -9,6 +9,7 @@ import { loadEnv } from '../config/env';
 import { makeTestDb } from '../db/test-helpers.js';
 import type { Db } from '../db/client.js';
 import { getArchivedSession } from '../db/session-archive.js';
+import { persistAggregate } from '../interviewer/metrics-aggregator.js';
 
 const testEnv = loadEnv({
   PORT: '3000',
@@ -287,18 +288,33 @@ describe('POST /api/v1/sessions/:sessionId/end y GET /api/v1/sessions/:sessionId
     });
     const { sessionId, token } = JSON.parse(create.body);
 
+    // Seed del transcript y las metricas como los habria dejado la entrevista,
+    // para verificar que /end archiva el contenido real (no solo los metadatos).
+    await redis.rpush(
+      `session:messages:${sessionId}`,
+      JSON.stringify({ role: 'interviewer', text: 'Cuentame de ti', timestamp: 1 }),
+      JSON.stringify({ role: 'candidate', text: 'Soy backend', timestamp: 2 }),
+    );
+    await persistAggregate(redis, sessionId, { fluency: 88, eye_contact: null, speech_rate: 60 });
+
     const end = await server.inject({
       method: 'POST',
       url: `/api/v1/sessions/${sessionId}/end?token=${token}`,
     });
     expect(end.statusCode).toBe(202);
 
-    // La fila durable existe con los metadatos correctos y el plan aun en null
+    // La fila durable existe con los metadatos, el transcript y las metricas
+    // correctos, y el plan aun en null
     const archived = await getArchivedSession(db, sessionId);
     expect(archived?.industry).toBe('backend');
     expect(archived?.level).toBe('mid');
     expect(archived?.status).toBe('ended');
     expect(archived?.durationMs).toBeGreaterThanOrEqual(0);
+    expect(archived?.transcript).toEqual([
+      { role: 'interviewer', text: 'Cuentame de ti', timestamp: 1 },
+      { role: 'candidate', text: 'Soy backend', timestamp: 2 },
+    ]);
+    expect(archived?.metrics).toEqual({ fluency: 88, eye_contact: null, speech_rate: 60 });
     expect(archived?.plan).toBeNull();
 
     // "Sobrevive el TTL de Redis": vaciamos Redis y la sesion sigue consultable
@@ -308,13 +324,14 @@ describe('POST /api/v1/sessions/:sessionId/end y GET /api/v1/sessions/:sessionId
   });
 
   it('si el archivo en Postgres falla, /end igual responde 202', async () => {
-    const failingDb = {
-      insert: () => ({
-        values: () => ({
-          onConflictDoNothing: () => Promise.reject(new Error('db caida')),
-        }),
+    // Spy en insert: confirma que el camino de archivo se ejecuto (y fallo),
+    // no que el test pase por haberse salteado el archivo.
+    const insertSpy = vi.fn(() => ({
+      values: () => ({
+        onConflictDoNothing: () => Promise.reject(new Error('db caida')),
       }),
-    } as unknown as Db;
+    }));
+    const failingDb = { insert: insertSpy } as unknown as Db;
     const failServer = await buildServer(testEnv, {
       redis: new RedisMock() as unknown as Redis,
       db: failingDb,
@@ -331,6 +348,7 @@ describe('POST /api/v1/sessions/:sessionId/end y GET /api/v1/sessions/:sessionId
       url: `/api/v1/sessions/${sessionId}/end?token=${token}`,
     });
     expect(end.statusCode).toBe(202);
+    expect(insertSpy).toHaveBeenCalled();
     await failServer.close();
   });
 });
