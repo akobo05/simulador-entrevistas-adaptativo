@@ -302,10 +302,10 @@ describe('POST /api/v1/sessions/:sessionId/end y GET /api/v1/sessions/:sessionId
       url: `/api/v1/sessions/${sessionId}/end?token=${token}`,
     });
     expect(end.statusCode).toBe(202);
+    const { planId } = JSON.parse(end.body);
 
     // La fila durable existe con los metadatos, el transcript y las metricas
-    // correctos. El plan lo completa generatePlan en un segundo paso
-    // (fire-and-forget desde /end), por lo que no lo afirmamos aqui.
+    // correctos (escritos sincronicamente en /end antes del 202).
     const archived = await getArchivedSession(db, sessionId);
     expect(archived?.industry).toBe('backend');
     expect(archived?.level).toBe('mid');
@@ -316,6 +316,14 @@ describe('POST /api/v1/sessions/:sessionId/end y GET /api/v1/sessions/:sessionId
       { role: 'candidate', text: 'Soy backend', timestamp: 2 },
     ]);
     expect(archived?.metrics).toEqual({ fluency: 88, eye_contact: null, speech_rate: 60 });
+
+    // El plan lo completa generatePlan en un segundo paso (fire-and-forget desde
+    // /end): se espera a que la fila quede con el mismo planId, probando el write
+    // de dos pasos de punta a punta por la capa de ruta.
+    await vi.waitFor(async () => {
+      const withPlan = await getArchivedSession(db, sessionId);
+      expect(withPlan?.plan?.planId).toBe(planId);
+    });
 
     // "Sobrevive el TTL de Redis": vaciamos Redis y la sesion sigue consultable
     await redis.flushall();
