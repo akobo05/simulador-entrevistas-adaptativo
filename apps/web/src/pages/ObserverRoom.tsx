@@ -158,8 +158,26 @@ function Room({ roomId, obsType }: { roomId: string; obsType: ObserverType }) {
       </header>
 
       <main className="obs-body">
-        <div className="obs-metrics">
-          <h3>Métricas en vivo</h3>
+        <div className="obs-col obs-col--left">
+          <div className="obs-col-header">Participantes</div>
+          <div className="obs-participant-list">
+            {participants.map((p) => (
+              <div key={p.peerId} className="obs-participant-item">
+                <span className="obs-participant-dot obs-participant-dot--observer" />
+                <span className="obs-participant-name">Observador</span>
+                {p.peerId === peerId && (
+                  <span className="obs-participant-you">tú — {observerLabel(obsType)}</span>
+                )}
+              </div>
+            ))}
+            {participants.length === 0 && (
+              <span className="obs-col-empty">Esperando participantes…</span>
+            )}
+          </div>
+        </div>
+
+        <div className="obs-col obs-col--center">
+          <div className="obs-col-header">Métricas en vivo</div>
           <div className="obs-metrics__rings">
             <CompetencyRing label="Fluidez" score={metrics.fluency} />
             <CompetencyRing label="Contacto visual" score={metrics.eyeContact} />
@@ -167,58 +185,37 @@ function Room({ roomId, obsType }: { roomId: string; obsType: ObserverType }) {
           </div>
         </div>
 
-        <div className="obs-bottom">
-          <div className="obs-participants">
-            <h3>Participantes</h3>
-            <div className="obs-participant-list">
-              {participants.map((p) => (
-                <div key={p.peerId} className="obs-participant-item">
-                  <span className="obs-participant-dot obs-participant-dot--observer" />
-                  <span>Observador</span>
-                  {p.peerId === peerId && (
-                    <>
-                      <span className="obs-participant-you">(tú — {observerLabel(obsType)})</span>
-                    </>
-                  )}
-                </div>
-              ))}
-            </div>
+        <div className="obs-col obs-col--right">
+          <div className="obs-col-header">Comentarios</div>
+          <div className="obs-comments__list">
+            {comments.length === 0 && <span className="obs-col-empty">Aún no hay comentarios</span>}
+            {comments.map((c) => (
+              <div key={c.id} className="obs-comment-item">
+                <span className="obs-comment-time">{formatTimer(c.timestamp)}</span>
+                <span className="obs-comment-text">{c.text}</span>
+              </div>
+            ))}
           </div>
-
-          <div className="obs-comments">
-            <h3>Comentarios</h3>
-            <div className="obs-comments__list">
-              {comments.length === 0 && (
-                <span className="obs-comments__empty">Aún no hay comentarios</span>
-              )}
-              {comments.map((c) => (
-                <div key={c.id} className="obs-comment-item">
-                  <span className="obs-comment-time">{formatTimer(c.timestamp)}</span>
-                  <span className="obs-comment-text">{c.text}</span>
-                </div>
-              ))}
-            </div>
-            <div className="obs-comments__input-row">
-              <input
-                className="obs-comments__input"
-                value={commentInput}
-                onChange={(e) => setCommentInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    addComment();
-                  }
-                }}
-                placeholder="Ancla un comentario en este momento…"
-              />
-              <button
-                className="obs-comments__send"
-                onClick={addComment}
-                disabled={!commentInput.trim()}
-              >
-                Anclar
-              </button>
-            </div>
+          <div className="obs-comments__input-row">
+            <input
+              className="obs-comments__input"
+              value={commentInput}
+              onChange={(e) => setCommentInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  addComment();
+                }
+              }}
+              placeholder="Ancla un comentario…"
+            />
+            <button
+              className="obs-comments__send"
+              onClick={addComment}
+              disabled={!commentInput.trim()}
+            >
+              Anclar
+            </button>
           </div>
         </div>
       </main>
