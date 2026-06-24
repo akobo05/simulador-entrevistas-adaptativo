@@ -203,6 +203,27 @@ describe('createSttController', () => {
     warnSpy.mockRestore();
   });
 
+  it('no invoca el callback si onresult se dispara despues de stop()', () => {
+    const received: unknown[] = [];
+    const fakeRec = new MockSpeechRecognition();
+    const controller = createSttController(
+      SESSION_ID,
+      (t) => received.push(t),
+      {},
+      () => fakeRec as unknown as ReturnType<(typeof fakeRec)['start']>,
+    );
+    controller.start();
+    controller.stop();
+    fakeRec.onresult?.({
+      resultIndex: 0,
+      results: {
+        length: 1,
+        0: { isFinal: true, length: 1, 0: { transcript: 'hola', confidence: 0.9 } },
+      },
+    } as unknown as Parameters<NonNullable<typeof fakeRec.onresult>>[0]);
+    expect(received.length).toBe(0);
+  });
+
   it('invoca el callback con el transcript parseado cuando onresult se dispara', () => {
     const received: unknown[] = [];
     const fakeRec = new MockSpeechRecognition();
