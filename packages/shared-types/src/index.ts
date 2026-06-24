@@ -7,3 +7,4 @@ export * from './ws';
 export * from './errors';
 export * from './sessions';
 export * from './room';
+export * from './progress';
