@@ -1,6 +1,7 @@
-import type { Industry, Level, SessionPhase } from '@warachikuy/shared-types';
+import type { CompetencyName, Industry, Level, SessionPhase } from '@warachikuy/shared-types';
 import type { SeedQuestion } from './question-bank.js';
 import type { MetricsAggregate } from './metrics-aggregator.js';
+import type { CoachBaseline } from './baseline.js';
 
 export interface SystemPromptInput {
   industry: Industry;
@@ -43,18 +44,29 @@ export interface CoachPromptInput {
   industry: Industry;
   level: Level;
   metrics: MetricsAggregate;
+  // Linea base del candidato (#60). Ausente en sesiones sin candidateId: el
+  // prompt entonces no menciona ninguna tendencia (honesto por omision).
+  baseline?: CoachBaseline;
 }
 
 function fmtMetric(value: number | null): string {
   return value === null ? 'sin datos' : `${Math.round(value)}/100`;
 }
 
+// Etiquetas en espanol de cada competencia, para el texto del prompt.
+const COMPETENCY_LABELS: Record<CompetencyName, string> = {
+  fluency: 'fluidez verbal',
+  eye_contact: 'contacto visual',
+  speech_rate: 'ritmo del habla',
+  content: 'contenido',
+};
+
 // System prompt del LLM Coach: genera el plan de mejora tras la entrevista.
 // Rol distinto al entrevistador. El transcript NO va aca (viaja como contents),
 // solo las instrucciones y los valores medidos (datos del backend, confiables).
 export function buildCoachPrompt(input: CoachPromptInput): string {
-  const { industry, level, metrics } = input;
-  return [
+  const { industry, level, metrics, baseline } = input;
+  const lines = [
     `Eres un coach de carrera que da retroalimentacion constructiva tras una entrevista tecnica de ${industry}, nivel ${level}.`,
     'Analizas la conversacion (que recibes como el historial de mensajes) y devuelves un plan de mejora en JSON.',
     'Idioma: espanol neutro. Tono alentador pero honesto. No inventes datos que no esten en el transcript ni en las metricas.',
@@ -71,7 +83,34 @@ export function buildCoachPrompt(input: CoachPromptInput): string {
     '- 40-70: correctas pero superficiales o poco estructuradas.',
     '- 70-100: correctas, profundas, bien estructuradas y con ejemplos.',
     `Ajusta la exigencia al nivel ${level}. Criterios: correctitud tecnica, profundidad, claridad y uso de ejemplos.`,
-    '',
+  ];
+
+  // Linea base del candidato (#60): solo se compara lo realmente medido (RNF14).
+  if (baseline) {
+    lines.push('');
+    if (baseline.priorSessionCount >= 1) {
+      lines.push(
+        `Linea base del candidato (promedio de sus ${baseline.priorSessionCount} sesiones previas; compara la sesion actual contra esto):`,
+      );
+      for (const c of baseline.competencies) {
+        lines.push(`- ${COMPETENCY_LABELS[c.name]}: promedio previo ${fmtMetric(c.priorAverage)}`);
+      }
+      lines.push(
+        'Para cada competencia con linea base, indica en su comentario si mejoro, empeoro o se mantuvo respecto a su promedio previo, y refleja la tendencia en el resumen y en los aspectos a mejorar.',
+      );
+      lines.push(
+        'NO afirmes ninguna tendencia para una competencia cuyo promedio previo diga "sin datos": tratala como su primera medicion.',
+      );
+    } else {
+      lines.push(
+        'Es la primera sesion del candidato (sin linea base): evalua en terminos absolutos y no afirmes ninguna tendencia respecto a sesiones anteriores.',
+      );
+    }
+  }
+
+  lines.push('');
+  lines.push(
     'Devuelve: un resumen breve, un comentario por cada competencia (fluency, eye_contact, speech_rate, content), el contentScore, una lista de fortalezas, una lista de aspectos a mejorar, y ejercicios priorizados (titulo + descripcion).',
-  ].join('\n');
+  );
+  return lines.join('\n');
 }

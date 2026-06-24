@@ -1,7 +1,22 @@
 import { describe, it, expect } from 'vitest';
-import { buildSystemPrompt, buildCoachPrompt } from './prompts';
+import { buildSystemPrompt, buildCoachPrompt } from './prompts.js';
+import type { CoachBaseline } from './baseline.js';
 
 const seed = { id: 'be-apis', topic: 'apis', prompt: 'Como disenarias una API REST?' };
+
+const metrics = { fluency: 72, eye_contact: null, speech_rate: 64 };
+
+function baselineWith(priorSessionCount: number): CoachBaseline {
+  return {
+    priorSessionCount,
+    competencies: [
+      { name: 'fluency', priorAverage: 65 },
+      { name: 'eye_contact', priorAverage: null },
+      { name: 'speech_rate', priorAverage: 60 },
+      { name: 'content', priorAverage: 70 },
+    ],
+  };
+}
 
 describe('buildSystemPrompt', () => {
   it('incluye el rol, la industria y el nivel', () => {
@@ -93,5 +108,38 @@ describe('buildCoachPrompt', () => {
     });
     expect(p.toLowerCase()).toContain('rubrica');
     expect(p).toContain('content');
+  });
+});
+
+describe('buildCoachPrompt linea base (#60)', () => {
+  it('con sesiones previas, incluye la linea base y la instruccion de tendencia', () => {
+    const prompt = buildCoachPrompt({
+      industry: 'backend',
+      level: 'mid',
+      metrics,
+      baseline: baselineWith(3),
+    });
+    expect(prompt).toContain('Linea base del candidato');
+    expect(prompt).toContain('3 sesiones previas');
+    expect(prompt).toContain('promedio previo 65/100'); // fluency
+    expect(prompt).toContain('promedio previo sin datos'); // eye_contact null
+    expect(prompt).toContain('mejoro, empeoro o se mantuvo');
+  });
+
+  it('sin sesiones previas (count 0), lo dice honestamente y no afirma tendencia', () => {
+    const prompt = buildCoachPrompt({
+      industry: 'backend',
+      level: 'mid',
+      metrics,
+      baseline: baselineWith(0),
+    });
+    expect(prompt).toContain('primera sesion del candidato');
+    expect(prompt).not.toContain('Linea base del candidato');
+  });
+
+  it('sin baseline, el prompt no menciona linea base ni tendencia', () => {
+    const prompt = buildCoachPrompt({ industry: 'backend', level: 'mid', metrics });
+    expect(prompt).not.toContain('Linea base del candidato');
+    expect(prompt).not.toContain('primera sesion del candidato');
   });
 });
