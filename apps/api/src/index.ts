@@ -1,5 +1,6 @@
 import { loadEnv, EnvValidationError, type Env } from './config/env.js';
 import { buildServer } from './server.js';
+import { createDb, runMigrations } from './db/client.js';
 
 async function main(): Promise<void> {
   let env: Env;
@@ -15,7 +16,16 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
-  const server = await buildServer(env);
+  const db = createDb(env.DATABASE_URL);
+  try {
+    await runMigrations(db, env.DATABASE_URL);
+  } catch (err) {
+    console.error('Fallo aplicando migraciones de la base de datos:');
+    console.error(err);
+    process.exit(1);
+  }
+
+  const server = await buildServer(env, { db });
 
   try {
     await server.listen({ port: env.PORT, host: '0.0.0.0' });

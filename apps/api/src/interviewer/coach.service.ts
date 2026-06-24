@@ -9,11 +9,14 @@ import { readHistory } from './conversation.js';
 import { readAggregate, type MetricsAggregate } from './metrics-aggregator.js';
 import { buildCoachPrompt } from './prompts.js';
 import { setPlanReady, setPlanFailed } from './plan-store.js';
+import type { Db } from '../db/client.js';
+import { updateArchivedPlan } from '../db/session-archive.js';
 
 export interface CoachDeps {
   redis: Redis;
   gemini: GeminiClient;
   log: FastifyBaseLogger;
+  db: Db;
 }
 
 // Schema de la salida CRUDA del LLM Coach. Solo puntua "content"; los 3 puntajes
@@ -165,6 +168,15 @@ export async function generatePlan(
     const plan = assemble(planId, sessionId, out, metrics);
     ImprovementPlanSchema.parse(plan); // defensa: validamos el plan ensamblado
     await setPlanReady(deps.redis, sessionId, plan);
+    // Completa la fila durable con el plan generado (segundo paso de la
+    // escritura, ver spec seccion 3). Falla NO fatal: el plan ya vive en Redis.
+    // Si la fila no existe (p. ej. Postgres estaba caido en /end), el UPDATE
+    // afecta 0 filas sin error.
+    try {
+      await updateArchivedPlan(deps.db, sessionId, plan);
+    } catch (err) {
+      deps.log.error({ err, sessionId }, 'no se pudo actualizar el plan archivado en Postgres');
+    }
   } catch (err) {
     deps.log.error({ err, sessionId }, 'fallo la generacion del plan de mejora');
     await setPlanFailed(deps.redis, sessionId, planId);

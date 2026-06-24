@@ -4,6 +4,7 @@ import type Redis from 'ioredis';
 import type { FastifyInstance } from 'fastify';
 import { buildServer } from './server';
 import { loadEnv } from './config/env';
+import { makeTestDb } from './db/test-helpers.js';
 
 const testEnv = loadEnv({
   PORT: '3000',
@@ -127,5 +128,15 @@ describe('buildServer', () => {
     // agrega igual porque el hook corre antes del handler.
     const res = await server.inject({ method: 'POST', url: '/api/v1/sessions', payload: {} });
     expect(Number(res.headers['x-ratelimit-limit'])).toBe(60);
+  });
+});
+
+describe('decoracion de db', () => {
+  it('expone server.db cuando se inyecta por deps', async () => {
+    const redis = new RedisMock() as unknown as Redis;
+    const db = await makeTestDb();
+    const server = await buildServer(testEnv, { redis, db });
+    expect(server.db).toBe(db);
+    await server.close();
   });
 });

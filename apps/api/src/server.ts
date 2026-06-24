@@ -11,6 +11,7 @@ import { ConnectionRegistry } from './services/connection-registry.js';
 import { registerSessionsWsRoute } from './routes/sessions.ws.js';
 import { apiError } from './errors.js';
 import { buildGeminiClient, type GeminiClient } from './interviewer/gemini-client.js';
+import { createDb, type Db } from './db/client.js';
 
 // Aumentamos el tipo de FastifyInstance para que `server.redis`, `server.env`
 // y `server.connections` sean accesibles desde handlers y plugins sin casts.
@@ -20,6 +21,7 @@ declare module 'fastify' {
     env: Env;
     connections: ConnectionRegistry;
     gemini: GeminiClient;
+    db: Db;
   }
 }
 
@@ -30,6 +32,8 @@ export interface BuildServerDeps {
   loggerDestination?: { write(chunk: string): boolean | void };
   /** Cliente Gemini a usar. Si no se provee, se construye con `buildGeminiClient(env)`. */
   gemini?: GeminiClient;
+  /** Instancia de base de datos a usar. Si no se provee, se construye con `createDb(env.DATABASE_URL)`. */
+  db?: Db;
 }
 
 export async function buildServer(env: Env, deps: BuildServerDeps = {}): Promise<FastifyInstance> {
@@ -56,6 +60,9 @@ export async function buildServer(env: Env, deps: BuildServerDeps = {}): Promise
   const redis = deps.redis ?? buildRedisClient(env);
   server.decorate('redis', redis);
   server.decorate('env', env);
+
+  const db = deps.db ?? createDb(env.DATABASE_URL);
+  server.decorate('db', db);
 
   // Handler global de errores no atrapados. Garantiza que cualquier excepcion
   // que escape de un handler o hook (ej: redis.get rechaza por conexion

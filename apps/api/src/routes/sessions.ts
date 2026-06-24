@@ -13,6 +13,9 @@ import { tryStartGenerating, readPlan, setPlanFailed } from '../interviewer/plan
 import { generatePlan } from '../interviewer/coach.service.js';
 import { GENERATION_TIMEOUT_SECONDS, PLAN_TTL_SECONDS } from '../interviewer/constants.js';
 import { validateSessionToken } from '../ws/auth.js';
+import { readHistory } from '../interviewer/conversation.js';
+import { readAggregate } from '../interviewer/metrics-aggregator.js';
+import { archiveSession } from '../db/session-archive.js';
 
 // Codigo de error que devuelve validateSessionToken cuando falla la auth.
 type AuthErrorCode = Extract<ValidateTokenResult, { ok: false }>['code'];
@@ -95,8 +98,29 @@ export async function registerSessionsRoutes(server: FastifyInstance): Promise<v
       await server.redis.set(`session:${sessionId}`, JSON.stringify(ended), 'EX', PLAN_TTL_SECONDS);
       server.connections.get(sessionId)?.close(WS_CLOSE_CODES.SESSION_EXPIRED, 'session_ended');
 
+      // Espejo durable en Postgres (aditivo): la sesion debe sobrevivir el TTL
+      // de Redis para el historial (#51), la calibracion (#58) y el plan relativo
+      // (#60). Falla NO fatal: la entrevista y el plan viven en Redis.
+      try {
+        const transcript = await readHistory(server.redis, sessionId, req.log);
+        const metrics = await readAggregate(server.redis, sessionId, req.log);
+        await archiveSession(server.db, {
+          id: sessionId,
+          industry: ended.industry,
+          level: ended.level,
+          status: ended.status,
+          startedAt: new Date(ended.startedAt),
+          endedAt: new Date(now),
+          durationMs: now - ended.startedAt,
+          transcript,
+          metrics,
+        });
+      } catch (err) {
+        req.log.error({ err, sessionId }, 'no se pudo archivar la sesion en Postgres');
+      }
+
       void generatePlan(
-        { redis: server.redis, gemini: server.gemini, log: req.log },
+        { redis: server.redis, gemini: server.gemini, log: req.log, db: server.db },
         ended,
         planId,
       ).catch((err: unknown) => {
