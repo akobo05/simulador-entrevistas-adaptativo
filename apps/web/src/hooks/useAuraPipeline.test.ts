@@ -84,7 +84,9 @@ describe('useAuraPipeline', () => {
   });
 
   it('camara denegada -> denied y el pipeline de habla sigue', async () => {
-    mockGetUserMedia(() => Promise.reject(new Error('NotAllowed')));
+    mockGetUserMedia(() =>
+      Promise.reject(new DOMException('Permission denied', 'NotAllowedError')),
+    );
     trackerMock.getMetrics.mockReturnValue([speechMetric]);
     const onSnapshot = vi.fn();
     const { result } = renderHook(() => useAuraPipeline('s1', true, onSnapshot));
