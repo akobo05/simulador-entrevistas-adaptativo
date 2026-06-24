@@ -93,7 +93,12 @@ export function buildCoachPrompt(input: CoachPromptInput): string {
         `Linea base del candidato (promedio de sus ${baseline.priorSessionCount} sesiones previas; compara la sesion actual contra esto):`,
       );
       for (const c of baseline.competencies) {
-        lines.push(`- ${COMPETENCY_LABELS[c.name]}: promedio previo ${fmtMetric(c.priorAverage)}`);
+        const head = `- ${COMPETENCY_LABELS[c.name]}: promedio previo ${fmtMetric(c.priorAverage)}`;
+        lines.push(
+          c.priorAverage === null
+            ? head
+            : `${head} sobre ${c.measuredCount} ${c.measuredCount === 1 ? 'sesion' : 'sesiones'}`,
+        );
       }
       lines.push(
         'Para cada competencia con linea base, indica en su comentario si mejoro, empeoro o se mantuvo respecto a su promedio previo, y refleja la tendencia en el resumen y en los aspectos a mejorar.',
@@ -102,8 +107,16 @@ export function buildCoachPrompt(input: CoachPromptInput): string {
         'Para la competencia "contenido", la comparacion es contra el contentScore que tu mismo asignas en esta sesion (no hay un valor actual en la lista de metricas de arriba).',
       );
       lines.push(
-        'NO afirmes ninguna tendencia para una competencia cuyo promedio previo diga "sin datos": tratala como su primera medicion.',
+        'NO afirmes ninguna tendencia para una competencia cuyo promedio previo diga "sin datos": evaluala de forma absoluta, como su primera medicion.',
       );
+      // La cautela solo aplica si alguna competencia se apoya en una sola
+      // medicion previa (promedio poco representativo); con muestras mayores el
+      // aviso seria ruido.
+      if (baseline.competencies.some((c) => c.priorAverage !== null && c.measuredCount === 1)) {
+        lines.push(
+          'Alguna competencia tiene linea base de una sola sesion: menciona su tendencia con cautela (puede ser ruido), no afirmes una mejora o empeoramiento tajante.',
+        );
+      }
     } else {
       lines.push(
         'Es la primera sesion del candidato (sin linea base): evalua en terminos absolutos y no afirmes ninguna tendencia respecto a sesiones anteriores.',

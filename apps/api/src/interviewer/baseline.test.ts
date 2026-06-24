@@ -76,6 +76,11 @@ describe('buildBaseline', () => {
     expect(byName.speech_rate).toBe(60); // (50+70)/2
     expect(byName.content).toBe(65); // (60+70)/2
     expect(byName.eye_contact).toBeNull(); // nunca se midio
+    const byCount = Object.fromEntries(baseline.competencies.map((c) => [c.name, c.measuredCount]));
+    expect(byCount.fluency).toBe(2);
+    expect(byCount.eye_contact).toBe(0);
+    expect(byCount.content).toBe(2);
+    expect(byCount.speech_rate).toBe(2);
   });
 
   it('sin sesiones previas devuelve count 0 y todos los promedios en null', () => {
@@ -83,5 +88,6 @@ describe('buildBaseline', () => {
     expect(baseline.priorSessionCount).toBe(0);
     expect(baseline.competencies).toHaveLength(4);
     expect(baseline.competencies.every((c) => c.priorAverage === null)).toBe(true);
+    expect(baseline.competencies.every((c) => c.measuredCount === 0)).toBe(true);
   });
 });
