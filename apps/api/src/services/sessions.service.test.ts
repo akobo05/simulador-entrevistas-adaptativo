@@ -75,4 +75,23 @@ describe('createSession', () => {
     expect(res.websocketUrl).toContain(res.token);
     expect(res.websocketUrl).toMatch(/^ws:\/\/test\.local\/v1\/sessions\/[^/]+\/ws\?token=/);
   });
+
+  it('persiste el candidateId en el SessionState cuando viene en el request', async () => {
+    const redis = new RedisMock() as unknown as Redis;
+    const candidateId = '550e8400-e29b-41d4-a716-446655440000';
+    const res = await createSession(
+      redis,
+      { industry: 'backend', level: 'mid', candidateId },
+      fakeEnv,
+    );
+    const raw = await redis.get(`session:${res.sessionId}`);
+    expect(JSON.parse(raw!).candidateId).toBe(candidateId);
+  });
+
+  it('sin candidateId el SessionState no lo incluye', async () => {
+    const redis = new RedisMock() as unknown as Redis;
+    const res = await createSession(redis, { industry: 'backend', level: 'mid' }, fakeEnv);
+    const raw = await redis.get(`session:${res.sessionId}`);
+    expect(JSON.parse(raw!).candidateId).toBeUndefined();
+  });
 });

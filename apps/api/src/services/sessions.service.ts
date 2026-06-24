@@ -28,6 +28,7 @@ export async function createSession(
     phase: 'warmup',
     turnNumber: 0,
     startedAt: Date.now(),
+    candidateId: request.candidateId,
     token,
   };
 

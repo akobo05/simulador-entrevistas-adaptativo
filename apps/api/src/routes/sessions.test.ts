@@ -359,6 +359,37 @@ describe('POST /api/v1/sessions/:sessionId/end y GET /api/v1/sessions/:sessionId
     expect(insertSpy).toHaveBeenCalled();
     await failServer.close();
   });
+
+  it('estampa el candidate_id en la fila archivada cuando la sesion tiene candidateId', async () => {
+    const candidateId = '550e8400-e29b-41d4-a716-446655440000';
+    const create = await server.inject({
+      method: 'POST',
+      url: '/api/v1/sessions',
+      payload: { industry: 'backend', level: 'mid', candidateId },
+    });
+    const { sessionId, token } = JSON.parse(create.body);
+    await server.inject({
+      method: 'POST',
+      url: `/api/v1/sessions/${sessionId}/end?token=${token}`,
+    });
+    const archived = await getArchivedSession(db, sessionId);
+    expect(archived?.candidateId).toBe(candidateId);
+  });
+
+  it('archiva candidate_id null cuando la sesion no tiene candidateId', async () => {
+    const create = await server.inject({
+      method: 'POST',
+      url: '/api/v1/sessions',
+      payload: { industry: 'backend', level: 'mid' },
+    });
+    const { sessionId, token } = JSON.parse(create.body);
+    await server.inject({
+      method: 'POST',
+      url: `/api/v1/sessions/${sessionId}/end?token=${token}`,
+    });
+    const archived = await getArchivedSession(db, sessionId);
+    expect(archived?.candidateId).toBeNull();
+  });
 });
 
 describe('GET /api/v1/sessions/:sessionId', () => {
