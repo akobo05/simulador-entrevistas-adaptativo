@@ -42,7 +42,10 @@ export function useAuraPipeline(
     trackerRef.current = createSpeechMetricsTracker();
   }
 
-  const cameraStatus: CameraStatus = workerFailed ? 'failed' : camera.status;
+  // Si la cámara está activa pero el worker de MediaPipe falló, degradamos
+  // a on_no_metrics: el self-view sigue visible, solo falta eye_contact.
+  const cameraStatus: CameraStatus =
+    camera.status === 'on' && workerFailed ? 'on_no_metrics' : camera.status;
 
   // Worker + frame loop: re-create cuando cambia el stream
   useEffect(() => {
@@ -69,6 +72,7 @@ export function useAuraPipeline(
 
         const video = document.createElement('video');
         video.muted = true;
+        video.playsInline = true; // iOS Safari: sin esto play() puede rechazar
         video.srcObject = curStream;
         try {
           await video.play();

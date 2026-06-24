@@ -149,7 +149,7 @@ describe('useAuraPipeline', () => {
     expect(last.metrics).toEqual(expect.arrayContaining([speechMetric, eyeMetric]));
   });
 
-  it('si el worker no inicializa -> failed pero la camara sigue activa', async () => {
+  it('si el worker no inicializa -> on_no_metrics: camara activa sin eye_contact', async () => {
     mockGetUserMedia(() => Promise.resolve(fakeStream()));
     workerApi.initialize.mockRejectedValueOnce(new Error('model_load_failed'));
     const { result } = renderHook(() => useAuraPipeline('s1', true, vi.fn()));
@@ -159,7 +159,8 @@ describe('useAuraPipeline', () => {
     await act(async () => {
       await vi.advanceTimersByTimeAsync(0);
     });
-    expect(result.current.cameraStatus).toBe('failed');
+    // La cámara sigue "on" pero con degradación: self-view visible sin métricas
+    expect(result.current.cameraStatus).toBe('on_no_metrics');
     // La camara NO se libera (el self-view sigue activo aunque falle el worker)
     expect(stopTrack).not.toHaveBeenCalled();
   });

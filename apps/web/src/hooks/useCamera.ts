@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-export type CameraStatus = 'off' | 'starting' | 'on' | 'denied' | 'failed';
+export type CameraStatus = 'off' | 'starting' | 'on' | 'on_no_metrics' | 'denied' | 'failed';
 
 export interface UseCameraOptions {
   constraints?: MediaTrackConstraints;
@@ -73,7 +73,7 @@ export function useCamera(options: UseCameraOptions = {}): UseCameraReturn {
         s.getTracks().forEach((track) =>
           track.addEventListener('ended', () => {
             if (cancelledRef.current) return;
-            setStatus('denied');
+            setStatus('failed');
             setStream(null);
             streamRef.current = null;
           }),
