@@ -1,7 +1,16 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import type { RoomRole } from '@warachikuy/shared-types';
+import { CompetencyRing } from '../components/CompetencyRing';
 import { useRoomSocket } from '../hooks/useRoomSocket';
+import { useAuraPipeline } from '../hooks/useAuraPipeline';
 import './ObserverRoom.css';
+
+/* ── Types ────────────────────────────────────────────────── */
+interface TimestampComment {
+  id: string;
+  timestamp: number;
+  text: string;
+}
 
 /* ── Helpers ──────────────────────────────────────────────── */
 const STUN = {
@@ -121,9 +130,22 @@ function Room({ roomId, role }: { roomId: string; role: RoomRole }) {
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
   const [elapsed, setElapsed] = useState(0);
+  const [comments, setComments] = useState<TimestampComment[]>([]);
+  const [commentInput, setCommentInput] = useState('');
+  const [metrics, setMetrics] = useState<{
+    fluency: number | null;
+    eyeContact: number | null;
+    speechRate: number | null;
+  }>({
+    fluency: null,
+    eyeContact: null,
+    speechRate: null,
+  });
   const pcRef = useRef<RTCPeerConnection | null>(null);
   const pendingCandidates: RTCIceCandidateInit[] = [];
   let remoteDescSet = false;
+
+  const isCaller = role === 'candidate' || role === 'interviewer';
 
   const { peerId, participants, send } = useRoomSocket({
     roomId,
@@ -170,7 +192,48 @@ function Room({ roomId, role }: { roomId: string; role: RoomRole }) {
         startCall();
       }
     },
+    onMetricsUpdate: (_from, incoming) => {
+      if (role !== 'observer') return;
+      const m = {
+        fluency: null as number | null,
+        eyeContact: null as number | null,
+        speechRate: null as number | null,
+      };
+      for (const metric of incoming) {
+        if (metric.name === 'fluency') m.fluency = metric.value;
+        else if (metric.name === 'eye_contact') m.eyeContact = metric.value;
+        else if (metric.name === 'speech_rate') m.speechRate = metric.value;
+      }
+      setMetrics(m);
+    },
   });
+
+  const { auraState } = useAuraPipeline(
+    roomId,
+    isCaller,
+    useCallback(
+      (state) => {
+        send({ type: 'metrics.update', payload: { metrics: state.metrics } });
+      },
+      [send],
+    ),
+  );
+
+  useEffect(() => {
+    if (auraState && isCaller) {
+      const m = {
+        fluency: null as number | null,
+        eyeContact: null as number | null,
+        speechRate: null as number | null,
+      };
+      for (const metric of auraState.metrics) {
+        if (metric.name === 'fluency') m.fluency = metric.value;
+        else if (metric.name === 'eye_contact') m.eyeContact = metric.value;
+        else if (metric.name === 'speech_rate') m.speechRate = metric.value;
+      }
+      setMetrics(m);
+    }
+  }, [auraState, isCaller]);
 
   const flushCandidates = (pc: RTCPeerConnection) => {
     while (pendingCandidates.length) {
@@ -255,7 +318,13 @@ function Room({ roomId, role }: { roomId: string; role: RoomRole }) {
     };
   }, [localStream]);
 
-  const isCaller = role === 'candidate' || role === 'interviewer';
+  const addComment = () => {
+    const text = commentInput.trim();
+    if (!text) return;
+    setComments((prev) => [...prev, { id: crypto.randomUUID(), timestamp: elapsed, text }]);
+    setCommentInput('');
+  };
+
   const otherRole =
     role === 'candidate' ? 'interviewer' : role === 'interviewer' ? 'candidate' : 'candidate';
 
@@ -306,22 +375,71 @@ function Room({ roomId, role }: { roomId: string; role: RoomRole }) {
           )}
         </div>
 
-        <div className="obs-participants">
-          <h3>Participantes</h3>
-          <div className="obs-participant-list">
-            {participants.map((p) => (
-              <div key={p.peerId} className="obs-participant-item">
-                <span className={`obs-participant-dot obs-participant-dot--${p.role}`} />
-                <span>
-                  {p.role === 'candidate'
-                    ? 'Candidato'
-                    : p.role === 'interviewer'
-                      ? 'Entrevistador'
-                      : 'Observador'}
-                </span>
-                {p.peerId === peerId && <span className="obs-participant-you">(tú)</span>}
-              </div>
-            ))}
+        {role === 'observer' && (
+          <div className="obs-metrics">
+            <h3>Métricas en vivo</h3>
+            <div className="obs-metrics__rings">
+              <CompetencyRing label="Fluidez" score={metrics.fluency} />
+              <CompetencyRing label="Contacto visual" score={metrics.eyeContact} />
+              <CompetencyRing label="Ritmo del habla" score={metrics.speechRate} />
+            </div>
+          </div>
+        )}
+
+        <div className="obs-bottom">
+          <div className="obs-participants">
+            <h3>Participantes</h3>
+            <div className="obs-participant-list">
+              {participants.map((p) => (
+                <div key={p.peerId} className="obs-participant-item">
+                  <span className={`obs-participant-dot obs-participant-dot--${p.role}`} />
+                  <span>
+                    {p.role === 'candidate'
+                      ? 'Candidato'
+                      : p.role === 'interviewer'
+                        ? 'Entrevistador'
+                        : 'Observador'}
+                  </span>
+                  {p.peerId === peerId && <span className="obs-participant-you">(tú)</span>}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="obs-comments">
+            <h3>Comentarios</h3>
+            <div className="obs-comments__list">
+              {comments.length === 0 && (
+                <span className="obs-comments__empty">Aún no hay comentarios</span>
+              )}
+              {comments.map((c) => (
+                <div key={c.id} className="obs-comment-item">
+                  <span className="obs-comment-time">{formatTimer(c.timestamp)}</span>
+                  <span className="obs-comment-text">{c.text}</span>
+                </div>
+              ))}
+            </div>
+            <div className="obs-comments__input-row">
+              <input
+                className="obs-comments__input"
+                value={commentInput}
+                onChange={(e) => setCommentInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    addComment();
+                  }
+                }}
+                placeholder="Ancla un comentario en este momento…"
+              />
+              <button
+                className="obs-comments__send"
+                onClick={addComment}
+                disabled={!commentInput.trim()}
+              >
+                Anclar
+              </button>
+            </div>
           </div>
         </div>
       </main>

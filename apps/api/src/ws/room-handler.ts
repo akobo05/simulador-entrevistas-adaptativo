@@ -124,6 +124,23 @@ export function attachRoomHandlers(ctx: RoomHandlerContext): void {
         );
         break;
       }
+      case 'metrics.update': {
+        if (!role) {
+          send({
+            type: 'room.error',
+            payload: { code: 'not_joined', message: 'Debes unirte a la sala primero' },
+          });
+          return;
+        }
+        broadcast(
+          {
+            type: 'metrics.update',
+            payload: { from: peerId, metrics: msg.payload.metrics },
+          },
+          peerId,
+        );
+        break;
+      }
     }
   });
 

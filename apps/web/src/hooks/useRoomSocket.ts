@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import {
   RoomToClientMessageSchema,
+  type AuraMetric,
   type RoomToServerMessage,
   type RoomRole,
 } from '@warachikuy/shared-types';
@@ -19,6 +20,7 @@ interface UseRoomSocketOptions {
   onIceCandidate?: (from: string, candidate: RTCIceCandidateInit) => void;
   onPeerJoined?: (peer: RoomPeer) => void;
   onPeerLeft?: (peerId: string) => void;
+  onMetricsUpdate?: (from: string, metrics: AuraMetric[]) => void;
 }
 
 interface UseRoomSocketReturn {
@@ -37,6 +39,7 @@ export function useRoomSocket({
   onIceCandidate,
   onPeerJoined,
   onPeerLeft,
+  onMetricsUpdate,
 }: UseRoomSocketOptions): UseRoomSocketReturn {
   const [status, setStatus] = useState<'connecting' | 'connected' | 'disconnected'>('connecting');
   const [peerId, setPeerId] = useState<string | null>(null);
@@ -49,6 +52,7 @@ export function useRoomSocket({
     onIceCandidate,
     onPeerJoined,
     onPeerLeft,
+    onMetricsUpdate,
   });
   callbacksRef.current = {
     onSignalOffer,
@@ -56,6 +60,7 @@ export function useRoomSocket({
     onIceCandidate,
     onPeerJoined,
     onPeerLeft,
+    onMetricsUpdate,
   };
 
   const baseUrl =
@@ -121,6 +126,9 @@ export function useRoomSocket({
             break;
           case 'signal.ice-candidate':
             cb.onIceCandidate?.(msg.payload.from, msg.payload.candidate);
+            break;
+          case 'metrics.update':
+            cb.onMetricsUpdate?.(msg.payload.from, msg.payload.metrics);
             break;
           case 'room.error':
             console.error('room error:', msg.payload);

@@ -1278,6 +1278,174 @@
 }
 
 /* ══════════════════════════════════════════════════════════
+   METRICS — anillo de competencias en vivo
+   ══════════════════════════════════════════════════════════ */
+.obs-metrics {
+  padding: 16px 20px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+  background: rgba(8,12,20,0.95);
+  flex-shrink: 0;
+}
+
+.obs-metrics h3 {
+  font-family: 'Syne', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  color: #94A3B8;
+  text-transform: uppercase;
+  margin: 0 0 12px;
+}
+
+.obs-metrics__rings {
+  display: flex;
+  gap: 24px;
+  justify-content: center;
+}
+
+.obs-metrics__rings .ring-inner {
+  background: #1E293B;
+  color: #F1F5F9;
+}
+
+.obs-metrics__rings .ring-nodata {
+  color: #64748B;
+}
+
+.obs-metrics__rings .ring-label {
+  color: #94A3B8;
+}
+
+/* ── Bottom row (participants + comments) ────────────────── */
+.obs-bottom {
+  display: flex;
+  border-top: 1px solid rgba(255,255,255,0.06);
+  background: rgba(8,12,20,0.95);
+  flex-shrink: 0;
+}
+
+.obs-bottom .obs-participants {
+  border-top: none;
+  width: 50%;
+  flex-shrink: 0;
+}
+
+/* ══════════════════════════════════════════════════════════
+   COMMENTS — anclados a timestamp
+   ══════════════════════════════════════════════════════════ */
+.obs-comments {
+  width: 50%;
+  padding: 16px 20px;
+  border-left: 1px solid rgba(255,255,255,0.06);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.obs-comments h3 {
+  font-family: 'Syne', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  color: #94A3B8;
+  text-transform: uppercase;
+  margin: 0;
+}
+
+.obs-comments__list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 120px;
+  overflow-y: auto;
+}
+
+.obs-comments__empty {
+  font-size: 12px;
+  color: #475569;
+}
+
+.obs-comment-item {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 6px 10px;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 8px;
+  animation: fadeSlideUp 0.2s ease;
+}
+
+.obs-comment-time {
+  font-family: 'Syne', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  color: #0EA5E9;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.obs-comment-text {
+  font-size: 12px;
+  color: #CBD5E1;
+  line-height: 1.4;
+}
+
+.obs-comments__input-row {
+  display: flex;
+  gap: 8px;
+}
+
+.obs-comments__input {
+  flex: 1;
+  padding: 8px 12px;
+  background: #0A0F1A;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 8px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 12px;
+  color: #E2E8F0;
+  transition: border-color 150ms ease;
+}
+
+.obs-comments__input:focus {
+  outline: none;
+  border-color: rgba(14,165,233,0.4);
+  box-shadow: 0 0 0 3px rgba(14,165,233,0.08);
+}
+
+.obs-comments__input::placeholder {
+  color: #475569;
+}
+
+.obs-comments__send {
+  padding: 8px 16px;
+  background: linear-gradient(135deg, #2563EB, #0EA5E9);
+  border: none;
+  border-radius: 8px;
+  font-family: 'Syne', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+  cursor: pointer;
+  transition: all 150ms ease;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.obs-comments__send:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(37,99,235,0.35);
+}
+
+.obs-comments__send:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* ══════════════════════════════════════════════════════════
    RESPONSIVE — colapsa a 1 columna en < 900px
    ══════════════════════════════════════════════════════════ */
 @media (max-width: 900px) {
@@ -1287,32 +1455,21 @@
     height: auto;
   }
 
-  .obs-col--left {
-    flex-direction: row;
-    flex-wrap: wrap;
-    border-bottom: 1px solid rgba(255,255,255,0.06);
+  .obs-bottom {
+    flex-direction: column;
   }
 
-  .obs-video-card {
-    flex: 1;
-    min-width: 200px;
-    height: 140px;
+  .obs-bottom .obs-participants,
+  .obs-comments {
+    width: 100%;
   }
 
-  .obs-audio-card,
-  .obs-avatar-card {
-    flex: 1;
-    min-width: 160px;
-  }
-
-  .obs-col--center {
+  .obs-comments {
     border-left: none;
-    border-right: none;
     border-top: 1px solid rgba(255,255,255,0.06);
-    border-bottom: 1px solid rgba(255,255,255,0.06);
   }
 
-  .obs-anchor-modal {
-    width: 90vw;
+  .obs-metrics__rings {
+    gap: 12px;
   }
 }

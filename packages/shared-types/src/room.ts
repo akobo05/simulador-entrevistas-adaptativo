@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { AuraMetricSchema } from './metrics.js';
 
 export const RoomRoleSchema = z.enum(['candidate', 'interviewer', 'observer']);
 export type RoomRole = z.infer<typeof RoomRoleSchema>;
@@ -35,6 +36,10 @@ export const RoomToServerMessageSchema = z.discriminatedUnion('type', [
     type: z.literal('signal.ice-candidate'),
     payload: z.object({ candidate: RTCIceCandidateSchema }),
   }),
+  z.object({
+    type: z.literal('metrics.update'),
+    payload: z.object({ metrics: z.array(AuraMetricSchema) }),
+  }),
 ]);
 export type RoomToServerMessage = z.infer<typeof RoomToServerMessageSchema>;
 
@@ -64,6 +69,10 @@ export const RoomToClientMessageSchema = z.discriminatedUnion('type', [
   z.object({
     type: z.literal('signal.ice-candidate'),
     payload: z.object({ from: z.string(), candidate: RTCIceCandidateSchema }),
+  }),
+  z.object({
+    type: z.literal('metrics.update'),
+    payload: z.object({ from: z.string(), metrics: z.array(AuraMetricSchema) }),
   }),
 ]);
 export type RoomToClientMessage = z.infer<typeof RoomToClientMessageSchema>;
