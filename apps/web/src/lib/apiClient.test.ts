@@ -14,7 +14,12 @@ function mockFetch(status: number, body: unknown): void {
 }
 
 describe('apiClient', () => {
-  beforeEach(() => vi.unstubAllGlobals());
+  beforeEach(() => {
+    vi.unstubAllGlobals();
+    // createSession acuna el candidateId en localStorage; se limpia para no
+    // filtrar estado entre tests.
+    localStorage.clear();
+  });
   afterEach(() => vi.unstubAllGlobals());
 
   it('getIndustries devuelve la lista', async () => {
