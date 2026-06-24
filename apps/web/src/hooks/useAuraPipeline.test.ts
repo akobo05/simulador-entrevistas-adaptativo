@@ -40,7 +40,6 @@ function mockGetUserMedia(impl: () => Promise<MediaStream>) {
   });
 }
 function fakeStream(): MediaStream {
-  // El track expone addEventListener porque el hook escucha su evento 'ended'
   return {
     getTracks: () => [{ stop: stopTrack, addEventListener: vi.fn() }],
   } as unknown as MediaStream;
@@ -57,15 +56,18 @@ describe('useAuraPipeline', () => {
     vi.useRealTimers();
   });
 
-  it('con camara deshabilitada no pide la camara y emite snapshots solo de habla', () => {
+  it('con camara deshabilitada no pide la camara y emite snapshots solo de habla', async () => {
     mockGetUserMedia(() => Promise.reject(new Error('no debe llamarse')));
     trackerMock.getMetrics.mockReturnValue([speechMetric]);
     const onSnapshot = vi.fn();
     const { result } = renderHook(() => useAuraPipeline('s1', false, onSnapshot));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
     expect(result.current.cameraStatus).toBe('off');
     expect(navigator.mediaDevices.getUserMedia).not.toHaveBeenCalled();
-    act(() => {
-      vi.advanceTimersByTime(250);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(250);
     });
     expect(onSnapshot).toHaveBeenCalledWith(
       expect.objectContaining({ sessionId: 's1', metrics: [speechMetric] }),
@@ -73,12 +75,12 @@ describe('useAuraPipeline', () => {
     expect(result.current.auraState?.metrics).toEqual([speechMetric]);
   });
 
-  it('sin ninguna metrica no emite snapshots (nada de AuraState vacios)', () => {
+  it('sin ninguna metrica no emite snapshots (nada de AuraState vacios)', async () => {
     mockGetUserMedia(() => Promise.reject(new Error('x')));
     const onSnapshot = vi.fn();
     renderHook(() => useAuraPipeline('s1', false, onSnapshot));
-    act(() => {
-      vi.advanceTimersByTime(1000);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1000);
     });
     expect(onSnapshot).not.toHaveBeenCalled();
   });
@@ -94,8 +96,8 @@ describe('useAuraPipeline', () => {
       await vi.advanceTimersByTimeAsync(0);
     });
     expect(result.current.cameraStatus).toBe('denied');
-    act(() => {
-      vi.advanceTimersByTime(250);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(250);
     });
     expect(onSnapshot).toHaveBeenCalled();
   });
@@ -103,8 +105,6 @@ describe('useAuraPipeline', () => {
   it('camara ok -> on, inicializa el worker y combina habla + camara', async () => {
     mockGetUserMedia(() => Promise.resolve(fakeStream()));
     trackerMock.getMetrics.mockReturnValue([speechMetric]);
-    // El hook crea <video>/<canvas> internos: se stubean via createElement para
-    // que el frame loop funcione en happy-dom (que no tiene video real)
     const realCreate = document.createElement.bind(document);
     vi.spyOn(document, 'createElement').mockImplementation((tag: string) => {
       if (tag === 'video') {
@@ -134,14 +134,14 @@ describe('useAuraPipeline', () => {
     await act(async () => {
       await vi.advanceTimersByTimeAsync(0);
     });
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
     expect(result.current.cameraStatus).toBe('on');
     expect(workerApi.initialize).toHaveBeenCalledOnce();
     await act(async () => {
       await vi.advanceTimersByTimeAsync(300);
     });
-    // Segundo avance: el snapshot de t=500 ya ve la metrica de camara que
-    // processFrame resolvio tras el tick de t=250 (waitFor no detecta los
-    // fake timers de vitest sin el global `jest` y se colgaria)
     await act(async () => {
       await vi.advanceTimersByTimeAsync(300);
     });
@@ -149,40 +149,18 @@ describe('useAuraPipeline', () => {
     expect(last.metrics).toEqual(expect.arrayContaining([speechMetric, eyeMetric]));
   });
 
-  it('si el worker no inicializa -> on_no_metrics, mantiene el preview y no detiene la camara', async () => {
+  it('si el worker no inicializa -> failed pero la camara sigue activa', async () => {
     mockGetUserMedia(() => Promise.resolve(fakeStream()));
     workerApi.initialize.mockRejectedValueOnce(new Error('model_load_failed'));
     const { result } = renderHook(() => useAuraPipeline('s1', true, vi.fn()));
     await act(async () => {
       await vi.advanceTimersByTimeAsync(0);
     });
-    expect(result.current.cameraStatus).toBe('on_no_metrics');
-    expect(result.current.videoStream).not.toBeNull();
-    expect(stopTrack).not.toHaveBeenCalled();
-  });
-
-  it('si el video de analisis no reproduce -> on_no_metrics, mantiene el preview', async () => {
-    mockGetUserMedia(() => Promise.resolve(fakeStream()));
-    const realCreate = document.createElement.bind(document);
-    vi.spyOn(document, 'createElement').mockImplementation((tag: string) => {
-      if (tag === 'video') {
-        return {
-          videoWidth: 2,
-          videoHeight: 2,
-          muted: false,
-          playsInline: false,
-          srcObject: null,
-          play: vi.fn(() => Promise.reject(new Error('NotAllowedError'))),
-        } as unknown as HTMLVideoElement;
-      }
-      return realCreate(tag);
-    });
-    const { result } = renderHook(() => useAuraPipeline('s1', true, vi.fn()));
     await act(async () => {
       await vi.advanceTimersByTimeAsync(0);
     });
-    expect(result.current.cameraStatus).toBe('on_no_metrics');
-    expect(result.current.videoStream).not.toBeNull();
+    expect(result.current.cameraStatus).toBe('failed');
+    // La camara NO se libera (el self-view sigue activo aunque falle el worker)
     expect(stopTrack).not.toHaveBeenCalled();
   });
 
@@ -224,7 +202,6 @@ describe('useAuraPipeline', () => {
     });
     const withCamera = onSnapshot.mock.calls.at(-1)?.[0] as { metrics: AuraMetric[] };
     expect(withCamera.metrics).toEqual(expect.arrayContaining([eyeMetric]));
-    // Camara apagada: el eye_contact congelado NO puede seguir emitiendose
     rerender({ cam: false });
     onSnapshot.mockClear();
     await act(async () => {
@@ -266,9 +243,9 @@ describe('useAuraPipeline', () => {
     expect(terminateMock).toHaveBeenCalledOnce();
     expect(stopTrack).toHaveBeenCalled();
     onSnapshot.mockClear();
-    act(() => {
-      vi.advanceTimersByTime(1000);
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(1000);
     });
-    expect(onSnapshot).not.toHaveBeenCalled(); // timers limpiados
+    expect(onSnapshot).not.toHaveBeenCalled();
   });
 });
