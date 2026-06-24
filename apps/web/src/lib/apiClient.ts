@@ -53,6 +53,8 @@ export async function createSession(req: CreateSessionRequest): Promise<CreateSe
   const res = await fetch(`${BASE}/api/v1/sessions`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
+    // El cliente es dueno de la identidad: el candidateId del navegador
+    // sobrescribe a proposito cualquiera que venga en req.
     body: JSON.stringify({ ...req, candidateId: getOrCreateCandidateId() }),
   });
   if (!res.ok) throw await readError(res);
