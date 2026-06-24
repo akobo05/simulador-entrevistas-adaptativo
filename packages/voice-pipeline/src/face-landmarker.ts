@@ -109,10 +109,6 @@ export async function createFaceLandmarker(): Promise<FaceLandmarkerClient> {
       lastProcessedAt = now;
       if (video.videoWidth === 0) return [];
       const value = computeEyeContact(landmarker, video, now);
-      // DIAGNOSTICO temporal: confirmar que detecta rostro/iris.
-      if (value === null)
-        console.info('[aura/diag] detect: sin medicion (rostro/iris no confiable)');
-      else console.info('[aura/diag] detect: eye_contact =', value);
       if (value === null) return [];
       return [{ name: 'eye_contact', value, confidence: 'high', timestamp: now }];
     },

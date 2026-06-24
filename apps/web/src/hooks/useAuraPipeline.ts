@@ -88,7 +88,8 @@ export function useAuraPipeline(
       try {
         landmarker = await createFaceLandmarker();
       } catch (err) {
-        console.error('[aura/diag] createFaceLandmarker fallo:', err);
+        // El analisis no arranco, pero la camara sigue activa (on_no_metrics).
+        console.warn('[aura] no se pudo iniciar el analisis de contacto visual', err);
         video.remove();
         activeVideo = null;
         if (!cancelled) setWorkerFailed(true);
