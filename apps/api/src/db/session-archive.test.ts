@@ -130,4 +130,9 @@ describe('listCandidateSessions', () => {
     const rows = await listCandidateSessions(db, cand);
     expect(rows.map((r) => r.id)).toEqual([withPlan.id]);
   });
+
+  it('devuelve [] cuando el candidato no tiene sesiones', async () => {
+    const db = await makeTestDb();
+    expect(await listCandidateSessions(db, cand)).toEqual([]);
+  });
 });
