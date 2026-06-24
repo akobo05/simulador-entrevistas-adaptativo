@@ -8,8 +8,10 @@ export async function registerProgressRoutes(server: FastifyInstance): Promise<v
   server.get<{ Params: { candidateId: string } }>(
     '/candidates/:candidateId/progress',
     async (req, reply) => {
-      // El candidateId es un uuid anonimo (capability de lectura, sin auth: el
-      // modelo de confianza del MVP de #56; auth real es F5).
+      // El candidateId es un uuid anonimo y funciona como unica barrera de
+      // lectura: quien tenga el uuid ve todo el historial de competencias del
+      // candidato. Es el modelo de confianza del MVP de #56 (el uuid es
+      // inadivinable); la auth real (login/ownership) es F5.
       const parsed = z.string().uuid().safeParse(req.params.candidateId);
       if (!parsed.success) {
         return reply.code(400).send(apiError('invalid_input', 'candidateId invalido'));

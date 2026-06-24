@@ -3,6 +3,7 @@ import RedisMock from 'ioredis-mock';
 import type Redis from 'ioredis';
 import type { FastifyInstance } from 'fastify';
 import type { ImprovementPlan } from '@warachikuy/shared-types';
+import { ProgressSummarySchema } from '@warachikuy/shared-types';
 import { buildServer } from '../server';
 import { loadEnv } from '../config/env';
 import { makeTestDb } from '../db/test-helpers.js';
@@ -81,6 +82,8 @@ describe('GET /api/v1/candidates/:candidateId/progress', () => {
     });
     expect(res.statusCode).toBe(200);
     const body = JSON.parse(res.body);
+    // La respuesta cumple el contrato del wire (no solo el tipo estatico).
+    expect(ProgressSummarySchema.safeParse(body).success).toBe(true);
     expect(body.sessionCount).toBe(2);
     const fluency = body.competencies.find((c: { name: string }) => c.name === 'fluency');
     expect(fluency.latest).toBe(80);
@@ -106,5 +109,29 @@ describe('GET /api/v1/candidates/:candidateId/progress', () => {
     });
     expect(res.statusCode).toBe(400);
     expect(JSON.parse(res.body).error.code).toBe('invalid_input');
+  });
+
+  it('si la lectura a Postgres falla responde 500', async () => {
+    // Stub cuyo select rechaza: la lectura es el camino critico del request.
+    const failingDb = {
+      select: () => ({
+        from: () => ({
+          where: () => ({
+            orderBy: () => Promise.reject(new Error('db caida')),
+          }),
+        }),
+      }),
+    } as unknown as Db;
+    const failServer = await buildServer(testEnv, {
+      redis: new RedisMock() as unknown as Redis,
+      db: failingDb,
+    });
+    const res = await failServer.inject({
+      method: 'GET',
+      url: `/api/v1/candidates/${cand}/progress`,
+    });
+    expect(res.statusCode).toBe(500);
+    expect(JSON.parse(res.body).error.code).toBe('internal_error');
+    await failServer.close();
   });
 });
