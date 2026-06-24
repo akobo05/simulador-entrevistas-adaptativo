@@ -84,4 +84,23 @@ describe('buildProgressSummary', () => {
     expect(s.competencies[0]!.points).toEqual([]);
     expect(s.competencies[0]!.latest).toBeNull();
   });
+
+  it('delta usa los ultimos dos no-null (no filas adyacentes) y una competencia siempre null queda en null', () => {
+    const rows = [row('a', 1000, 70), row('b', 2000, null), row('c', 3000, 90)];
+    const s = buildProgressSummary(cand, rows);
+    const fluency = s.competencies.find((c) => c.name === 'fluency')!;
+    expect(fluency.points).toEqual([
+      { at: 1000, score: 70 },
+      { at: 2000, score: null },
+      { at: 3000, score: 90 },
+    ]);
+    expect(fluency.average).toBe(80); // (70 + 90) / 2
+    expect(fluency.delta).toBe(20); // 90 - 70, los dos ultimos no-null
+    // eye_contact es null en todas las filas: latest/average/delta quedan null
+    const eye = s.competencies.find((c) => c.name === 'eye_contact')!;
+    expect(eye.points.map((p) => p.score)).toEqual([null, null, null]);
+    expect(eye.latest).toBeNull();
+    expect(eye.average).toBeNull();
+    expect(eye.delta).toBeNull();
+  });
 });
