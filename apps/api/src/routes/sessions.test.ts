@@ -6,6 +6,9 @@ import type { SessionState } from '@warachikuy/shared-types';
 import type { GeminiClient } from '../interviewer/gemini-client';
 import { buildServer } from '../server';
 import { loadEnv } from '../config/env';
+import { makeTestDb } from '../db/test-helpers.js';
+import type { Db } from '../db/client.js';
+import { getArchivedSession } from '../db/session-archive.js';
 
 const testEnv = loadEnv({
   PORT: '3000',
@@ -141,6 +144,7 @@ function seedSession(redis: Redis, sessionId: string): Promise<unknown> {
 describe('POST /api/v1/sessions/:sessionId/end y GET /api/v1/sessions/:sessionId/plan', () => {
   let server: FastifyInstance;
   let redis: Redis;
+  let db: Db;
   const sessionId = '11111111-1111-4111-8111-111111111111';
   // Token sembrado por seedSession (SessionStateSchema.token).
   const token = 'a'.repeat(64);
@@ -154,7 +158,8 @@ describe('POST /api/v1/sessions/:sessionId/end y GET /api/v1/sessions/:sessionId
       generate: async () => '',
       generateJson: async () => coachOutput,
     };
-    server = await buildServer(testEnv, { redis, gemini });
+    db = await makeTestDb();
+    server = await buildServer(testEnv, { redis, gemini, db });
   });
 
   afterEach(async () => {
@@ -272,6 +277,61 @@ describe('POST /api/v1/sessions/:sessionId/end y GET /api/v1/sessions/:sessionId
     });
     expect(res.statusCode).toBe(200);
     expect(JSON.parse(res.body)).toStrictEqual({ status: 'failed' });
+  });
+
+  it('archiva la sesion en Postgres al cerrarla y sobrevive el TTL de Redis', async () => {
+    const create = await server.inject({
+      method: 'POST',
+      url: '/api/v1/sessions',
+      payload: { industry: 'backend', level: 'mid' },
+    });
+    const { sessionId, token } = JSON.parse(create.body);
+
+    const end = await server.inject({
+      method: 'POST',
+      url: `/api/v1/sessions/${sessionId}/end?token=${token}`,
+    });
+    expect(end.statusCode).toBe(202);
+
+    // La fila durable existe con los metadatos correctos y el plan aun en null
+    const archived = await getArchivedSession(db, sessionId);
+    expect(archived?.industry).toBe('backend');
+    expect(archived?.level).toBe('mid');
+    expect(archived?.status).toBe('ended');
+    expect(archived?.durationMs).toBeGreaterThanOrEqual(0);
+    expect(archived?.plan).toBeNull();
+
+    // "Sobrevive el TTL de Redis": vaciamos Redis y la sesion sigue consultable
+    await redis.flushall();
+    const stillThere = await getArchivedSession(db, sessionId);
+    expect(stillThere?.id).toBe(sessionId);
+  });
+
+  it('si el archivo en Postgres falla, /end igual responde 202', async () => {
+    const failingDb = {
+      insert: () => ({
+        values: () => ({
+          onConflictDoNothing: () => Promise.reject(new Error('db caida')),
+        }),
+      }),
+    } as unknown as Db;
+    const failServer = await buildServer(testEnv, {
+      redis: new RedisMock() as unknown as Redis,
+      db: failingDb,
+    });
+
+    const create = await failServer.inject({
+      method: 'POST',
+      url: '/api/v1/sessions',
+      payload: { industry: 'backend', level: 'mid' },
+    });
+    const { sessionId, token } = JSON.parse(create.body);
+    const end = await failServer.inject({
+      method: 'POST',
+      url: `/api/v1/sessions/${sessionId}/end?token=${token}`,
+    });
+    expect(end.statusCode).toBe(202);
+    await failServer.close();
   });
 });
 
