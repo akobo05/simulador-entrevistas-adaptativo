@@ -65,6 +65,9 @@ services:
       - api
     volumes:
       - ./apps/web/src:/workspace/apps/web/src
+      # mediapipe-wasm esta en .gitignore; ejecuta pnpm --filter @warachikuy/web copy:wasm
+      # una vez despues de clonar para poblar esta carpeta.
+      - ./apps/web/public:/workspace/apps/web/public
       - ./packages/shared-types/src:/workspace/packages/shared-types/src
       - ./packages/voice-pipeline/src:/workspace/packages/voice-pipeline/src
 
