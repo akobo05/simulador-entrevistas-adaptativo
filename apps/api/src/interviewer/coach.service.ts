@@ -41,7 +41,19 @@ type CoachOutput = z.infer<typeof CoachOutputSchema>;
 // (@google/genai), que expone OBJECT/STRING/ARRAY/NUMBER.
 const COACH_RESPONSE_SCHEMA = {
   type: Type.OBJECT,
+  // El contentScore se emite PRIMERO para que el comentario de content y el
+  // resumen se condicionen a un puntaje ya materializado (evita la circularidad
+  // de redactar la tendencia de content antes de fijar su score).
+  propertyOrdering: [
+    'contentScore',
+    'summary',
+    'competencyComments',
+    'strengths',
+    'improvements',
+    'exercises',
+  ],
   properties: {
+    contentScore: { type: Type.NUMBER },
     summary: { type: Type.STRING },
     competencyComments: {
       type: Type.OBJECT,
@@ -53,7 +65,6 @@ const COACH_RESPONSE_SCHEMA = {
       },
       required: ['fluency', 'eye_contact', 'speech_rate', 'content'],
     },
-    contentScore: { type: Type.NUMBER },
     strengths: { type: Type.ARRAY, items: { type: Type.STRING } },
     improvements: { type: Type.ARRAY, items: { type: Type.STRING } },
     exercises: {
@@ -66,9 +77,9 @@ const COACH_RESPONSE_SCHEMA = {
     },
   },
   required: [
+    'contentScore',
     'summary',
     'competencyComments',
-    'contentScore',
     'strengths',
     'improvements',
     'exercises',
@@ -152,7 +163,12 @@ export async function generatePlan(
     let baseline: CoachBaseline | undefined;
     if (state.candidateId) {
       try {
-        const priorRows = await listCandidateSessions(deps.db, state.candidateId);
+        // Se excluye la sesion actual por id: /end es idempotente y un reintento
+        // puede haber persistido ya su plan, con lo que listCandidateSessions la
+        // devolveria y sesgaria su propia linea base.
+        const priorRows = (await listCandidateSessions(deps.db, state.candidateId)).filter(
+          (row) => row.id !== sessionId,
+        );
         baseline = buildBaseline(state.candidateId, priorRows);
       } catch (err) {
         deps.log.error(

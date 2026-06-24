@@ -255,6 +255,45 @@ describe('generatePlan', () => {
     expect(systemPrompt).toContain('promedio previo 65/100'); // content (60+70)/2
   });
 
+  it('excluye la sesion actual de su propia linea base (reintento idempotente)', async () => {
+    const redis = new RedisMock() as unknown as Redis;
+    const currentSessionId = makeState().id;
+    await persistAggregate(redis, currentSessionId, {
+      fluency: 88,
+      eye_contact: null,
+      speech_rate: 62,
+    });
+    // Dos sesiones previas con content 60 y 70 -> promedio previo 65.
+    await seedPriorSession(db, '11111111-1111-4111-8111-111111111111', new Date(1000), 60);
+    await seedPriorSession(db, '22222222-2222-4222-8222-222222222222', new Date(2000), 70);
+    // La sesion ACTUAL ya tiene plan (simula un reintento de /end donde la fila
+    // ya fue archivada con plan en el intento anterior).
+    await archiveSession(db, {
+      id: currentSessionId,
+      candidateId: CAND,
+      industry: 'backend',
+      level: 'mid',
+      status: 'ended',
+      startedAt: new Date(3000),
+      endedAt: new Date(4000),
+      durationMs: 1000,
+      transcript: [],
+      metrics: { fluency: 88, eye_contact: null, speech_rate: 62 },
+    });
+    await updateArchivedPlan(db, currentSessionId, priorPlan(currentSessionId, 90));
+    const generateJson = vi.fn().mockResolvedValue(COACH_OUTPUT);
+    await generatePlan(
+      { redis, gemini: { generate: async () => '', generateJson }, log: silentLog(), db },
+      makeState({ candidateId: CAND }),
+      '550e8400-e29b-41d4-a716-446655440099',
+    );
+    expect(generateJson).toHaveBeenCalledTimes(1);
+    const systemPrompt = generateJson.mock.calls[0]?.[0] as string;
+    // Solo las 2 sesiones previas deben contar, NO la actual (content 90).
+    expect(systemPrompt).toContain('2 sesiones previas');
+    expect(systemPrompt).toContain('promedio previo 65/100'); // (60+70)/2, sin contaminar con 90
+  });
+
   it('no inyecta linea base cuando la sesion no tiene candidateId', async () => {
     const redis = new RedisMock() as unknown as Redis;
     await persistAggregate(redis, makeState().id, {

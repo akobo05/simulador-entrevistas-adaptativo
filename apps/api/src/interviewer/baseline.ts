@@ -6,6 +6,8 @@ export interface CompetencyBaseline {
   name: CompetencyName;
   // Promedio previo redondeado de la competencia; null si nunca se midio.
   priorAverage: number | null;
+  // Cantidad de sesiones previas que SI midieron esta competencia (score no-null).
+  measuredCount: number;
 }
 
 export interface CoachBaseline {
@@ -26,6 +28,10 @@ export function buildBaseline(
   const summary = buildProgressSummary(candidateId, priorRows);
   return {
     priorSessionCount: summary.sessionCount,
-    competencies: summary.competencies.map((c) => ({ name: c.name, priorAverage: c.average })),
+    competencies: summary.competencies.map((c) => ({
+      name: c.name,
+      priorAverage: c.average,
+      measuredCount: c.points.filter((p) => p.score !== null).length,
+    })),
   };
 }
