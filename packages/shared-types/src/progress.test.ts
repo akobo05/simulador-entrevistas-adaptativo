@@ -55,4 +55,23 @@ describe('ProgressSummarySchema', () => {
   it('rechaza un candidateId que no es uuid', () => {
     expect(ProgressSummarySchema.safeParse({ ...valid, candidateId: 'x' }).success).toBe(false);
   });
+
+  it('acepta un delta negativo (la tendencia puede bajar)', () => {
+    const down = {
+      ...valid,
+      competencies: [
+        {
+          name: 'fluency',
+          points: [
+            { at: 1000, score: 80 },
+            { at: 2000, score: 65 },
+          ],
+          latest: 65,
+          average: 73,
+          delta: -15,
+        },
+      ],
+    };
+    expect(ProgressSummarySchema.parse(down).competencies[0]?.delta).toBe(-15);
+  });
 });
