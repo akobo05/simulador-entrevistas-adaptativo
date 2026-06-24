@@ -4,11 +4,11 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "pnpm run copy:wasm && vite",
     "lint": "eslint src",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "build": "tsc && vite build",
+    "build": "pnpm run copy:wasm && tsc && vite build",
     "preview": "vite preview",
     "copy:wasm": "node --input-type=module -e \"import{cpSync,mkdirSync}from'node:fs';mkdirSync('public/mediapipe-wasm',{recursive:true});cpSync('../../packages/voice-pipeline/node_modules/@mediapipe/tasks-vision/wasm','public/mediapipe-wasm',{recursive:true});console.log('MediaPipe WASM copiado a public/mediapipe-wasm/');\""
   },
