@@ -6,6 +6,7 @@ import type Redis from 'ioredis';
 import { type Env } from './config/env.js';
 import { buildRedisClient } from './services/redis.js';
 import { registerSessionsRoutes } from './routes/sessions.js';
+import { registerProgressRoutes } from './routes/progress.js';
 import { MAX_WS_PAYLOAD_BYTES } from './ws/constants.js';
 import { ConnectionRegistry } from './services/connection-registry.js';
 import { RoomRegistry } from './services/room-registry.js';
@@ -149,6 +150,7 @@ export async function buildServer(env: Env, deps: BuildServerDeps = {}): Promise
   await server.register(
     async (api) => {
       await registerSessionsRoutes(api);
+      await registerProgressRoutes(api);
     },
     { prefix: '/api/v1' },
   );
