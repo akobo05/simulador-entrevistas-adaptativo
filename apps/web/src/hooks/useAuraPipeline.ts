@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import {
-  createMetricsWorker,
+  createFaceLandmarker,
   createSpeechMetricsTracker,
-  type MetricsWorkerClient,
+  type FaceLandmarkerClient,
   type SpeechMetricsTracker,
 } from '@warachikuy/voice-pipeline';
 import type { AuraMetric, AuraState, CandidateTranscript } from '@warachikuy/shared-types';
@@ -35,19 +35,19 @@ export function useAuraPipeline(
   const processingEnabledRef = useRef(processingEnabled);
   processingEnabledRef.current = processingEnabled;
   const eyeMetricsRef = useRef<AuraMetric[]>([]);
-  const workerRef = useRef<MetricsWorkerClient | null>(null);
+  const landmarkerRef = useRef<FaceLandmarkerClient | null>(null);
   const frameTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   if (trackerRef.current === null) {
     trackerRef.current = createSpeechMetricsTracker();
   }
 
-  // Si la cámara está activa pero el worker de MediaPipe falló, degradamos
+  // Si la camara esta activa pero el landmarker de MediaPipe fallo, degradamos
   // a on_no_metrics: el self-view sigue visible, solo falta eye_contact.
   const cameraStatus: CameraStatus =
     camera.status === 'on' && workerFailed ? 'on_no_metrics' : camera.status;
 
-  // Worker + frame loop: re-create cuando cambia el stream
+  // Landmarker + frame loop: re-create cuando cambia el stream
   useEffect(() => {
     if (!camera.stream) {
       setWorkerFailed(false);
@@ -56,78 +56,80 @@ export function useAuraPipeline(
 
     let cancelled = false;
     const curStream: MediaStream = camera.stream;
+    let activeVideo: HTMLVideoElement | null = null;
 
-    async function initWorker(): Promise<void> {
-      let w: MetricsWorkerClient | null = null;
+    async function initLandmarker(): Promise<void> {
+      // Crear video offscreen anclado al DOM para que Chrome no congele los frames
+      // (un video no conectado al DOM puede tener videoWidth=0 aunque este playing).
+      const video = document.createElement('video');
+      activeVideo = video;
+      video.muted = true;
+      video.playsInline = true; // iOS Safari: sin esto play() puede rechazar
+      video.style.cssText =
+        'position:fixed;top:0;left:0;width:1px;height:1px;opacity:0;pointer-events:none;';
+      document.body.appendChild(video);
+      video.srcObject = curStream;
       try {
-        w = createMetricsWorker();
-        await w.api.initialize();
-
-        if (cancelled) {
-          w.terminate();
-          return;
-        }
-
-        workerRef.current = w;
-        setWorkerFailed(false);
-
-        const video = document.createElement('video');
-        video.muted = true;
-        video.playsInline = true; // iOS Safari: sin esto play() puede rechazar
-        video.srcObject = curStream;
-        try {
-          await video.play();
-        } catch {
-          // FIX 3: degradar a on_no_metrics; el analisis no arranca pero la camara sigue
-          workerRef.current?.terminate();
-          workerRef.current = null;
-          if (!cancelled) setWorkerFailed(true);
-          return;
-        }
-        if (cancelled) return;
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d', { willReadFrequently: true });
-
-        if (frameTimerRef.current) clearInterval(frameTimerRef.current);
-
-        // Captura w como no-nulo: en este punto initialize() ya resolvio y
-        // el cancelled check previo garantiza que w esta asignado.
-        const worker = w;
-        frameTimerRef.current = setInterval(() => {
-          if (!processingEnabledRef.current) {
-            eyeMetricsRef.current = [];
-            return;
-          }
-          if (!ctx || video.videoWidth === 0) return;
-          canvas.width = video.videoWidth;
-          canvas.height = video.videoHeight;
-          ctx.drawImage(video, 0, 0);
-          const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
-          worker.api
-            .processFrame(img.data.buffer as ArrayBuffer, img.width, img.height)
-            .then((metrics) => {
-              if (!cancelled) eyeMetricsRef.current = metrics;
-            })
-            .catch(() => {});
-        }, FRAME_INTERVAL_MS);
+        await video.play();
       } catch {
-        // FIX 1: no dejar el worker zombie si initialize() (u otra cosa) lanza
-        w?.terminate();
+        // Degradar a on_no_metrics; el analisis no arranca pero la camara sigue
+        video.remove();
+        activeVideo = null;
         if (!cancelled) setWorkerFailed(true);
+        return;
       }
+      if (cancelled) {
+        video.remove();
+        activeVideo = null;
+        return;
+      }
+
+      let landmarker: FaceLandmarkerClient | null = null;
+      try {
+        landmarker = await createFaceLandmarker();
+      } catch (err) {
+        console.error('[aura/diag] createFaceLandmarker fallo:', err);
+        video.remove();
+        activeVideo = null;
+        if (!cancelled) setWorkerFailed(true);
+        return;
+      }
+
+      if (cancelled) {
+        landmarker.close();
+        video.remove();
+        activeVideo = null;
+        return;
+      }
+
+      landmarkerRef.current = landmarker;
+      setWorkerFailed(false);
+
+      if (frameTimerRef.current) clearInterval(frameTimerRef.current);
+
+      frameTimerRef.current = setInterval(() => {
+        if (!processingEnabledRef.current) {
+          eyeMetricsRef.current = [];
+          return;
+        }
+        if (!landmarkerRef.current) return;
+        eyeMetricsRef.current = landmarkerRef.current.detect(video);
+      }, FRAME_INTERVAL_MS);
     }
 
-    void initWorker();
+    void initLandmarker();
 
     return () => {
       cancelled = true;
-      workerRef.current?.terminate();
-      workerRef.current = null;
+      landmarkerRef.current?.close();
+      landmarkerRef.current = null;
       if (frameTimerRef.current) {
         clearInterval(frameTimerRef.current);
         frameTimerRef.current = null;
       }
       eyeMetricsRef.current = [];
+      activeVideo?.remove();
+      activeVideo = null;
     };
   }, [camera.stream]);
 
