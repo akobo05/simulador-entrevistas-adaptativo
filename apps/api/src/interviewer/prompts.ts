@@ -109,9 +109,14 @@ export function buildCoachPrompt(input: CoachPromptInput): string {
       lines.push(
         'NO afirmes ninguna tendencia para una competencia cuyo promedio previo diga "sin datos": evaluala de forma absoluta, como su primera medicion.',
       );
-      lines.push(
-        'Si una competencia tiene linea base de una sola sesion, menciona la tendencia con cautela (puede ser ruido); no afirmes una mejora o empeoramiento tajante.',
-      );
+      // La cautela solo aplica si alguna competencia se apoya en una sola
+      // medicion previa (promedio poco representativo); con muestras mayores el
+      // aviso seria ruido.
+      if (baseline.competencies.some((c) => c.priorAverage !== null && c.measuredCount === 1)) {
+        lines.push(
+          'Alguna competencia tiene linea base de una sola sesion: menciona su tendencia con cautela (puede ser ruido), no afirmes una mejora o empeoramiento tajante.',
+        );
+      }
     } else {
       lines.push(
         'Es la primera sesion del candidato (sin linea base): evalua en terminos absolutos y no afirmes ninguna tendencia respecto a sesiones anteriores.',

@@ -127,7 +127,21 @@ describe('buildCoachPrompt linea base (#60)', () => {
     expect(prompt).toContain('fluidez verbal: promedio previo 65/100');
     expect(prompt).toContain('contentScore que tu mismo asignas');
     expect(prompt).toContain('sobre 3 sesiones'); // tamano de muestra expuesto
-    expect(prompt).toContain('con cautela'); // instruccion de muestra pequena
+    expect(prompt).not.toContain('con cautela'); // todas con >=2 mediciones: sin aviso
+  });
+
+  it('emite la cautela solo cuando alguna competencia tiene una sola medicion', () => {
+    const base: CoachBaseline = {
+      priorSessionCount: 2,
+      competencies: [
+        { name: 'fluency', priorAverage: 65, measuredCount: 1 },
+        { name: 'eye_contact', priorAverage: null, measuredCount: 0 },
+        { name: 'speech_rate', priorAverage: 60, measuredCount: 2 },
+        { name: 'content', priorAverage: 70, measuredCount: 2 },
+      ],
+    };
+    const prompt = buildCoachPrompt({ industry: 'backend', level: 'mid', metrics, baseline: base });
+    expect(prompt).toContain('con cautela');
   });
 
   it('sin sesiones previas (count 0), lo dice honestamente y no afirma tendencia', () => {
