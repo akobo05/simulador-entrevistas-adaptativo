@@ -22,6 +22,7 @@ export function PermissionGate({ onReady }: PermissionGateProps) {
 
   async function requestOne(constraints: MediaStreamConstraints): Promise<boolean> {
     try {
+      if (!navigator.mediaDevices?.getUserMedia) return false;
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
       // Solo se pedia el permiso: el stream real lo abre cada pipeline despues
       stream.getTracks().forEach((t) => t.stop());

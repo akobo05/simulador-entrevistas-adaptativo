@@ -255,9 +255,15 @@ export function InterviewPage() {
               data-testid="ip-selfview"
             />
           )}
-          {(pipeline.cameraStatus === 'denied' || pipeline.cameraStatus === 'failed') && (
-            <p className="ip-camera-note" data-testid="ip-camera-note">
-              Cámara no disponible: el contacto visual queda sin datos.
+          {(pipeline.cameraStatus === 'denied' ||
+            pipeline.cameraStatus === 'failed' ||
+            (pipeline.cameraStatus === 'off' && !grants.camera)) && (
+            <p className="ip-camera-note" data-testid="ip-camera-note" role="alert">
+              {pipeline.cameraStatus === 'denied'
+                ? 'Cámara no disponible: revisa los permisos en la configuración de tu navegador.'
+                : pipeline.cameraStatus === 'failed'
+                  ? 'Error al iniciar la cámara. Puedes intentar recargar la página.'
+                  : 'Cámara desactivada: el contacto visual queda sin datos.'}
             </p>
           )}
         </section>

@@ -53,16 +53,38 @@ export function useAuraPipeline(
     let frameTimer: ReturnType<typeof setInterval> | null = null;
     let cancelled = false;
 
+    function delay(ms: number): Promise<void> {
+      return new Promise((r) => setTimeout(r, ms));
+    }
+
     async function startCamera(): Promise<void> {
       setCameraStatus('starting');
-      try {
-        stream = await navigator.mediaDevices.getUserMedia({ video: true });
-      } catch {
-        if (!cancelled) setCameraStatus('denied');
-        return;
+      const maxRetries = 2;
+      for (let attempt = 0; attempt <= maxRetries; attempt++) {
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: { width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: 15 } },
+          });
+          break;
+        } catch (err) {
+          const isNotAllowed = (err as DOMException)?.name === 'NotAllowedError';
+          if (cancelled) return;
+          if (isNotAllowed) {
+            setCameraStatus('denied');
+            return;
+          }
+          if (attempt < maxRetries) {
+            await delay(1000 * (attempt + 1));
+            if (cancelled) return;
+            continue;
+          }
+          setCameraStatus('failed');
+          return;
+        }
       }
+      const cam = stream!;
       if (cancelled) {
-        stream.getTracks().forEach((t) => t.stop());
+        cam.getTracks().forEach((t) => t.stop());
         return;
       }
       try {
@@ -70,27 +92,35 @@ export function useAuraPipeline(
         await worker.api.initialize();
       } catch {
         if (!cancelled) setCameraStatus('failed');
-        stream.getTracks().forEach((t) => t.stop());
+        cam.getTracks().forEach((t) => t.stop());
         return;
       }
       if (cancelled) return;
 
       const video = document.createElement('video');
       video.muted = true;
-      video.srcObject = stream;
-      await video.play().catch(() => undefined);
+      video.srcObject = cam;
+      try {
+        await video.play();
+      } catch {
+        if (!cancelled) {
+          setCameraStatus('failed');
+          cam.getTracks().forEach((t) => t.stop());
+        }
+        return;
+      }
       if (cancelled) return; // desmonte durante el play: no abrir el frame loop
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d', { willReadFrequently: true });
       setCameraStatus('on');
       // Expone el stream para el self-view de la UI (el mismo MediaStream puede
       // alimentar varios <video> a la vez).
-      setVideoStream(stream);
+      setVideoStream(cam);
 
       // Si la camara muere a mitad de sesion (se desenchufa, el SO revoca el
       // permiso) el <video> queda congelado y MediaPipe seguiria midiendo esa
       // imagen fija con timestamps frescos: hay que cortar el loop y avisar.
-      stream.getTracks().forEach((track) =>
+      cam.getTracks().forEach((track) =>
         track.addEventListener('ended', () => {
           if (cancelled) return;
           if (frameTimer) clearInterval(frameTimer);

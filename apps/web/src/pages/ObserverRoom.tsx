@@ -1,8 +1,7 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
-import type { RoomRole } from '@warachikuy/shared-types';
+import { useState, useEffect } from 'react';
 import { CompetencyRing } from '../components/CompetencyRing';
 import { useRoomSocket } from '../hooks/useRoomSocket';
-import { useAuraPipeline } from '../hooks/useAuraPipeline';
+import type { RoomRole } from '@warachikuy/shared-types';
 import './ObserverRoom.css';
 
 /* ── Types ────────────────────────────────────────────────── */
@@ -12,11 +11,20 @@ interface TimestampComment {
   text: string;
 }
 
-/* ── Helpers ──────────────────────────────────────────────── */
-const STUN = {
-  iceServers: [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }],
-};
+export type ObserverType = 'student' | 'teacher' | 'recruiter' | 'guest';
 
+const OBSERVER_TYPES: { value: ObserverType; label: string }[] = [
+  { value: 'student', label: 'Estudiante' },
+  { value: 'teacher', label: 'Docente' },
+  { value: 'recruiter', label: 'Reclutador' },
+  { value: 'guest', label: 'Invitado' },
+];
+
+function observerLabel(type: ObserverType): string {
+  return OBSERVER_TYPES.find((t) => t.value === type)?.label ?? 'Invitado';
+}
+
+/* ── Helpers ──────────────────────────────────────────────── */
 function formatTimer(s: number): string {
   const m = Math.floor(s / 60)
     .toString()
@@ -26,14 +34,14 @@ function formatTimer(s: number): string {
 }
 
 /* ── Lobby ────────────────────────────────────────────────── */
-function Lobby({ onJoin }: { onJoin: (roomId: string, role: RoomRole) => void }) {
+function Lobby({ onJoin }: { onJoin: (roomId: string, type: ObserverType) => void }) {
   const [roomId] = useState(() => crypto.randomUUID().slice(0, 8));
-  const [role, setRole] = useState<RoomRole>('observer');
+  const [obsType, setObsType] = useState<ObserverType>('guest');
   const [inputRoom, setInputRoom] = useState(roomId);
 
   const handleJoin = () => {
     const id = inputRoom.trim() || roomId;
-    onJoin(id, role);
+    onJoin(id, obsType);
   };
 
   return (
@@ -41,7 +49,9 @@ function Lobby({ onJoin }: { onJoin: (roomId: string, role: RoomRole) => void })
       <div className="obs-lobby-card">
         <div className="obs-lobby-icon">W</div>
         <h1 className="obs-lobby-title">Sala de observación</h1>
-        <p className="obs-lobby-sub">Conéctate como observador, entrevistador o candidato</p>
+        <p className="obs-lobby-sub">
+          Todos los que entran son observadores. Selecciona tu perfil.
+        </p>
 
         <div className="obs-lobby-field">
           <label className="obs-lobby-label">ID de sala</label>
@@ -54,17 +64,15 @@ function Lobby({ onJoin }: { onJoin: (roomId: string, role: RoomRole) => void })
         </div>
 
         <div className="obs-lobby-field">
-          <label className="obs-lobby-label">Tu rol</label>
+          <label className="obs-lobby-label">Tu perfil como observador</label>
           <div className="obs-lobby-roles">
-            {(['candidate', 'interviewer', 'observer'] as const).map((r) => (
+            {OBSERVER_TYPES.map((t) => (
               <button
-                key={r}
-                className={`obs-lobby-role ${role === r ? 'obs-lobby-role--active' : ''}`}
-                onClick={() => setRole(r)}
+                key={t.value}
+                className={`obs-lobby-role ${obsType === t.value ? 'obs-lobby-role--active' : ''}`}
+                onClick={() => setObsType(t.value)}
               >
-                {r === 'candidate' && '🎤 Candidato'}
-                {r === 'interviewer' && '🎙 Entrevistador'}
-                {r === 'observer' && '👁 Observador'}
+                {t.label}
               </button>
             ))}
           </div>
@@ -78,57 +86,8 @@ function Lobby({ onJoin }: { onJoin: (roomId: string, role: RoomRole) => void })
   );
 }
 
-/* ── VideoBox ─────────────────────────────────────────────── */
-function VideoBox({
-  stream,
-  label,
-  muted,
-  mirrored,
-}: {
-  stream: MediaStream | null;
-  label: string;
-  muted?: boolean;
-  mirrored?: boolean;
-}) {
-  const ref = useRef<HTMLVideoElement>(null);
-
-  useEffect(() => {
-    if (ref.current) ref.current.srcObject = stream;
-  }, [stream]);
-
-  if (!stream) {
-    return (
-      <div className="obs-video-box obs-video-box--empty">
-        <div className="obs-video-avatar">
-          <svg width="40" height="40" viewBox="0 0 64 64" fill="none">
-            <circle cx="32" cy="24" r="14" fill="#1E293B" />
-            <ellipse cx="32" cy="52" rx="22" ry="14" fill="#1E293B" />
-          </svg>
-        </div>
-        <span className="obs-video-label">{label}</span>
-        <span className="obs-video-waiting">Esperando conexión…</span>
-      </div>
-    );
-  }
-
-  return (
-    <div className="obs-video-box">
-      <video
-        ref={ref}
-        autoPlay
-        playsInline
-        muted={muted}
-        className={`obs-video-el ${mirrored ? 'obs-video-el--mirrored' : ''}`}
-      />
-      <span className="obs-video-label">{label}</span>
-    </div>
-  );
-}
-
 /* ── Room ─────────────────────────────────────────────────── */
-function Room({ roomId, role }: { roomId: string; role: RoomRole }) {
-  const [localStream, setLocalStream] = useState<MediaStream | null>(null);
-  const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
+function Room({ roomId, obsType }: { roomId: string; obsType: ObserverType }) {
   const [elapsed, setElapsed] = useState(0);
   const [comments, setComments] = useState<TimestampComment[]>([]);
   const [commentInput, setCommentInput] = useState('');
@@ -141,59 +100,13 @@ function Room({ roomId, role }: { roomId: string; role: RoomRole }) {
     eyeContact: null,
     speechRate: null,
   });
-  const pcRef = useRef<RTCPeerConnection | null>(null);
-  const pendingCandidates: RTCIceCandidateInit[] = [];
-  let remoteDescSet = false;
 
-  const isCaller = role === 'candidate' || role === 'interviewer';
+  const role: RoomRole = 'observer';
 
-  const { peerId, participants, send } = useRoomSocket({
+  const { peerId, participants } = useRoomSocket({
     roomId,
     role,
-    onSignalOffer: (from, desc) => {
-      const pc = getOrCreatePC();
-      pc.setRemoteDescription(new RTCSessionDescription(desc as RTCSessionDescriptionInit))
-        .then(() => {
-          remoteDescSet = true;
-          flushCandidates(pc);
-          return pc.createAnswer();
-        })
-        .then((answer) => pc.setLocalDescription(answer))
-        .then(() => {
-          const ld = pc.localDescription;
-          if (ld && ld.sdp) {
-            send({
-              type: 'signal.answer',
-              payload: { description: { type: ld.type, sdp: ld.sdp } },
-            });
-          }
-        })
-        .catch(console.error);
-    },
-    onSignalAnswer: (_from, desc) => {
-      const pc = getOrCreatePC();
-      pc.setRemoteDescription(new RTCSessionDescription(desc as RTCSessionDescriptionInit))
-        .then(() => {
-          remoteDescSet = true;
-          flushCandidates(pc);
-        })
-        .catch(console.error);
-    },
-    onIceCandidate: (_from, candidate) => {
-      const pc = pcRef.current;
-      if (pc && remoteDescSet) {
-        pc.addIceCandidate(new RTCIceCandidate(candidate)).catch(() => {});
-      } else {
-        pendingCandidates.push(candidate);
-      }
-    },
-    onPeerJoined: (peer) => {
-      if (role !== 'observer' && peer.role !== 'observer' && pcRef.current === null) {
-        startCall();
-      }
-    },
     onMetricsUpdate: (_from, incoming) => {
-      if (role !== 'observer') return;
       const m = {
         fluency: null as number | null,
         eyeContact: null as number | null,
@@ -208,115 +121,10 @@ function Room({ roomId, role }: { roomId: string; role: RoomRole }) {
     },
   });
 
-  const { auraState } = useAuraPipeline(
-    roomId,
-    isCaller,
-    useCallback(
-      (state) => {
-        send({ type: 'metrics.update', payload: { metrics: state.metrics } });
-      },
-      [send],
-    ),
-  );
-
-  useEffect(() => {
-    if (auraState && isCaller) {
-      const m = {
-        fluency: null as number | null,
-        eyeContact: null as number | null,
-        speechRate: null as number | null,
-      };
-      for (const metric of auraState.metrics) {
-        if (metric.name === 'fluency') m.fluency = metric.value;
-        else if (metric.name === 'eye_contact') m.eyeContact = metric.value;
-        else if (metric.name === 'speech_rate') m.speechRate = metric.value;
-      }
-      setMetrics(m);
-    }
-  }, [auraState, isCaller]);
-
-  const flushCandidates = (pc: RTCPeerConnection) => {
-    while (pendingCandidates.length) {
-      pc.addIceCandidate(new RTCIceCandidate(pendingCandidates.shift()!)).catch(() => {});
-    }
-  };
-
-  const getOrCreatePC = useCallback((): RTCPeerConnection => {
-    if (pcRef.current) return pcRef.current;
-
-    const pc = new RTCPeerConnection(STUN);
-    pcRef.current = pc;
-
-    pc.onicecandidate = (e) => {
-      if (e.candidate) {
-        send({
-          type: 'signal.ice-candidate',
-          payload: {
-            candidate: {
-              candidate: e.candidate.candidate,
-              sdpMid: e.candidate.sdpMid,
-              sdpMLineIndex: e.candidate.sdpMLineIndex,
-            },
-          },
-        });
-      }
-    };
-
-    pc.ontrack = (e) => {
-      setRemoteStream(e.streams[0] ?? null);
-    };
-
-    pc.onconnectionstatechange = () => {
-      // connection state changed
-    };
-
-    if (localStream) {
-      for (const track of localStream.getTracks()) {
-        pc.addTrack(track, localStream);
-      }
-    }
-
-    return pc;
-  }, [localStream, send]);
-
-  const startCall = useCallback(async () => {
-    const pc = getOrCreatePC();
-    try {
-      const offer = await pc.createOffer();
-      await pc.setLocalDescription(offer);
-      if (offer.sdp) {
-        send({
-          type: 'signal.offer',
-          payload: { description: { type: offer.type, sdp: offer.sdp } },
-        });
-      }
-    } catch (err) {
-      console.error('Error creating offer:', err);
-    }
-  }, [getOrCreatePC, send]);
-
-  useEffect(() => {
-    if (role === 'observer') return;
-    navigator.mediaDevices
-      .getUserMedia({ audio: true, video: true })
-      .then((stream) => {
-        setLocalStream(stream);
-      })
-      .catch(() => {});
-  }, [role]);
-
   useEffect(() => {
     const id = setInterval(() => setElapsed((p) => p + 1), 1000);
     return () => clearInterval(id);
   }, []);
-
-  useEffect(() => {
-    return () => {
-      pcRef.current?.close();
-      pcRef.current = null;
-      localStream?.getTracks().forEach((t) => t.stop());
-    };
-  }, [localStream]);
 
   const addComment = () => {
     const text = commentInput.trim();
@@ -325,9 +133,6 @@ function Room({ roomId, role }: { roomId: string; role: RoomRole }) {
     setCommentInput('');
   };
 
-  const otherRole =
-    role === 'candidate' ? 'interviewer' : role === 'interviewer' ? 'candidate' : 'candidate';
-
   return (
     <div className="obs-room">
       <header className="obs-header">
@@ -335,11 +140,7 @@ function Room({ roomId, role }: { roomId: string; role: RoomRole }) {
           <div className="obs-logo">W</div>
           <div className="obs-header__info">
             <span className="obs-header__name">Sala: {roomId}</span>
-            <span className="obs-header__role">
-              {role === 'candidate' && 'Candidato'}
-              {role === 'interviewer' && 'Entrevistador'}
-              {role === 'observer' && 'Observador'}
-            </span>
+            <span className="obs-header__role">{observerLabel(obsType)}</span>
           </div>
         </div>
 
@@ -350,96 +151,71 @@ function Room({ roomId, role }: { roomId: string; role: RoomRole }) {
         </div>
 
         <div className="obs-header__right">
-          <div className={`obs-badge obs-badge--${role}`}>
+          <div className="obs-badge obs-badge--observer">
             {participants.length} participante{participants.length !== 1 ? 's' : ''}
           </div>
         </div>
       </header>
 
       <main className="obs-body">
-        <div className="obs-videos">
-          {isCaller && (
-            <>
-              <VideoBox stream={localStream} label="Tú" muted mirrored />
-              <VideoBox
-                stream={remoteStream}
-                label={otherRole === 'candidate' ? 'Candidato' : 'Entrevistador'}
-              />
-            </>
-          )}
-          {role === 'observer' && (
-            <>
-              <VideoBox stream={remoteStream} label="Candidato" />
-              <VideoBox stream={null} label="Entrevistador" />
-            </>
-          )}
+        <div className="obs-col obs-col--left">
+          <div className="obs-col-header">Participantes</div>
+          <div className="obs-participant-list">
+            {participants.map((p) => (
+              <div key={p.peerId} className="obs-participant-item">
+                <span className="obs-participant-dot obs-participant-dot--observer" />
+                <span className="obs-participant-name">Observador</span>
+                {p.peerId === peerId && (
+                  <span className="obs-participant-you">tú — {observerLabel(obsType)}</span>
+                )}
+              </div>
+            ))}
+            {participants.length === 0 && (
+              <span className="obs-col-empty">Esperando participantes…</span>
+            )}
+          </div>
         </div>
 
-        {role === 'observer' && (
-          <div className="obs-metrics">
-            <h3>Métricas en vivo</h3>
-            <div className="obs-metrics__rings">
-              <CompetencyRing label="Fluidez" score={metrics.fluency} />
-              <CompetencyRing label="Contacto visual" score={metrics.eyeContact} />
-              <CompetencyRing label="Ritmo del habla" score={metrics.speechRate} />
-            </div>
+        <div className="obs-col obs-col--center">
+          <div className="obs-col-header">Métricas en vivo</div>
+          <div className="obs-metrics__rings">
+            <CompetencyRing label="Fluidez" score={metrics.fluency} />
+            <CompetencyRing label="Contacto visual" score={metrics.eyeContact} />
+            <CompetencyRing label="Ritmo del habla" score={metrics.speechRate} />
           </div>
-        )}
+        </div>
 
-        <div className="obs-bottom">
-          <div className="obs-participants">
-            <h3>Participantes</h3>
-            <div className="obs-participant-list">
-              {participants.map((p) => (
-                <div key={p.peerId} className="obs-participant-item">
-                  <span className={`obs-participant-dot obs-participant-dot--${p.role}`} />
-                  <span>
-                    {p.role === 'candidate'
-                      ? 'Candidato'
-                      : p.role === 'interviewer'
-                        ? 'Entrevistador'
-                        : 'Observador'}
-                  </span>
-                  {p.peerId === peerId && <span className="obs-participant-you">(tú)</span>}
-                </div>
-              ))}
-            </div>
+        <div className="obs-col obs-col--right">
+          <div className="obs-col-header">Comentarios</div>
+          <div className="obs-comments__list">
+            {comments.length === 0 && <span className="obs-col-empty">Aún no hay comentarios</span>}
+            {comments.map((c) => (
+              <div key={c.id} className="obs-comment-item">
+                <span className="obs-comment-time">{formatTimer(c.timestamp)}</span>
+                <span className="obs-comment-text">{c.text}</span>
+              </div>
+            ))}
           </div>
-
-          <div className="obs-comments">
-            <h3>Comentarios</h3>
-            <div className="obs-comments__list">
-              {comments.length === 0 && (
-                <span className="obs-comments__empty">Aún no hay comentarios</span>
-              )}
-              {comments.map((c) => (
-                <div key={c.id} className="obs-comment-item">
-                  <span className="obs-comment-time">{formatTimer(c.timestamp)}</span>
-                  <span className="obs-comment-text">{c.text}</span>
-                </div>
-              ))}
-            </div>
-            <div className="obs-comments__input-row">
-              <input
-                className="obs-comments__input"
-                value={commentInput}
-                onChange={(e) => setCommentInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    addComment();
-                  }
-                }}
-                placeholder="Ancla un comentario en este momento…"
-              />
-              <button
-                className="obs-comments__send"
-                onClick={addComment}
-                disabled={!commentInput.trim()}
-              >
-                Anclar
-              </button>
-            </div>
+          <div className="obs-comments__input-row">
+            <input
+              className="obs-comments__input"
+              value={commentInput}
+              onChange={(e) => setCommentInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  addComment();
+                }
+              }}
+              placeholder="Ancla un comentario…"
+            />
+            <button
+              className="obs-comments__send"
+              onClick={addComment}
+              disabled={!commentInput.trim()}
+            >
+              Anclar
+            </button>
           </div>
         </div>
       </main>
@@ -451,14 +227,14 @@ function Room({ roomId, role }: { roomId: string; role: RoomRole }) {
    PAGE
    ══════════════════════════════════════════════════════════ */
 export function ObserverRoom() {
-  const [joined, setJoined] = useState<{ roomId: string; role: RoomRole } | null>(null);
+  const [joined, setJoined] = useState<{ roomId: string; obsType: ObserverType } | null>(null);
 
-  const handleJoin = (roomId: string, role: RoomRole) => {
-    setJoined({ roomId, role });
+  const handleJoin = (roomId: string, obsType: ObserverType) => {
+    setJoined({ roomId, obsType });
   };
 
   if (joined) {
-    return <Room roomId={joined.roomId} role={joined.role} />;
+    return <Room roomId={joined.roomId} obsType={joined.obsType} />;
   }
 
   return <Lobby onJoin={handleJoin} />;
