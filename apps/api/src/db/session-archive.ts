@@ -33,7 +33,8 @@ export async function getArchivedSession(
 
 // Historial del candidato para el progreso longitudinal (#51): solo sesiones
 // con plan (las que aportan competencias), ordenadas cronologicamente. Usa el
-// indice sobre candidate_id (#56).
+// indice sobre candidate_id (#56). El id es desempate estable: si dos sesiones
+// comparten ended_at, el orden (y por ende delta/latest) no queda al azar.
 export async function listCandidateSessions(
   db: Db,
   candidateId: string,
@@ -42,5 +43,5 @@ export async function listCandidateSessions(
     .select()
     .from(interviewSessions)
     .where(and(eq(interviewSessions.candidateId, candidateId), isNotNull(interviewSessions.plan)))
-    .orderBy(asc(interviewSessions.endedAt));
+    .orderBy(asc(interviewSessions.endedAt), asc(interviewSessions.id));
 }

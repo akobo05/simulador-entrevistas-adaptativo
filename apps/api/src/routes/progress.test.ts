@@ -90,6 +90,29 @@ describe('GET /api/v1/candidates/:candidateId/progress', () => {
     expect(fluency.delta).toBe(10);
   });
 
+  it('no mezcla el historial de otro candidato', async () => {
+    const other = '660e8400-e29b-41d4-a716-446655440001';
+    const mine = rowFor('33333333-3333-4333-8333-333333333333', new Date('2026-06-23T10:00:00Z'));
+    const theirs: NewInterviewSession = {
+      ...rowFor('44444444-4444-4444-8444-444444444444', new Date('2026-06-23T11:00:00Z')),
+      candidateId: other,
+    };
+    await archiveSession(db, mine);
+    await archiveSession(db, theirs);
+    await updateArchivedPlan(db, mine.id, planFor(mine.id, 70));
+    await updateArchivedPlan(db, theirs.id, planFor(theirs.id, 95));
+
+    const res = await server.inject({
+      method: 'GET',
+      url: `/api/v1/candidates/${cand}/progress`,
+    });
+    expect(res.statusCode).toBe(200);
+    const body = JSON.parse(res.body);
+    expect(body.sessionCount).toBe(1); // solo la propia, no la del otro candidato
+    const fluency = body.competencies.find((c: { name: string }) => c.name === 'fluency');
+    expect(fluency.latest).toBe(70); // 70 (propia), nunca 95 (del otro)
+  });
+
   it('candidato sin datos devuelve 200 con summary vacio', async () => {
     const res = await server.inject({
       method: 'GET',
